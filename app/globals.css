@@ -1,0 +1,784 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Lato:wght@300;400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-size: 16px;
+    
+    /* Cosmic Color Palette */
+    --background: 240 70% 20%;
+    --foreground: 240 5% 93%;
+    --card: 240 70% 20% / 0.3;
+    --card-foreground: 240 5% 93%;
+    --popover: 240 70% 10%;
+    --popover-foreground: 240 5% 93%;
+    --primary: 51 100% 50%; /* gold */
+    --primary-foreground: 240 70% 10%;
+    --secondary: 0 0% 75%; /* silver */
+    --secondary-foreground: 240 5% 93%;
+    --muted: 0 0% 75% / 0.1;
+    --muted-foreground: 240 5% 93% / 0.7;
+    --accent: 51 100% 50%;
+    --accent-foreground: 240 70% 10%;
+    --destructive: 349 79% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 75% / 0.2;
+    --input: 0 0% 75% / 0.1;
+    --ring: 51 100% 50%;
+    --radius: 0.625rem;
+    
+    /* Typography */
+    --font-heading: 'Cormorant Garamond', serif;
+    --font-body: 'Lato', sans-serif;
+    
+    /* Cosmic Elements */
+    --starlight-gold: #FFD700;
+    --nebula-silver: #C0C0C0;
+    --cosmic-navy: #191970;
+    --cosmic-black: #0a0a23;
+  }
+
+  .dark {
+    --background: 240 70% 8%;
+    --foreground: 240 5% 98%;
+    --card: 240 70% 8%;
+    --card-foreground: 240 5% 98%;
+    --popover: 240 70% 8%;
+    --popover-foreground: 240 5% 98%;
+    --primary: 240 5% 98%;
+    --primary-foreground: 240 70% 12%;
+    --secondary: 240 5% 16%;
+    --secondary-foreground: 240 5% 98%;
+    --muted: 240 5% 16%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 240 5% 16%;
+    --accent-foreground: 240 5% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 86% 97%;
+    --border: 240 5% 16%;
+    --input: 240 5% 16%;
+    --ring: 240 5% 44%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    background: linear-gradient(180deg, var(--cosmic-navy) 0%, var(--cosmic-black) 100%);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+}
+
+html {
+  font-size: var(--font-size);
+  scroll-behavior: smooth;
+  overflow: hidden; /* Prevent default scrolling for fullpage */
+}
+
+body {
+  overflow: hidden; /* Prevent default scrolling for fullpage */
+}
+
+/* Enhanced cosmic effects */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px var(--starlight-gold), 0 0 10px var(--starlight-gold), 0 0 15px var(--starlight-gold); }
+  50% { box-shadow: 0 0 10px var(--starlight-gold), 0 0 20px var(--starlight-gold), 0 0 30px var(--starlight-gold); }
+}
+
+@keyframes starDrift {
+  0%, 100% { 
+    transform: translateX(0) translateY(0) scale(1);
+    opacity: 0.3;
+  }
+  25% { 
+    transform: translateX(10px) translateY(-5px) scale(1.1);
+    opacity: 0.7;
+  }
+  50% { 
+    transform: translateX(-5px) translateY(-10px) scale(1.3);
+    opacity: 1;
+  }
+  75% { 
+    transform: translateX(-8px) translateY(5px) scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes cosmicPulse {
+  0%, 100% { 
+    transform: scale(1) rotate(0deg);
+    opacity: 0.2;
+    filter: blur(0.5px) hue-rotate(0deg);
+  }
+  33% { 
+    transform: scale(1.3) rotate(120deg);
+    opacity: 0.6;
+    filter: blur(1px) hue-rotate(60deg);
+  }
+  66% { 
+    transform: scale(0.8) rotate(240deg);
+    opacity: 0.8;
+    filter: blur(0.8px) hue-rotate(120deg);
+  }
+}
+
+@keyframes nebulaFlow {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.1;
+    filter: blur(2px);
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 0.3;
+    filter: blur(4px);
+  }
+}
+
+@keyframes orbitMotion {
+  0% {
+    transform: rotate(0deg) translateX(50px) rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg) translateX(50px) rotate(-360deg);
+  }
+}
+
+@keyframes shootingStar {
+  0% {
+    transform: translateX(-100px) translateY(-100px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(100px) translateY(100px);
+    opacity: 0;
+  }
+}
+
+@keyframes particleTrail {
+  0% {
+    transform: translateX(0) translateY(0) scale(1);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  80% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateX(20px) translateY(-15px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+.cosmic-glow {
+  animation: glow 3s ease-in-out infinite;
+}
+
+.star-twinkle {
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+.star-drift {
+  animation: starDrift 4s ease-in-out infinite;
+}
+
+.cosmic-pulse {
+  animation: cosmicPulse 6s ease-in-out infinite;
+}
+
+.nebula-flow {
+  animation: nebulaFlow 15s ease-in-out infinite;
+}
+
+.orbit-motion {
+  animation: orbitMotion 20s linear infinite;
+}
+
+.shooting-star {
+  animation: shootingStar 3s ease-out infinite;
+}
+
+.particle-trail {
+  animation: particleTrail 2s ease-out infinite;
+}
+
+/* Enhanced particle effects for different screen sizes */
+@media (max-width: 768px) {
+  .cosmic-background-mobile {
+    opacity: 0.7;
+  }
+  
+  .cosmic-background-mobile .star-drift {
+    animation-duration: 3s;
+  }
+  
+  .cosmic-background-mobile .cosmic-pulse {
+    animation-duration: 4s;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .star-drift,
+  .cosmic-pulse,
+  .nebula-flow,
+  .orbit-motion,
+  .shooting-star,
+  .particle-trail {
+    animation: none;
+  }
+  
+  .star-twinkle {
+    animation: twinkle 4s ease-in-out infinite;
+  }
+  
+  .cosmic-glow {
+    animation: glow 6s ease-in-out infinite;
+  }
+}
+
+/* Interactive particle effects */
+.interactive-particle {
+  transition: all 0.3s ease-out;
+}
+
+.interactive-particle:hover {
+  transform: scale(1.5) !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+}
+
+/* Fullpage scrolling styles */
+.fullpage-container {
+  height: 100vh;
+  transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Smooth scroll behavior for sections */
+section {
+  scroll-margin-top: 80px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Enhanced transitions for fullpage */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section-content {
+  animation: slideIn 0.6s ease-out;
+}
+
+/* Navigation dots animation */
+@keyframes dotPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.nav-dot-active {
+  animation: dotPulse 0.3s ease-out;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cosmic-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--starlight-gold);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--nebula-silver);
+}
+
+/* Mobile Menu Enhancements */
+.mobile-menu {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  isolation: isolate;
+  z-index: 9999 !important;
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  pointer-events: auto;
+}
+
+.mobile-menu-backdrop {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  isolation: isolate;
+  z-index: 9998 !important;
+  position: fixed !important;
+  inset: 0 !important;
+  pointer-events: auto;
+}
+
+.mobile-menu * {
+  position: relative;
+  z-index: 1;
+}
+
+.mobile-menu-container {
+  z-index: 10000 !important;
+  position: relative;
+}
+
+/* Touch improvements */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile responsive improvements */
+.mobile-container {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+.safe-padding {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+/* Navigation dots mobile improvements */
+.navigation-dots {
+  right: max(0.5rem, env(safe-area-inset-right));
+}
+
+/* Mobile breakpoint extensions */
+@media (max-width: 475px) {
+  .xs\:text-3xl {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+  
+  .xs\:text-4xl {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+  }
+  
+  .xs\:w-56 {
+    width: 14rem;
+  }
+  
+  .xs\:h-56 {
+    height: 14rem;
+  }
+  
+  .xs\:w-72 {
+    width: 18rem;
+  }
+  
+  .xs\:h-72 {
+    height: 18rem;
+  }
+}
+
+/* Astral chart mobile optimization */
+.astral-chart-svg {
+  overflow: visible;
+}
+
+@media (max-width: 640px) {
+  .astral-chart-svg text {
+    font-size: 14px !important;
+  }
+  
+  .astral-chart-svg circle[r="150"] {
+    stroke-width: 1.5px !important;
+  }
+  
+  .astral-chart-svg circle[r="90"] {
+    stroke-width: 1px !important;
+  }
+}
+
+/* Cosmic glow small variant */
+@keyframes cosmicGlowSmall {
+  0%, 100% { 
+    box-shadow: 0 0 2px rgba(255, 215, 0, 0.3), 0 0 4px rgba(255, 215, 0, 0.2);
+  }
+  50% { 
+    box-shadow: 0 0 4px rgba(255, 215, 0, 0.4), 0 0 8px rgba(255, 215, 0, 0.3);
+  }
+}
+
+.cosmic-glow-small {
+  animation: cosmicGlowSmall 3s ease-in-out infinite;
+}
+
+/* Safe area support for mobile */
+@supports (padding: max(0px)) {
+  .mobile-menu {
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+  
+  .header-container {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+  
+  .cta-button-container {
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+  
+  .navigation-arrow {
+    bottom: max(5rem, calc(env(safe-area-inset-bottom) + 4.5rem)) !important;
+  }
+  
+  .booking-nav-buttons {
+    padding-bottom: max(2rem, calc(env(safe-area-inset-bottom) + 2rem)) !important;
+  }
+  
+  .safe-padding {
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}
+
+/* Enhanced focus styles for accessibility */
+.focus-visible:focus-visible {
+  outline: 2px solid var(--starlight-gold);
+  outline-offset: 2px;
+}
+
+/* Menu slide animation improvements */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.menu-slide-in {
+  animation: slideInRight 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.menu-slide-out {
+  animation: slideOutRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* CTA Button enhancements */
+.cta-button-container {
+  z-index: 9996 !important;
+}
+
+/* Navigation arrows z-index management */
+.navigation-arrow {
+  z-index: 9997 !important;
+}
+
+/* Booking section z-index management */
+.booking-section {
+  position: relative;
+  z-index: 10;
+}
+
+.booking-section .step-content {
+  position: relative;
+  z-index: 20;
+}
+
+/* Booking navigation buttons z-index and styling */
+.booking-nav-buttons {
+  z-index: 9998 !important;
+  background: linear-gradient(180deg, transparent 0%, rgba(25, 25, 112, 0.8) 50%, rgba(10, 10, 35, 0.9) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 12px 12px 0 0;
+  margin: 0 -1.5rem -1.5rem -1.5rem;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+}
+
+.booking-nav-buttons button {
+  z-index: 9999 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(255, 215, 0, 0.1);
+}
+
+/* Enhanced backdrop blur for fixed elements */
+@supports (backdrop-filter: blur(12px)) {
+  .fixed-element-backdrop {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+/* Custom scrollbar for time slots */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(25, 25, 112, 0.2);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 215, 0, 0.4);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 215, 0, 0.6);
+}
+
+/* Enhanced calendar hover effects */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Calendar month transition */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.calendar-month-enter {
+  animation: fadeSlideIn 0.3s ease-out;
+}
+
+/* Time slot selection pulse */
+@keyframes selectionPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 215, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+  }
+}
+
+.time-slot-selected {
+  animation: selectionPulse 0.6s ease-out;
+}
+
+/* Enhanced cosmic glow for selected elements */
+.cosmic-glow-enhanced {
+  animation: cosmicPulse 2s ease-in-out infinite;
+}
+
+/* Weekly calendar animations */
+@keyframes weekSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.week-slide-in {
+  animation: weekSlideIn 0.3s ease-out;
+}
+
+/* Calendar view toggle animations */
+@keyframes viewToggle {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.view-toggle-active {
+  animation: viewToggle 0.3s ease-out;
+}
+
+/* Enhanced mobile navigation button styles */
+@keyframes navigationPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4), 0 4px 12px rgba(255, 215, 0, 0.2);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 8px rgba(255, 215, 0, 0), 0 6px 16px rgba(255, 215, 0, 0.3);
+  }
+}
+
+.navigation-button-enhanced {
+  animation: navigationPulse 2s ease-in-out infinite;
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 640px) {
+  h1 {
+    font-size: 2rem;
+    line-height: 1.1;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+    line-height: 1.2;
+  }
+  
+  .navigation-arrow {
+    width: 3rem !important;
+    height: 3rem !important;
+    border-width: 2px !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    background: rgba(255, 215, 0, 0.25) !important;
+    box-shadow: 0 4px 16px rgba(255, 215, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+  }
+  
+  .navigation-arrow:hover {
+    background: rgba(255, 215, 0, 0.35) !important;
+    transform: scale(1.05);
+  }
+  
+  .navigation-arrow:active {
+    transform: scale(0.95);
+  }
+  
+  .navigation-arrow::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    z-index: -1;
+  }
+  
+  section {
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+  }
+  
+  .cta-button-container {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    bottom: 0.75rem !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  
+  .cta-button-container button {
+    min-height: 44px; /* iOS minimum touch target */
+    font-size: 0.875rem !important;
+    padding: 0.75rem 1.25rem !important;
+    display: block !important;
+    margin: 0 auto !important;
+  }
+  
+  .booking-nav-buttons {
+    padding-bottom: 2rem !important;
+    margin-bottom: 1rem !important;
+    margin-left: -1rem !important;
+    margin-right: -1rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  .booking-nav-buttons button {
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15), 0 1px 6px rgba(255, 215, 0, 0.2) !important;
+    min-height: 44px !important;
+  }
+  
+  .navigation-dots {
+    right: 0.5rem !important;
+  }
+  
+  .navigation-dots button {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+    border-width: 1.5px !important;
+  }
+  
+  .h-full {
+    min-height: 100vh;
+    min-height: 100svh;
+  }
+  
+  .cosmic-background-mobile .star-drift {
+    animation-duration: 2.5s;
+  }
+  
+  .cosmic-background-mobile .cosmic-pulse {
+    animation-duration: 3.5s;
+  }
+}

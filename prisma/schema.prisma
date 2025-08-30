@@ -1,0 +1,179 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User profiles and authentication
+model Profile {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  fullName  String?
+  avatarUrl String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  profileBookings Booking[] @relation("ProfileBookings")
+
+  @@map("profiles")
+}
+
+// Email configuration for SMTP settings
+model EmailConfig {
+  id        Int      @id @default(autoincrement())
+  smtpHost  String   @default("smtp.gmail.com")
+  smtpPort  Int      @default(587)
+  smtpUser  String   @default("")
+  smtpPass  String   @default("")
+  fromEmail String   @default("noreply@soulpath.lat")
+  fromName  String   @default("SOULPATH")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("email_config")
+}
+
+// Email templates for different languages
+model EmailTemplate {
+  id         Int      @id @default(autoincrement())
+  templateKey String  @unique @map("template_key")
+  subject    String
+  body       String
+  language   String   @default("en")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("email_templates")
+}
+
+// Website content in multiple languages
+model Content {
+  id                Int      @id @default(autoincrement())
+  heroTitleEn       String   @default("Welcome to SOULPATH") @map("hero_title_en")
+  heroTitleEs       String   @default("Bienvenido a SOULPATH") @map("hero_title_es")
+  heroSubtitleEn    String   @default("Your journey to wellness starts here") @map("hero_subtitle_en")
+  heroSubtitleEs    String   @default("Tu camino al bienestar comienza aquí") @map("hero_subtitle_es")
+  aboutTitleEn      String   @default("About Us") @map("about_title_en")
+  aboutTitleEs      String   @default("Sobre Nosotros") @map("about_title_es")
+  aboutContentEn    String   @default("We are dedicated to helping you achieve your wellness goals.") @map("about_content_en")
+  aboutContentEs    String   @default("Estamos dedicados a ayudarte a alcanzar tus metas de bienestar.") @map("about_content_es")
+  approachTitleEn   String   @default("Our Approach") @map("approach_title_en")
+  approachTitleEs   String   @default("Nuestro Enfoque") @map("approach_title_es")
+  approachContentEn String   @default("We use a holistic approach to wellness.") @map("approach_content_en")
+  approachContentEs String   @default("Usamos un enfoque holístico para el bienestar.") @map("approach_content_es")
+  servicesTitleEn   String   @default("Our Services") @map("services_title_en")
+  servicesTitleEs   String   @default("Nuestros Servicios") @map("services_title_es")
+  servicesContentEn String   @default("Professional wellness services in a peaceful environment.") @map("services_content_en")
+  servicesContentEs String   @default("Servicios profesionales de bienestar en un ambiente pacífico.") @map("services_content_es")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("content")
+}
+
+// Logo and branding settings
+model LogoSettings {
+  id        Int      @id @default(autoincrement())
+  type      String   @default("text")
+  text      String   @default("SOULPATH")
+  imageUrl  String? @map("image_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("logo_settings")
+}
+
+// SEO metadata and settings
+model Seo {
+  id          Int      @id @default(autoincrement())
+  title       String   @default("SOULPATH - Wellness & Healing")
+  description String   @default("Your journey to wellness starts here. Professional wellness services in a peaceful environment.")
+  keywords    String   @default("wellness, healing, therapy, meditation, soulpath")
+  ogImage     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("seo")
+}
+
+// Business hours and availability
+model Schedule {
+  id          Int      @id @default(autoincrement())
+  dayOfWeek   String @map("day_of_week")
+  startTime   String @map("start_time")
+  endTime     String @map("end_time")
+  isAvailable Boolean  @default(true) @map("is_available")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("schedules")
+}
+
+// Client management
+model Client {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  phone     String?
+  status    String   @default("active")
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  clientBookings Booking[] @relation("ClientBookings")
+
+  @@map("clients")
+}
+
+// Appointment bookings
+model Booking {
+  id           Int      @id @default(autoincrement())
+  clientEmail  String
+  sessionDate  DateTime
+  sessionTime  String
+  sessionType  String
+  status       String   @default("pending")
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  client Client @relation("ClientBookings", fields: [clientEmail], references: [email], map: "bookings_client_email_fkey")
+  profile Profile? @relation("ProfileBookings", fields: [clientEmail], references: [email], map: "bookings_profile_email_fkey")
+
+  @@map("bookings")
+}
+
+// Image management
+model Image {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String
+  altText   String?
+  category  String   @default("general")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("images")
+}
+
+// Profile images for specific sections
+model ProfileImage {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  url       String
+  altText   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("profile_images")
+}
