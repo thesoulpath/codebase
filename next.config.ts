@@ -1,17 +1,8 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    rules: {
-      '*.svg': {
-        loaders: ['@svgr/webpack'],
-        as: '*.js',
-      },
-    },
-  },
-  // Disable API routes during build to prevent environment variable issues
-  output: 'standalone',
-  // Set the correct workspace root to resolve lockfile warnings
+  // Remove turbopack config that might cause Vercel build issues
+  // output: 'standalone', // This can cause issues in Vercel
   outputFileTracingRoot: process.cwd(),
   images: {
     remotePatterns: [
