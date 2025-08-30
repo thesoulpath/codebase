@@ -87,7 +87,17 @@ CREATE TABLE IF NOT EXISTS clients (
   name TEXT NOT NULL,
   phone TEXT,
   status TEXT DEFAULT 'active',
-  notes TEXT,
+  birth_date DATE NOT NULL,
+  birth_time TIME,
+  birth_place TEXT NOT NULL,
+  question TEXT NOT NULL,
+  language TEXT DEFAULT 'en',
+  admin_notes TEXT,
+  scheduled_date DATE,
+  scheduled_time TIME,
+  session_type TEXT,
+  last_reminder_sent TIMESTAMP WITH TIME ZONE,
+  last_booking TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

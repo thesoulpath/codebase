@@ -562,6 +562,29 @@ section {
   }
 }
 
+/* Global Select dropdown styling */
+[data-radix-popper-content-wrapper] [data-radix-select-content] {
+  background-color: white !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 0.5rem !important;
+}
+
+[data-radix-popper-content-wrapper] [data-radix-select-content] [data-radix-select-item] {
+  color: #000000 !important;
+  padding: 0.5rem 0.75rem !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s ease-in-out !important;
+}
+
+[data-radix-popper-content-wrapper] [data-radix-select-content] [data-radix-select-item]:hover {
+  background-color: #f3f4f6 !important;
+}
+
+[data-radix-popper-content-wrapper] [data-radix-select-content] [data-radix-select-item][data-highlighted] {
+  background-color: #f3f4f6 !important;
+}
+
 /* Custom scrollbar for time slots */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;

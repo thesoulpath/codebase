@@ -153,11 +153,11 @@ function ScheduleModal({ schedule, isOpen, mode, onClose, onSave }: ScheduleModa
                 <SelectTrigger className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30">30 minutes</SelectItem>
-                  <SelectItem value="60">60 minutes</SelectItem>
-                  <SelectItem value="90">90 minutes</SelectItem>
-                  <SelectItem value="120">2 hours</SelectItem>
+                <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                  <SelectItem value="30" className="text-black hover:bg-gray-100 focus:bg-gray-100">30 minutes</SelectItem>
+                  <SelectItem value="60" className="text-black hover:bg-gray-100 focus:bg-gray-100">60 minutes</SelectItem>
+                  <SelectItem value="90" className="text-black hover:bg-gray-100 focus:bg-gray-100">90 minutes</SelectItem>
+                  <SelectItem value="120" className="text-black hover:bg-gray-100 focus:bg-gray-100">2 hours</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -172,12 +172,12 @@ function ScheduleModal({ schedule, isOpen, mode, onClose, onSave }: ScheduleModa
                 <SelectTrigger className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 client</SelectItem>
-                  <SelectItem value="2">2 clients</SelectItem>
-                  <SelectItem value="3">3 clients</SelectItem>
-                  <SelectItem value="4">4 clients</SelectItem>
-                  <SelectItem value="5">5 clients</SelectItem>
+                <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                  <SelectItem value="1" className="text-black hover:bg-gray-100 focus:bg-gray-100">1 client</SelectItem>
+                  <SelectItem value="2" className="text-black hover:bg-gray-100 focus:bg-gray-100">2 clients</SelectItem>
+                  <SelectItem value="3" className="text-black hover:bg-gray-100 focus:bg-gray-100">3 clients</SelectItem>
+                  <SelectItem value="4" className="text-black hover:bg-gray-100 focus:bg-gray-100">4 clients</SelectItem>
+                  <SelectItem value="5" className="text-black hover:bg-gray-100 focus:bg-gray-100">5 clients</SelectItem>
                 </SelectContent>
               </Select>
             </div>

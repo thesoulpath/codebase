@@ -19,19 +19,22 @@ interface Client {
   id: string;
   name: string;
   email: string;
+  phone?: string;
+  status: string;
   birthDate: string;
-  birthTime: string;
+  birthTime?: string;
   birthPlace: string;
   question: string;
-  status: string;
-  createdAt: string;
+  language: string;
+  adminNotes?: string;
   scheduledDate?: string;
   scheduledTime?: string;
+  sessionType?: string;
   lastReminderSent?: string;
-  language: string;
-  bookings?: Booking[];
-  totalBookings?: number;
   lastBooking?: string;
+  createdAt: string;
+  updatedAt?: string;
+  totalBookings?: number;
   isRecurrent?: boolean;
 }
 
@@ -62,12 +65,14 @@ function ClientModal({ client, isOpen, mode, onClose, onSave }: ClientModalProps
   const [formData, setFormData] = useState<Partial<Client>>({
     name: '',
     email: '',
+    phone: '',
+    status: 'active',
     birthDate: '',
     birthTime: '',
     birthPlace: '',
     question: '',
-    status: 'pending',
-    language: 'en'
+    language: 'en',
+    adminNotes: ''
   });
 
   useEffect(() => {
@@ -77,12 +82,14 @@ function ClientModal({ client, isOpen, mode, onClose, onSave }: ClientModalProps
       setFormData({
         name: '',
         email: '',
+        phone: '',
+        status: 'active',
         birthDate: '',
         birthTime: '',
         birthPlace: '',
         question: '',
-        status: 'pending',
-        language: 'en'
+        language: 'en',
+        adminNotes: ''
       });
     }
   }, [client, mode]);
@@ -123,116 +130,170 @@ function ClientModal({ client, isOpen, mode, onClose, onSave }: ClientModalProps
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name" className="text-[#C0C0C0]">Full Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
-                  disabled={mode === 'view'}
-                  required
-                />
-              </div>
+            {/* Basic Information Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[#EAEAEA] border-b border-[#C0C0C0]/20 pb-2">
+                Basic Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name" className="text-[#C0C0C0]">Full Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                    disabled={mode === 'view'}
+                    required
+                  />
+                </div>
 
-              <div>
-                <Label htmlFor="email" className="text-[#C0C0C0]">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
-                  disabled={mode === 'view'}
-                  required
-                />
-              </div>
+                <div>
+                  <Label htmlFor="email" className="text-[#C0C0C0]">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                    disabled={mode === 'view'}
+                    required
+                  />
+                </div>
 
-              <div>
-                <Label htmlFor="birthDate" className="text-[#C0C0C0]">Birth Date *</Label>
-                <Input
-                  id="birthDate"
-                  type="date"
-                  value={formData.birthDate || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
-                  className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
-                  disabled={mode === 'view'}
-                  required
-                />
-              </div>
+                <div>
+                  <Label htmlFor="phone" className="text-[#C0C0C0]">Phone</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                    disabled={mode === 'view'}
+                    placeholder="+1 (555) 123-4567"
+                  />
+                </div>
 
-              <div>
-                <Label htmlFor="birthTime" className="text-[#C0C0C0]">Birth Time</Label>
-                <Input
-                  id="birthTime"
-                  type="time"
-                  value={formData.birthTime || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, birthTime: e.target.value }))}
-                  className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
-                  disabled={mode === 'view'}
-                />
-              </div>
+                <div>
+                  <Label htmlFor="language" className="text-[#C0C0C0]">Language</Label>
+                  <Select
+                    value={formData.language || 'en'}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}
+                    disabled={mode === 'view'}
+                  >
+                    <SelectTrigger className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                      <SelectItem value="en" className="text-black hover:bg-gray-100 focus:bg-gray-100">🇺🇸 English</SelectItem>
+                      <SelectItem value="es" className="text-black hover:bg-gray-100 focus:bg-gray-100">🇪🇸 Español</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="md:col-span-2">
-                <Label htmlFor="birthPlace" className="text-[#C0C0C0]">Birth Place</Label>
-                <Input
-                  id="birthPlace"
-                  value={formData.birthPlace || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, birthPlace: e.target.value }))}
-                  className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
-                  disabled={mode === 'view'}
-                  placeholder="City, Country"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="language" className="text-[#C0C0C0]">Language</Label>
-                <Select
-                  value={formData.language || 'en'}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}
-                  disabled={mode === 'view'}
-                >
-                  <SelectTrigger className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="en">🇺🇸 English</SelectItem>
-                    <SelectItem value="es">🇪🇸 Español</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="status" className="text-[#C0C0C0]">Status</Label>
-                <Select
-                  value={formData.status || 'pending'}
+                <div>
+                  <Label htmlFor="status" className="text-[#C0C0C0]">Status</Label>
+                                  <Select
+                  value={formData.status || 'active'}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
                   disabled={mode === 'view'}
                 >
-                  <SelectTrigger className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                    <SelectItem value="no-show">No Show</SelectItem>
+                    <SelectTrigger className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]">
+                      <SelectValue />
+                    </SelectTrigger>
+                                      <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                    <SelectItem value="active" className="text-black hover:bg-gray-100 focus:bg-gray-100">Active</SelectItem>
+                    <SelectItem value="pending" className="text-black hover:bg-gray-100 focus:bg-gray-100">Pending</SelectItem>
+                    <SelectItem value="confirmed" className="text-black hover:bg-gray-100 focus:bg-gray-100">Confirmed</SelectItem>
+                    <SelectItem value="completed" className="text-black hover:bg-gray-100 focus:bg-gray-100">Completed</SelectItem>
+                    <SelectItem value="cancelled" className="text-black hover:bg-gray-100 focus:bg-gray-100">Cancelled</SelectItem>
+                    <SelectItem value="no-show" className="text-black hover:bg-gray-100 focus:bg-gray-100">No Show</SelectItem>
+                    <SelectItem value="inactive" className="text-black hover:bg-gray-100 focus:bg-gray-100">Inactive</SelectItem>
                   </SelectContent>
-                </Select>
+                  </Select>
+                </div>
               </div>
+            </div>
 
-              <div className="md:col-span-2">
-                <Label htmlFor="question" className="text-[#C0C0C0]">Question/Focus Areas</Label>
-                <Textarea
-                  id="question"
-                  value={formData.question || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, question: e.target.value }))}
-                  className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA] min-h-[100px]"
-                  disabled={mode === 'view'}
-                  placeholder="What would you like to explore in your reading?"
-                />
+            {/* Astrology Chart Information Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[#EAEAEA] border-b border-[#C0C0C0]/20 pb-2">
+                Astrology Chart Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="birthDate" className="text-[#C0C0C0]">Birth Date *</Label>
+                  <Input
+                    id="birthDate"
+                    type="date"
+                    value={formData.birthDate || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
+                    className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                    disabled={mode === 'view'}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="birthTime" className="text-[#C0C0C0]">Birth Time (Optional)</Label>
+                  <Input
+                    id="birthTime"
+                    type="time"
+                    value={formData.birthTime || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, birthTime: e.target.value }))}
+                    className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                    disabled={mode === 'view'}
+                    placeholder="Leave empty if unknown"
+                  />
+                  <p className="text-xs text-[#C0C0C0]/70 mt-1">Leave empty if birth time is unknown</p>
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="birthPlace" className="text-[#C0C0C0]">Birth Place *</Label>
+                  <Input
+                    id="birthPlace"
+                    value={formData.birthPlace || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, birthPlace: e.target.value }))}
+                    className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                    disabled={mode === 'view'}
+                    placeholder="City, Country (or just City if country unknown)"
+                    required
+                  />
+                  <p className="text-xs text-[#C0C0C0]/70 mt-1">City and country preferred, but city alone is acceptable</p>
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="question" className="text-[#C0C0C0]">Question/Focus Areas *</Label>
+                  <Textarea
+                    id="question"
+                    value={formData.question || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, question: e.target.value }))}
+                    className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA] min-h-[100px]"
+                    disabled={mode === 'view'}
+                    placeholder="What would you like to explore in your reading?"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Admin & CRM Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[#EAEAEA] border-b border-[#C0C0C0]/20 pb-2">
+                Admin & CRM
+              </h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="adminNotes" className="text-[#C0C0C0]">Admin Notes (CRM History)</Label>
+                  <Textarea
+                    id="adminNotes"
+                    value={formData.adminNotes || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, adminNotes: e.target.value }))}
+                    className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA] min-h-[100px]"
+                    disabled={mode === 'view'}
+                    placeholder="Internal notes, follow-up actions, client preferences, etc."
+                  />
+                </div>
               </div>
             </div>
 
@@ -471,7 +532,7 @@ export function ClientManagement() {
       if (!user?.access_token) return;
 
       const response = await fetch(
-        `/api/admin/clients/enhanced`,
+        `/api/admin/clients?enhanced=true`,
         {
           headers: {
             'Authorization': `Bearer ${user.access_token}`,
@@ -483,6 +544,8 @@ export function ClientManagement() {
       if (response.ok) {
         const data = await response.json();
         setClients(data.clients || []);
+      } else {
+        console.error('Failed to load clients:', response.statusText);
       }
     } catch (error) {
       console.error('Error loading clients:', error);
@@ -802,13 +865,15 @@ export function ClientManagement() {
                 <SelectTrigger className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="no-show">No Show</SelectItem>
+                <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                  <SelectItem value="all" className="text-black hover:bg-gray-100 focus:bg-gray-100">All Status</SelectItem>
+                  <SelectItem value="active" className="text-black hover:bg-gray-100 focus:bg-gray-100">Active</SelectItem>
+                  <SelectItem value="pending" className="text-black hover:bg-gray-100 focus:bg-gray-100">Pending</SelectItem>
+                  <SelectItem value="confirmed" className="text-black hover:bg-gray-100 focus:bg-gray-100">Confirmed</SelectItem>
+                  <SelectItem value="completed" className="text-black hover:bg-gray-100 focus:bg-gray-100">Completed</SelectItem>
+                  <SelectItem value="cancelled" className="text-black hover:bg-gray-100 focus:bg-gray-100">Cancelled</SelectItem>
+                  <SelectItem value="no-show" className="text-black hover:bg-gray-100 focus:bg-gray-100">No Show</SelectItem>
+                  <SelectItem value="inactive" className="text-black hover:bg-gray-100 focus:bg-gray-100">Inactive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -820,10 +885,10 @@ export function ClientManagement() {
                 <SelectTrigger className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Languages</SelectItem>
-                  <SelectItem value="en">🇺🇸 English</SelectItem>
-                  <SelectItem value="es">🇪🇸 Español</SelectItem>
+                <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                  <SelectItem value="all" className="text-black hover:bg-gray-100 focus:bg-gray-100">All Languages</SelectItem>
+                  <SelectItem value="en" className="text-black hover:bg-gray-100 focus:bg-gray-100">🇺🇸 English</SelectItem>
+                  <SelectItem value="es" className="text-black hover:bg-gray-100 focus:bg-gray-100">🇪🇸 Español</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -835,11 +900,11 @@ export function ClientManagement() {
                 <SelectTrigger className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">This Week</SelectItem>
-                  <SelectItem value="month">This Month</SelectItem>
+                <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                  <SelectItem value="all" className="text-black hover:bg-gray-100 focus:bg-gray-100">All Time</SelectItem>
+                  <SelectItem value="today" className="text-black hover:bg-gray-100 focus:bg-gray-100">Today</SelectItem>
+                  <SelectItem value="week" className="text-black hover:bg-gray-100 focus:bg-gray-100">This Week</SelectItem>
+                  <SelectItem value="month" className="text-black hover:bg-gray-100 focus:bg-gray-100">This Month</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -851,11 +916,11 @@ export function ClientManagement() {
                 <SelectTrigger className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date">Date Created</SelectItem>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="status">Status</SelectItem>
-                  <SelectItem value="bookings">Total Bookings</SelectItem>
+                <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                  <SelectItem value="date" className="text-black hover:bg-gray-100 focus:bg-gray-100">Date Created</SelectItem>
+                  <SelectItem value="name" className="text-black hover:bg-gray-100 focus:bg-gray-100">Name</SelectItem>
+                  <SelectItem value="status" className="text-black hover:bg-gray-100 focus:bg-gray-100">Status</SelectItem>
+                  <SelectItem value="bookings" className="text-black hover:bg-gray-100 focus:bg-gray-100">Total Bookings</SelectItem>
                 </SelectContent>
               </Select>
             </div>
