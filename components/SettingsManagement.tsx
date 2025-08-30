@@ -9,6 +9,9 @@ export function SettingsManagement() {
   const [isSeeding, setIsSeeding] = useState(false);
   const [seedStatus, setSeedStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [seedMessage, setSeedMessage] = useState('');
+  const [isSeedingCustomers, setIsSeedingCustomers] = useState(false);
+  const [seedCustomersStatus, setSeedCustomersStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [seedCustomersMessage, setSeedCustomersMessage] = useState('');
 
   const handleSeedContent = async () => {
     if (!confirm('Are you sure you want to seed the homepage content? This will overwrite existing content.')) {
@@ -41,6 +44,40 @@ export function SettingsManagement() {
       setSeedMessage('Network error occurred while seeding content');
     } finally {
       setIsSeeding(false);
+    }
+  };
+
+  const handleSeedCustomers = async () => {
+    if (!confirm('Are you sure you want to seed 3 sample customers? This will create new customer records.')) {
+      return;
+    }
+
+    setIsSeedingCustomers(true);
+    setSeedCustomersStatus('idle');
+    setSeedCustomersMessage('');
+
+    try {
+      const response = await fetch('/api/admin/seed/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSeedCustomersStatus('success');
+        setSeedCustomersMessage(`Successfully created ${data.count} sample customers!`);
+      } else {
+        const error = await response.json();
+        setSeedCustomersStatus('error');
+        setSeedCustomersMessage(error.message || 'Failed to seed customers');
+      }
+    } catch (error) {
+      setSeedCustomersStatus('error');
+      setSeedCustomersMessage('Network error occurred while seeding customers');
+    } finally {
+      setIsSeedingCustomers(false);
     }
   };
 
@@ -120,6 +157,62 @@ export function SettingsManagement() {
               <li>• Booking form labels and messages</li>
               <li>• Call-to-action buttons</li>
             </ul>
+          </div>
+
+          <div className="bg-[#0A0A23]/30 rounded-lg p-4">
+            <h4 className="text-lg font-medium text-[#EAEAEA] mb-2">Seed Sample Customers</h4>
+            <p className="text-[#C0C0C0] mb-4">
+              This will create 3 sample customers with complete astrology consultation data including birth dates, 
+              birth places, questions, and other required fields. Use this for testing and demonstration purposes.
+            </p>
+            
+            <div className="flex items-center space-x-4">
+              <Button
+                onClick={handleSeedCustomers}
+                disabled={isSeedingCustomers}
+                className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90 disabled:opacity-50"
+              >
+                {isSeedingCustomers ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-[#0A0A23] border-t-transparent rounded-full animate-spin mr-2" />
+                    Seeding Customers...
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} className="mr-2" />
+                    Seed 3 Sample Customers
+                  </>
+                )}
+              </Button>
+              
+              {seedCustomersStatus !== 'idle' && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg ${
+                    seedCustomersStatus === 'success' 
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  }`}
+                >
+                  {seedCustomersStatus === 'success' ? (
+                    <CheckCircle size={16} />
+                  ) : (
+                    <XCircle size={16} />
+                  )}
+                  <span className="text-sm">{seedCustomersMessage}</span>
+                </motion.div>
+              )}
+            </div>
+
+            <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <h5 className="text-sm font-medium text-blue-400 mb-2">Sample Customer Data:</h5>
+              <ul className="text-blue-300/80 text-xs space-y-1">
+                <li>• <strong>Maria Garcia</strong> - Spanish speaker, birth data, relationship questions</li>
+                <li>• <strong>John Smith</strong> - English speaker, birth data, career guidance</li>
+                <li>• <strong>Ana Rodriguez</strong> - Spanish speaker, birth data, life purpose questions</li>
+              </ul>
+            </div>
           </div>
 
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
