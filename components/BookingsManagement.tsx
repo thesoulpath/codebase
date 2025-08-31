@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { BaseButton } from '@/components/ui/BaseButton';
+import { BaseInput } from '@/components/ui/BaseInput';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '../hooks/useAuth';
 import DeleteConfirmationModal from './modals/DeleteConfirmationModal';
+
 
 interface Client {
   id: number;
@@ -399,10 +400,10 @@ const BookingsManagement: React.FC = () => {
                 <SelectTrigger className="dashboard-input">
                   <SelectValue placeholder="All clients" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All clients</SelectItem>
+                <SelectContent className="dashboard-dropdown-content">
+                  <SelectItem value="all" className="dashboard-dropdown-item">All clients</SelectItem>
                   {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id.toString()}>
+                    <SelectItem key={client.id} value={client.id.toString()} className="dashboard-dropdown-item">
                       {client.name}
                     </SelectItem>
                   ))}
@@ -419,13 +420,13 @@ const BookingsManagement: React.FC = () => {
                 <SelectTrigger className="dashboard-input">
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="no-show">No Show</SelectItem>
+                <SelectContent className="dashboard-dropdown-content">
+                  <SelectItem value="all" className="dashboard-dropdown-item">All statuses</SelectItem>
+                  <SelectItem value="pending" className="dashboard-dropdown-item">Pending</SelectItem>
+                  <SelectItem value="confirmed" className="dashboard-dropdown-item">Confirmed</SelectItem>
+                  <SelectItem value="completed" className="dashboard-dropdown-item">Completed</SelectItem>
+                  <SelectItem value="cancelled" className="dashboard-dropdown-item">Cancelled</SelectItem>
+                  <SelectItem value="no-show" className="dashboard-dropdown-item">No Show</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -439,17 +440,17 @@ const BookingsManagement: React.FC = () => {
                 <SelectTrigger className="dashboard-input">
                   <SelectValue placeholder="All types" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  <SelectItem value="individual">Individual</SelectItem>
-                  <SelectItem value="group">Group</SelectItem>
+                <SelectContent className="dashboard-dropdown-content">
+                  <SelectItem value="all" className="dashboard-dropdown-item">All types</SelectItem>
+                  <SelectItem value="individual" className="dashboard-dropdown-item">Individual</SelectItem>
+                  <SelectItem value="group" className="dashboard-dropdown-item">Group</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label className="dashboard-label">Date From</Label>
-              <Input
+              <BaseInput
                 type="date"
                 className="dashboard-input"
                 value={filters.date_from}
@@ -459,7 +460,7 @@ const BookingsManagement: React.FC = () => {
 
             <div className="space-y-2">
               <Label className="dashboard-label">Date To</Label>
-              <Input
+              <BaseInput
                 type="date"
                 className="dashboard-input"
                 value={filters.date_to}
@@ -476,11 +477,11 @@ const BookingsManagement: React.FC = () => {
                 <SelectTrigger className="dashboard-input">
                   <SelectValue placeholder="All package types" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All package types</SelectItem>
-                  <SelectItem value="individual">Individual</SelectItem>
-                  <SelectItem value="group">Group</SelectItem>
-                  <SelectItem value="mixed">Mixed</SelectItem>
+                <SelectContent className="dashboard-dropdown-content">
+                  <SelectItem value="all" className="dashboard-dropdown-item">All package types</SelectItem>
+                  <SelectItem value="individual" className="dashboard-dropdown-item">Individual</SelectItem>
+                  <SelectItem value="group" className="dashboard-dropdown-item">Group</SelectItem>
+                  <SelectItem value="mixed" className="dashboard-dropdown-item">Mixed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -562,13 +563,13 @@ const BookingsManagement: React.FC = () => {
                           <SelectTrigger className="w-32">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                            <SelectItem value="no-show">No Show</SelectItem>
-                          </SelectContent>
+                                          <SelectContent className="dashboard-dropdown-content">
+                  <SelectItem value="pending" className="dashboard-dropdown-item">Pending</SelectItem>
+                  <SelectItem value="confirmed" className="dashboard-dropdown-item">Confirmed</SelectItem>
+                  <SelectItem value="completed" className="dashboard-dropdown-item">Completed</SelectItem>
+                  <SelectItem value="cancelled" className="dashboard-dropdown-item">Cancelled</SelectItem>
+                  <SelectItem value="no-show" className="dashboard-dropdown-item">No Show</SelectItem>
+                </SelectContent>
                         </Select>
                       </td>
                       <td className="py-3 px-4">
@@ -589,7 +590,7 @@ const BookingsManagement: React.FC = () => {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
-                          <Button
+                          <BaseButton
                             variant="outline"
                             size="sm"
                             onClick={() => {
@@ -599,7 +600,7 @@ const BookingsManagement: React.FC = () => {
                             className="border-red-500/30 text-red-400 hover:bg-red-500/10"
                           >
                             <Trash2 size={14} />
-                          </Button>
+                          </BaseButton>
                         </div>
                       </td>
                     </tr>
@@ -618,22 +619,22 @@ const BookingsManagement: React.FC = () => {
             Page {pagination.page} of {pagination.totalPages}
           </div>
           <div className="flex gap-2">
-            <Button
+            <BaseButton
               variant="outline"
               className="dashboard-button-outline"
               onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
               disabled={pagination.page <= 1}
             >
               Previous
-            </Button>
-            <Button
+            </BaseButton>
+            <BaseButton
               variant="outline"
               className="dashboard-button-outline"
               onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
               disabled={pagination.page >= pagination.totalPages}
             >
               Next
-            </Button>
+            </BaseButton>
           </div>
         </div>
       )}

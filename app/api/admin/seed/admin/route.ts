@@ -19,9 +19,9 @@ export async function POST() {
   try {
     // Validate admin user data
     const adminData = {
-      email: 'coco@soulpath.lat',
-      password: 'soulpath2025!',
-      full_name: 'Coco Peru Admin',
+      email: 'beto@soulpath.com',
+      password: 'beto2025!',
+      full_name: 'Beto Admin',
       role: 'admin' as const
     };
 

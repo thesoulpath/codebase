@@ -5,14 +5,15 @@ import {
   CheckCircle,
   Calendar
 } from 'lucide-react';
-import { Button } from './ui/button';
+import { BaseButton } from './ui/BaseButton';
+import { BaseInput } from './ui/BaseInput';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Badge } from './ui/badge';
-import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { toast } from 'sonner';
+
 
 import { useAuth } from '../hooks/useAuth';
 
@@ -322,20 +323,20 @@ const PurchaseHistoryManagement: React.FC = () => {
           <p className="dashboard-text-secondary">Track package purchases, usage patterns, and revenue analytics</p>
         </div>
         <div className="flex gap-2">
-          <Button
+          <BaseButton
             onClick={() => exportData(activeTab as 'packages' | 'bookings')}
             className="dashboard-button-outline"
           >
             <Download className="w-4 h-4 mr-2" />
             Export
-          </Button>
-          <Button
+          </BaseButton>
+          <BaseButton
             onClick={fetchData}
-            className="dashboard-button-primary"
+            className="dashboard-button-reload"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
-          </Button>
+          </BaseButton>
         </div>
       </div>
 
@@ -464,7 +465,7 @@ const PurchaseHistoryManagement: React.FC = () => {
 
             <div className="space-y-2">
               <Label className="dashboard-label">Date From</Label>
-              <Input
+              <BaseInput
                 type="date"
                 className="dashboard-input"
                 value={filters.dateFrom}
@@ -474,7 +475,7 @@ const PurchaseHistoryManagement: React.FC = () => {
 
             <div className="space-y-2">
               <Label className="dashboard-label">Date To</Label>
-              <Input
+              <BaseInput
                 type="date"
                 className="dashboard-input"
                 value={filters.dateTo}
@@ -487,7 +488,7 @@ const PurchaseHistoryManagement: React.FC = () => {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-2 dashboard-tabs">
           <TabsTrigger value="packages" className="dashboard-tab">
             <Package className="w-4 h-4 mr-2" />
             Package Purchases

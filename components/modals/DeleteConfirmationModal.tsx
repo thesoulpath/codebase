@@ -1,9 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { AlertTriangle, Trash2, X, Package, DollarSign, Calendar } from 'lucide-react';
+import { Package, DollarSign, Calendar } from 'lucide-react';
+import { ConfirmationModal } from '@/components/ui/BaseModal';
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
@@ -29,17 +28,16 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   const getIcon = () => {
     switch (itemType) {
       case 'definition':
-        return <Package className="w-5 h-5 text-red-600" />;
+        return <Package className="w-5 h-5" />;
       case 'price':
-        return <DollarSign className="w-5 h-5 text-red-600" />;
+        return <DollarSign className="w-5 h-5" />;
       case 'template':
-        return <AlertTriangle className="w-5 h-5 text-red-600" />;
       case 'slot':
-        return <AlertTriangle className="w-5 h-5 text-red-600" />;
+        return <Calendar className="w-5 h-5" />;
       case 'booking':
-        return <Calendar className="w-5 h-5 text-red-600" />;
+        return <Calendar className="w-5 h-5" />;
       default:
-        return <AlertTriangle className="w-5 h-5 text-red-600" />;
+        return <Package className="w-5 h-5" />;
     }
   };
 
@@ -60,66 +58,52 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
     }
   };
 
+  const getWarningMessage = () => {
+    const baseMessage = `Deleting this ${getItemTypeText()} will permanently remove it from the system.`;
+    
+    switch (itemType) {
+      case 'definition':
+        return `${baseMessage} All associated prices will also be deleted.`;
+      case 'price':
+        return `${baseMessage} This may affect existing user packages.`;
+      case 'template':
+        return `${baseMessage} All associated schedule slots will also be deleted.`;
+      case 'slot':
+        return `${baseMessage} This may affect existing bookings.`;
+      case 'booking':
+        return `${baseMessage} This will restore the session to the user package.`;
+      default:
+        return baseMessage;
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="dashboard-modal max-w-md">
-        <DialogHeader>
-          <DialogTitle className="dashboard-modal-title text-red-600">
-            <div className="flex items-center gap-2">
-              {getIcon()}
-              {title}
-            </div>
-          </DialogTitle>
-          <DialogDescription className="dashboard-modal-description">
-            {description}
-            {itemName && (
-              <span className="block mt-2 font-medium text-gray-900">
-                "{itemName}"
-              </span>
-            )}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-red-800">
-              <p className="font-medium">This action cannot be undone.</p>
-              <p className="mt-1">
-                Deleting this {getItemTypeText()} will permanently remove it from the system.
-                {itemType === 'definition' && ' All associated prices will also be deleted.'}
-                {itemType === 'price' && ' This may affect existing user packages.'}
-                {itemType === 'template' && ' All associated schedule slots will also be deleted.'}
-                {itemType === 'slot' && ' This may affect existing bookings.'}
-                {itemType === 'booking' && ' This will restore the session to the user package.'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3 pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="dashboard-button-outline"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            <X className="w-4 h-4 mr-2" />
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            className="dashboard-button-danger"
-            onClick={onConfirm}
-            disabled={isLoading}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            {isLoading ? 'Deleting...' : 'Delete'}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <ConfirmationModal
+      isOpen={isOpen}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      title={title}
+      description={description}
+      confirmText={isLoading ? 'Deleting...' : 'Delete'}
+      cancelText="Cancel"
+      variant="danger"
+      icon={getIcon()}
+      isLoading={isLoading}
+    >
+      <div className="space-y-2">
+        {itemName && (
+          <p className="font-medium">
+            "{itemName}"
+          </p>
+        )}
+        <p className="text-sm">
+          {getWarningMessage()}
+        </p>
+        <p className="text-sm font-medium">
+          This action cannot be undone.
+        </p>
+      </div>
+    </ConfirmationModal>
   );
 };
 

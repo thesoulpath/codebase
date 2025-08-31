@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Package, Users, Clock, Save, X } from 'lucide-react';
+import { BaseModal } from '@/components/ui/BaseModal';
+import { BaseInput } from '@/components/ui/BaseInput';
+import { BaseButton } from '@/components/ui/BaseButton';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Package, Users, Clock, Save, X } from 'lucide-react';
 
 interface SessionDuration {
   id: number;
@@ -105,12 +105,12 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
       newErrors.session_duration_id = 'Session duration is required';
     }
 
-    if (formData.package_type === 'group' && !formData.max_group_size) {
-      newErrors.max_group_size = 'Max group size is required for group packages';
+    if (formData.package_type === 'group' && (!formData.max_group_size || parseInt(formData.max_group_size) <= 1)) {
+      newErrors.max_group_size = 'Group size must be greater than 1 for group packages';
     }
 
-    if (formData.max_group_size && parseInt(formData.max_group_size) <= 0) {
-      newErrors.max_group_size = 'Max group size must be a positive number';
+    if (formData.package_type === 'mixed' && (!formData.max_group_size || parseInt(formData.max_group_size) <= 1)) {
+      newErrors.max_group_size = 'Group size must be greater than 1 for mixed packages';
     }
 
     setErrors(newErrors);
@@ -120,18 +120,16 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
-      return;
+    if (validateForm()) {
+      const submitData = {
+        ...formData,
+        sessions_count: parseInt(formData.sessions_count),
+        session_duration_id: parseInt(formData.session_duration_id),
+        max_group_size: formData.max_group_size ? parseInt(formData.max_group_size) : null
+      };
+      
+      onSubmit(submitData);
     }
-
-    const submitData = {
-      ...formData,
-      sessions_count: parseInt(formData.sessions_count),
-      session_duration_id: parseInt(formData.session_duration_id),
-      max_group_size: formData.max_group_size ? parseInt(formData.max_group_size) : null
-    };
-
-    onSubmit(submitData);
   };
 
   const handleClose = () => {
@@ -140,162 +138,195 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="dashboard-modal max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="dashboard-modal-title">
-            <div className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              {mode === 'create' ? 'Create New Package' : 'Edit Package'}
-            </div>
-          </DialogTitle>
-          <DialogDescription className="dashboard-modal-description">
-            {mode === 'create' 
-              ? 'Define a new package with its core properties and settings'
-              : 'Update the package configuration and settings'
-            }
-          </DialogDescription>
-        </DialogHeader>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={mode === 'create' ? 'Create Package Definition' : 'Edit Package Definition'}
+      description="Define package settings and configuration"
+      size="lg"
+      variant="default"
+    >
+      <BaseModal.Header icon={<Package className="w-5 h-5 text-[var(--color-accent-500)]" />}>
+        <h3 className="text-[var(--font-size-lg)] font-[var(--font-weight-medium)] text-[var(--color-text-primary)]">
+          {mode === 'create' ? 'Create New Package Definition' : 'Edit Package Definition'}
+        </h3>
+      </BaseModal.Header>
 
+      <BaseModal.Content>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="dashboard-label">Package Name *</Label>
-              <Input
-                className={`dashboard-input ${errors.name ? 'border-red-500' : ''}`}
-                placeholder="e.g., Wellness Package, Single Session"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              />
-              {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="dashboard-label">Package Type *</Label>
-              <Select
-                value={formData.package_type}
-                onValueChange={(value: 'individual' | 'group' | 'mixed') => 
-                  setFormData(prev => ({ ...prev, package_type: value }))
-                }
-              >
-                <SelectTrigger className="dashboard-select">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="dashboard-dropdown-content">
-                  <SelectItem value="individual" className="dashboard-dropdown-item">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      Individual
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="group" className="dashboard-dropdown-item">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      Group
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="mixed" className="dashboard-dropdown-item">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      Mixed
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Package Name */}
+          <div className="space-y-2">
+            <Label htmlFor="name">Package Name</Label>
+            <BaseInput
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Enter package name"
+              required
+            />
+            {errors.name && (
+              <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
+                {errors.name}
+              </p>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="dashboard-label">Sessions Count *</Label>
-              <Input
-                className={`dashboard-input ${errors.sessions_count ? 'border-red-500' : ''}`}
-                type="number"
-                min="1"
-                placeholder="e.g., 5"
-                value={formData.sessions_count}
-                onChange={(e) => setFormData(prev => ({ ...prev, sessions_count: e.target.value }))}
-              />
-              {errors.sessions_count && <p className="text-red-500 text-sm">{errors.sessions_count}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="dashboard-label">Session Duration *</Label>
-              <Select
-                value={formData.session_duration_id}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, session_duration_id: value }))}
-              >
-                <SelectTrigger className="dashboard-select">
-                  <SelectValue placeholder="Select duration" />
-                </SelectTrigger>
-                <SelectContent className="dashboard-dropdown-content">
-                  {sessionDurations.map((duration) => (
-                    <SelectItem key={duration.id} value={duration.id.toString()} className="dashboard-dropdown-item">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        {duration.name} ({duration.duration_minutes} min)
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.session_duration_id && <p className="text-red-500 text-sm">{errors.session_duration_id}</p>}
-            </div>
+          {/* Package Type */}
+          <div className="space-y-2">
+            <Label className="text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-secondary)]">
+              Package Type
+            </Label>
+            <Select
+              value={formData.package_type}
+              onValueChange={(value: 'individual' | 'group' | 'mixed') => 
+                setFormData({ ...formData, package_type: value })
+              }
+            >
+              <SelectTrigger className="bg-[var(--color-surface-primary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]">
+                <SelectValue placeholder="Select package type" />
+              </SelectTrigger>
+              <SelectContent className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)]">
+                <SelectItem value="individual" className="text-[var(--color-text-primary)] hover:bg-[var(--color-surface-tertiary)]">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Individual Sessions
+                  </div>
+                </SelectItem>
+                <SelectItem value="group" className="text-[var(--color-text-primary)] hover:bg-[var(--color-surface-tertiary)]">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Group Sessions
+                  </div>
+                </SelectItem>
+                <SelectItem value="mixed" className="text-[var(--color-text-primary)] hover:bg-[var(--color-surface-tertiary)]">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Mixed (Individual + Group)
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {formData.package_type === 'group' && (
+          {/* Max Group Size (conditional) */}
+          {(formData.package_type === 'group' || formData.package_type === 'mixed') && (
             <div className="space-y-2">
-              <Label className="dashboard-label">Max Group Size *</Label>
-              <Input
-                className={`dashboard-input ${errors.max_group_size ? 'border-red-500' : ''}`}
+              <Label className="text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-secondary)]">
+                Maximum Group Size
+              </Label>
+              <BaseInput
                 type="number"
                 min="2"
-                placeholder="e.g., 5"
                 value={formData.max_group_size}
-                onChange={(e) => setFormData(prev => ({ ...prev, max_group_size: e.target.value }))}
+                onChange={(e) => setFormData({ ...formData, max_group_size: e.target.value })}
+                placeholder="Enter maximum group size"
+                required
               />
-              {errors.max_group_size && <p className="text-red-500 text-sm">{errors.max_group_size}</p>}
+              {errors.max_group_size && (
+                <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
+                  {errors.max_group_size}
+                </p>
+              )}
             </div>
           )}
 
+          {/* Session Duration */}
           <div className="space-y-2">
-            <Label className="dashboard-label">Description</Label>
+            <Label className="text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-secondary)]">
+              Session Duration
+            </Label>
+            <Select
+              value={formData.session_duration_id}
+              onValueChange={(value) => setFormData({ ...formData, session_duration_id: value })}
+            >
+              <SelectTrigger className="bg-[var(--color-surface-primary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]">
+                <SelectValue placeholder="Select session duration" />
+              </SelectTrigger>
+              <SelectContent className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)]">
+                {sessionDurations.map((duration) => (
+                  <SelectItem key={duration.id} value={duration.id.toString()} className="text-[var(--color-text-primary)] hover:bg-[var(--color-surface-tertiary)]">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      {duration.name} ({duration.duration_minutes} min)
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.session_duration_id && (
+              <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
+                {errors.session_duration_id}
+              </p>
+            )}
+          </div>
+
+          {/* Sessions Count */}
+          <div className="space-y-2">
+            <Label className="text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-secondary)]">
+              Number of Sessions
+            </Label>
+            <BaseInput
+              type="number"
+              min="1"
+              value={formData.sessions_count}
+              onChange={(e) => setFormData({ ...formData, sessions_count: e.target.value })}
+              placeholder="Enter number of sessions"
+              required
+            />
+            {errors.sessions_count && (
+              <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
+                {errors.sessions_count}
+              </p>
+            )}
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
             <Textarea
-              className="dashboard-textarea"
-              placeholder="Describe the package benefits and features..."
+              id="description"
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Enter package description (optional)"
+              className="bg-[var(--color-surface-primary)] border-[var(--color-border-500)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]"
               rows={3}
             />
           </div>
 
+          {/* Active Status */}
           <div className="flex items-center space-x-2">
             <Switch
               id="is_active"
               checked={formData.is_active}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+              onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
             />
-            <Label htmlFor="is_active" className="dashboard-label">Active Package</Label>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="dashboard-button-outline"
-              onClick={handleClose}
-            >
-              <X className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-            <Button type="submit" className="dashboard-button-primary">
-              <Save className="w-4 h-4 mr-2" />
-              {mode === 'create' ? 'Create Package' : 'Update Package'}
-            </Button>
+            <Label htmlFor="is_active" className="text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-secondary)]">
+              Active Package
+            </Label>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </BaseModal.Content>
+
+      <BaseModal.Footer>
+        <div className="flex justify-end space-x-3">
+          <BaseButton
+            variant="outline"
+            onClick={handleClose}
+            leftIcon={<X className="w-4 h-4" />}
+          >
+            Cancel
+          </BaseButton>
+          
+          <BaseButton
+            variant="primary"
+            onClick={handleSubmit}
+            leftIcon={<Save className="w-4 h-4" />}
+          >
+            {mode === 'create' ? 'Create Package' : 'Update Package'}
+          </BaseButton>
+        </div>
+      </BaseModal.Footer>
+    </BaseModal>
   );
 };
 

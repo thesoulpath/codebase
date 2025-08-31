@@ -180,11 +180,11 @@ export const scheduleFilterSchema = z.object({
 });
 
 // Export types
-export type Client = z.infer<typeof clientSchema>;
+// Client type is now imported from @/lib/types
 export type ClientCreate = z.infer<typeof clientCreateSchema>;
 export type ClientUpdate = z.infer<typeof clientUpdateSchema>;
 
-export type Schedule = z.infer<typeof scheduleSchema>;
+// Schedule types are now imported from @/lib/types
 export type ScheduleCreate = z.infer<typeof scheduleCreateSchema>;
 export type ScheduleUpdate = z.infer<typeof scheduleUpdateSchema>;
 
@@ -195,10 +195,10 @@ export type BookingUpdate = z.infer<typeof bookingUpdateSchema>;
 export type Content = z.infer<typeof contentSchema>;
 export type ContentUpdate = z.infer<typeof contentUpdateSchema>;
 
-export type EmailConfig = z.infer<typeof emailConfigSchema>;
+// EmailConfig types are now imported from @/lib/email
 export type EmailConfigUpdate = z.infer<typeof emailConfigUpdateSchema>;
 
-export type EmailTemplate = z.infer<typeof emailTemplateSchema>;
+// EmailTemplate types are now imported from @/lib/email
 export type EmailTemplateCreate = z.infer<typeof emailTemplateCreateSchema>;
 export type EmailTemplateUpdate = z.infer<typeof emailTemplateUpdateSchema>;
 

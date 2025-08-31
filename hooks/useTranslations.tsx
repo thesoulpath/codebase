@@ -26,7 +26,7 @@ export function useLanguage() {
 
 export function useTranslations(initialContent?: any, language?: 'en' | 'es') {
   const [content, setContent] = useState(initialContent || defaultTranslations);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Changed from true to false
   
   // Use provided language or fallback to default
   const currentLanguage = language || 'en';
@@ -34,31 +34,69 @@ export function useTranslations(initialContent?: any, language?: 'en' | 'es') {
   // Fetch translations from backend CMS
   const fetchTranslations = async () => {
     try {
-      setIsLoading(true);
+      // Don't set loading state for background fetch
       // Add cache-busting parameter to ensure fresh content
       const response = await fetch(`/api/content?t=${Date.now()}`);
       
       if (response.ok) {
         const result = await response.json();
         if (result.content && Object.keys(result.content).length > 0) {
-          setContent(result.content);
+          console.log('🔍 API returned content:', result.content);
+          console.log('🔍 Default translations keys:', Object.keys(defaultTranslations.en));
+          
+          // Ensure we always have the default structure, then update with API content
+          const mergedContent = {
+            en: { ...defaultTranslations.en },
+            es: { ...defaultTranslations.es }
+          };
+          
+          // Update specific keys from API content
+          if (result.content.en) {
+            Object.keys(result.content.en).forEach(key => {
+              if (result.content.en[key] && typeof result.content.en[key] === 'object') {
+                mergedContent.en[key as keyof typeof mergedContent.en] = { 
+                  ...mergedContent.en[key as keyof typeof mergedContent.en], 
+                  ...result.content.en[key] 
+                };
+              } else {
+                mergedContent.en[key as keyof typeof mergedContent.en] = result.content.en[key];
+              }
+            });
+          }
+          
+          if (result.content.es) {
+            Object.keys(result.content.es).forEach(key => {
+              if (result.content.es[key] && typeof result.content.es[key] === 'object') {
+                mergedContent.es[key as keyof typeof mergedContent.es] = { 
+                  ...mergedContent.es[key as keyof typeof mergedContent.es], 
+                  ...result.content.es[key] 
+                };
+              } else {
+                mergedContent.es[key as keyof typeof mergedContent.es] = result.content.es[key];
+              }
+            });
+          }
+          
+          console.log('🔍 Merged content keys:', Object.keys(mergedContent.en));
+          console.log('🔍 Merged nav keys:', Object.keys(mergedContent.en.nav || {}));
+          
+          setContent(mergedContent);
         } else {
           // Fallback to defaults if backend returns empty content
-          setContent(defaultTranslations);
+          console.log('🔍 Using default translations (no API content)');
+          // Don't update content if we already have defaults
         }
       } else {
         console.warn('Failed to fetch translations from backend, using defaults');
-        setContent(defaultTranslations);
+        // Don't update content if we already have defaults
       }
     } catch (error) {
       console.error('Error fetching translations:', error);
-      setContent(defaultTranslations);
-    } finally {
-      setIsLoading(false);
+      // Don't update content if we already have defaults
     }
   };
 
-  // Update content when initialContent changes or language changes
+  // Single useEffect to handle content initialization and language changes
   useEffect(() => {
     console.log(`🔄 useEffect triggered - initialContent:`, !!initialContent, 'language:', currentLanguage);
     
@@ -67,23 +105,13 @@ export function useTranslations(initialContent?: any, language?: 'en' | 'es') {
       console.log('✅ Using initial content for language:', currentLanguage);
       setContent(initialContent);
     } else {
-      // If no initial content provided, fetch from backend
+      // Ensure we have default translations first
+      setContent(defaultTranslations);
+      // Then fetch from backend in the background
       console.log('🔄 Fetching fresh content from backend for language:', currentLanguage);
       fetchTranslations();
     }
-  }, [initialContent, currentLanguage]); // Re-run when language changes
-
-  // Force refresh content when language changes
-  useEffect(() => {
-    if (currentLanguage && content) {
-      console.log(`🔄 Language changed to ${currentLanguage}, ensuring content is available`);
-      // If content doesn't have the current language, fetch fresh content
-      if (!content[currentLanguage]) {
-        console.log(`⚠️ Content missing for language ${currentLanguage}, fetching fresh content`);
-        fetchTranslations();
-      }
-    }
-  }, [currentLanguage, content]);
+  }, [initialContent, currentLanguage]); // Only depend on these two values
 
   const updateContent = async (newContent: any) => {
     try {

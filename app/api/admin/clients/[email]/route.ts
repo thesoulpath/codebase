@@ -20,9 +20,6 @@ export async function PUT(
     const { email } = params;
     const body = await request.json();
     
-    console.log('PUT /api/admin/clients/[email] - Email:', email);
-    console.log('PUT /api/admin/clients/[email] - Body:', body);
-
     // Transform camelCase field names to snake_case for database
     const updateData = {
       name: body.name,
@@ -94,7 +91,6 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',

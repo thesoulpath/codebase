@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { BaseButton } from '@/components/ui/BaseButton';
+import { BaseInput } from '@/components/ui/BaseInput';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../hooks/useAuth';
 import ScheduleTemplateModal from './modals/ScheduleTemplateModal';
 import DeleteConfirmationModal from './modals/DeleteConfirmationModal';
+
 
 interface SessionDuration {
   id: number;
@@ -29,12 +30,14 @@ interface ScheduleTemplate {
   start_time: string;
   end_time: string;
   capacity: number;
+  max_capacity: number;
   is_available: boolean;
-  session_duration_id: number | null;
+  is_active: boolean;
+  session_duration_id: number;
   auto_available: boolean;
   created_at: string;
   updated_at: string;
-  session_durations: SessionDuration | null;
+  session_durations: SessionDuration;
 }
 
 interface ScheduleSlot {
@@ -376,21 +379,21 @@ const ScheduleManagement: React.FC = () => {
           <p className="dashboard-text-secondary">Manage recurring availability patterns and generate bookable time slots</p>
         </div>
         <div className="flex gap-2">
-          <Button 
+          <BaseButton 
             className="dashboard-button-primary"
             onClick={() => setShowCreateTemplateModal(true)}
           >
             <Plus className="w-4 h-4 mr-2" />
             New Template
-          </Button>
-          <Button 
+          </BaseButton>
+          <BaseButton 
             variant="outline" 
             className="dashboard-button-outline"
             onClick={() => setShowSlotGenerationModal(true)}
           >
             <Calendar className="w-4 h-4 mr-2" />
             Generate Slots
-          </Button>
+          </BaseButton>
         </div>
       </div>
 
@@ -474,14 +477,14 @@ const ScheduleManagement: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button 
+                <BaseButton 
                   variant="outline" 
                   className="dashboard-button-outline"
                   onClick={fetchScheduleTemplates}
                 >
                   <Filter className="w-4 h-4 mr-2" />
                   Apply Filters
-                </Button>
+                </BaseButton>
               </div>
 
               {/* Schedule Templates Table */}
@@ -532,7 +535,7 @@ const ScheduleManagement: React.FC = () => {
                         </td>
                         <td>
                           <div className="flex gap-2">
-                            <Button
+                            <BaseButton
                               size="sm"
                               variant="outline"
                               className="dashboard-button-outline"
@@ -542,8 +545,8 @@ const ScheduleManagement: React.FC = () => {
                               }}
                             >
                               <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
+                            </BaseButton>
+                            <BaseButton
                               size="sm"
                               variant="outline"
                               className="dashboard-button-danger"
@@ -554,7 +557,7 @@ const ScheduleManagement: React.FC = () => {
                               }}
                             >
                               <Trash2 className="w-4 h-4" />
-                            </Button>
+                            </BaseButton>
                           </div>
                         </td>
                       </tr>
@@ -579,7 +582,7 @@ const ScheduleManagement: React.FC = () => {
               {/* Calendar Controls */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
-                  <Button
+                  <BaseButton
                     variant="outline"
                     className="dashboard-button-outline"
                     onClick={() => {
@@ -593,26 +596,26 @@ const ScheduleManagement: React.FC = () => {
                     }}
                   >
                     Previous
-                  </Button>
+                  </BaseButton>
                   
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant={calendarView === 'week' ? 'default' : 'outline'}
+                    <BaseButton
+                                              variant={calendarView === 'week' ? 'primary' : 'outline'}
                       className={calendarView === 'week' ? 'dashboard-button-primary' : 'dashboard-button-outline'}
                       onClick={() => setCalendarView('week')}
                     >
                       Week
-                    </Button>
-                    <Button
-                      variant={calendarView === 'month' ? 'default' : 'outline'}
+                    </BaseButton>
+                    <BaseButton
+                                              variant={calendarView === 'month' ? 'primary' : 'outline'}
                       className={calendarView === 'month' ? 'dashboard-button-primary' : 'dashboard-button-outline'}
                       onClick={() => setCalendarView('month')}
                     >
                       Month
-                    </Button>
+                    </BaseButton>
                   </div>
                   
-                  <Button
+                  <BaseButton
                     variant="outline"
                     className="dashboard-button-outline"
                     onClick={() => {
@@ -626,7 +629,7 @@ const ScheduleManagement: React.FC = () => {
                     }}
                   >
                     Next
-                  </Button>
+                  </BaseButton>
                 </div>
                 
                 <div className="text-lg font-semibold text-dashboard-text-primary">
@@ -660,7 +663,7 @@ const ScheduleManagement: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <Label className="dashboard-label">Start Date</Label>
-                  <Input
+                  <BaseInput
                     type="date"
                     className="dashboard-input"
                     value={slotFilters.start_date}
@@ -669,21 +672,21 @@ const ScheduleManagement: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <Label className="dashboard-label">End Date</Label>
-                  <Input
+                  <BaseInput
                     type="date"
                     className="dashboard-input"
                     value={slotFilters.end_date}
                     onChange={(e) => setSlotFilters(prev => ({ ...prev, end_date: e.target.value }))}
                   />
                 </div>
-                <Button 
+                <BaseButton 
                   variant="outline" 
                   className="dashboard-button-outline"
                   onClick={fetchScheduleSlots}
                 >
                   <Filter className="w-4 h-4 mr-2" />
                   Apply Filters
-                </Button>
+                </BaseButton>
               </div>
 
               {/* Schedule Slots Table */}
@@ -731,7 +734,7 @@ const ScheduleManagement: React.FC = () => {
                         </td>
                         <td>
                           <div className="flex gap-2">
-                            <Button
+                            <BaseButton
                               size="sm"
                               variant="outline"
                               className="dashboard-button-outline"
@@ -741,8 +744,8 @@ const ScheduleManagement: React.FC = () => {
                               }}
                             >
                               <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
+                            </BaseButton>
+                            <BaseButton
                               size="sm"
                               variant="outline"
                               className="dashboard-button-danger"
@@ -753,7 +756,7 @@ const ScheduleManagement: React.FC = () => {
                               }}
                             >
                               <Trash2 className="w-4 h-4" />
-                            </Button>
+                            </BaseButton>
                           </div>
                         </td>
                       </tr>
@@ -830,7 +833,7 @@ const ScheduleManagement: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="dashboard-label">Start Date</Label>
-                  <Input
+                  <BaseInput
                     type="date"
                     className="dashboard-input"
                     value={slotGenerationData.start_date}
@@ -839,7 +842,7 @@ const ScheduleManagement: React.FC = () => {
                 </div>
                 <div className="space-y-2">
                   <Label className="dashboard-label">End Date</Label>
-                  <Input
+                  <BaseInput
                     type="date"
                     className="dashboard-input"
                     value={slotGenerationData.end_date}
@@ -863,21 +866,21 @@ const ScheduleManagement: React.FC = () => {
             </div>
 
             <div className="flex justify-end gap-3 p-6 pt-0">
-              <Button
+              <BaseButton
                 variant="outline"
                 className="dashboard-button-outline"
                 onClick={() => setShowSlotGenerationModal(false)}
               >
                 Cancel
-              </Button>
-              <Button
+              </BaseButton>
+              <BaseButton
                 className="dashboard-button-primary"
                 onClick={handleGenerateSlots}
                 disabled={slotGenerationData.template_ids.length === 0 || !slotGenerationData.start_date || !slotGenerationData.end_date}
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Generate Slots
-              </Button>
+              </BaseButton>
             </div>
           </div>
         </div>

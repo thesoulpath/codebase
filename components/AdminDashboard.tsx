@@ -1,85 +1,126 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Users, Settings, LogOut, Search, FileText, Type, Calendar, X, Mail, 
-  Image as ImageIcon, Database, CreditCard, Receipt, Package, 
-  History, Clock
+  Settings, 
+  X, 
+  LogOut, 
+  Users, 
+  Calendar, 
+  Clock, 
+  Package, 
+  FileText, 
+  Mail, 
+  ImageIcon, 
+  // Type, 
+  Search, 
+  CreditCard, 
+  Receipt, 
+  History, 
+  Database,
+  Bug,
+  User
 } from 'lucide-react';
-
-import { Button } from './ui/button';
-
+import { BaseButton } from '@/components/ui/BaseButton';
 import { useAuth } from '../hooks/useAuth';
+import { ClientManagement } from './ClientManagement';
+import BookingsManagement from './BookingsManagement';
+import ScheduleManagement from './ScheduleManagement';
+import PackagesAndPricing from './PackagesAndPricing';
+import { ContentManagement } from './ContentManagement';
 import { EmailManagement } from './EmailManagement';
 import { ImageManagement } from './ImageManagement';
-import { ContentManagement } from './ContentManagement';
-import { ClientManagement } from './ClientManagement';
-import ScheduleManagement from './ScheduleManagement';
-import { LogoManagement } from './LogoManagement';
+// import { LogoManagement } from './LogoManagement';
 import { SeoManagement } from './SeoManagement';
-import { SettingsManagement } from './SettingsManagement';
-import BookingsManagement from './BookingsManagement';
-import PackagesAndPricing from './PackagesAndPricing';
 import PaymentMethodManagement from './PaymentMethodManagement';
 import PaymentRecordsManagement from './PaymentRecordsManagement';
 import PurchaseHistoryManagement from './PurchaseHistoryManagement';
+import { SettingsManagement } from './SettingsManagement';
+import { BugReportManagement } from './BugReportManagement';
+import Link from 'next/link';
 
-export function AdminDashboard({ onClose }: { onClose: () => void }) {
-  const { user, signOut } = useAuth();
+interface AdminDashboardProps {
+  onClose?: () => void;
+  isModal?: boolean;
+}
+
+export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps) {
+  const { user, signOut, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('clients');
 
   if (!user) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#C0C0C0]">Loading...</p>
+          <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[var(--color-text-secondary)]">Loading...</p>
         </div>
       </div>
     );
   }
 
+  const containerClasses = isModal 
+    ? "fixed inset-0 bg-[var(--color-background-primary)] z-50 overflow-hidden"
+    : "min-h-screen bg-[var(--color-background-primary)]";
+
   return (
-    <div className="fixed inset-0 bg-[#0a0a0a]/95 backdrop-blur-lg z-50 overflow-hidden">
+    <div className={containerClasses}>
       {/* Header */}
-      <header className="bg-[#191970]/90 backdrop-blur-lg border-b border-[#C0C0C0]/20 p-4">
+      <header className="bg-[var(--color-sidebar-800)] border-b border-[var(--color-border-500)] p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 bg-[#FFD700] rounded-full flex items-center justify-center">
-              <Settings size={20} className="text-[#0a0a0a]" />
+            <div className="w-10 h-10 bg-[var(--color-accent-500)] rounded-full flex items-center justify-center">
+              <Settings size={20} className="text-black" />
             </div>
             <div>
-              <h1 className="text-2xl font-heading text-[#EAEAEA]">Admin Dashboard</h1>
-              <p className="text-[#C0C0C0]">Welcome back, {user.email}</p>
+              <h1 className="text-[var(--font-size-2xl)] font-[var(--font-weight-bold)] text-[var(--color-text-primary)]">
+                Admin Dashboard
+              </h1>
+              <p className="text-[var(--color-text-secondary)]">Welcome back, {user.email}</p>
             </div>
           </div>
           
           <div className="flex items-center space-x-3">
-            <Button
-              onClick={onClose}
-              variant="outline"
-              size="sm"
-              className="border-[#C0C0C0]/30 text-[#C0C0C0] hover:bg-[#C0C0C0]/10"
-            >
-              <X size={16} className="mr-2" />
-              Close
-            </Button>
+            {/* Admin Account Button - Only show for admin users */}
+            {isAdmin && (
+              <Link href="/account">
+                <BaseButton
+                  size="sm"
+                  variant="outline"
+                  className="dashboard-button-account"
+                >
+                  <User size={16} className="mr-2" />
+                  My Account
+                </BaseButton>
+              </Link>
+            )}
             
-            <Button
+            {/* Close button - only show in modal mode */}
+            {isModal && onClose && (
+              <BaseButton
+                onClick={onClose}
+                size="sm"
+                className="dashboard-button-close"
+              >
+                <X size={16} className="mr-2" />
+                Close
+              </BaseButton>
+            )}
+            
+            <BaseButton
               onClick={signOut}
-              variant="outline"
               size="sm"
-              className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+              className="dashboard-button-signout"
             >
               <LogOut size={16} className="mr-2" />
               Sign Out
-            </Button>
+            </BaseButton>
           </div>
         </div>
       </header>
 
       <div className="flex h-[calc(100vh-80px)]">
         {/* Sidebar Navigation */}
-        <nav className="w-56 bg-[#0A0A23]/30 border-r border-[#C0C0C0]/20 p-3 overflow-y-auto">
+        <nav className="w-56 bg-[var(--color-sidebar-800)] border-r border-[var(--color-border-500)] p-3 overflow-y-auto">
           <div className="space-y-1">
             {[
               { key: 'clients', icon: Users, label: 'Client Management' },
@@ -87,86 +128,60 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
               { key: 'schedules', icon: Clock, label: 'Schedule Management' },
               { key: 'packages', icon: Package, label: 'Packages & Pricing' },
               { key: 'content', icon: FileText, label: 'Content Management' },
-              { key: 'emails', icon: Mail, label: 'Email Management' },
+              { key: 'email', icon: Mail, label: 'Email Management' },
               { key: 'images', icon: ImageIcon, label: 'Image Management' },
-              { key: 'logo', icon: Type, label: 'Logo Management' },
+              // { key: 'logo', icon: Type, label: 'Logo Management' },
               { key: 'seo', icon: Search, label: 'SEO Management' },
               { key: 'payment-methods', icon: CreditCard, label: 'Payment Methods' },
               { key: 'payment-records', icon: Receipt, label: 'Payment Records' },
               { key: 'purchase-history', icon: History, label: 'Purchase History' },
               { key: 'settings', icon: Database, label: 'Settings' },
+              { key: 'bug-reports', icon: Bug, label: 'Bug Reports' },
             ].map(({ key, icon: Icon, label }) => (
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                className={`w-full flex items-center space-x-2 px-3 py-2 rounded-md transition-all duration-200 text-sm ${
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                   activeTab === key
-                    ? 'bg-[#FFD700]/10 text-[#FFD700] border border-[#FFD700]/30'
-                    : 'text-[#C0C0C0] hover:text-[#EAEAEA] hover:bg-[#C0C0C0]/5'
+                    ? 'bg-[var(--color-accent-500)] text-black'
+                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-sidebar-700)] hover:text-[var(--color-text-primary)]'
                 }`}
               >
-                <Icon size={16} />
-                <span className="text-xs font-medium">{label}</span>
+                <Icon size={18} />
+                <span className="font-medium">{label}</span>
               </button>
             ))}
           </div>
         </nav>
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto p-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              {activeTab === 'clients' && <ClientManagement />}
-
-              {activeTab === 'bookings' && <BookingsManagement />}
-
-              {activeTab === 'schedules' && <ScheduleManagement />}
-
-              {activeTab === 'packages' && <PackagesAndPricing />}
-
-              {activeTab === 'content' && (
-                <ContentManagement />
-              )}
-
-              {activeTab === 'emails' && (
-                <EmailManagement />
-              )}
-
-              {activeTab === 'images' && (
-                <ImageManagement />
-              )}
-
-              {activeTab === 'logo' && (
-                <LogoManagement />
-              )}
-
-              {activeTab === 'seo' && (
-                <SeoManagement />
-              )}
-
-              {activeTab === 'payment-methods' && (
-                <PaymentMethodManagement />
-              )}
-
-              {activeTab === 'payment-records' && (
-                <PaymentRecordsManagement />
-              )}
-
-              {activeTab === 'purchase-history' && (
-                <PurchaseHistoryManagement />
-              )}
-
-              {activeTab === 'settings' && (
-                <SettingsManagement />
-              )}
-            </motion.div>
-          </AnimatePresence>
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-y-auto bg-[var(--color-background-primary)]">
+          <div className="p-6">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.2 }}
+              >
+                {activeTab === 'clients' && <ClientManagement />}
+                {activeTab === 'bookings' && <BookingsManagement />}
+                {activeTab === 'schedules' && <ScheduleManagement />}
+                {activeTab === 'packages' && <PackagesAndPricing />}
+                {activeTab === 'content' && <ContentManagement />}
+                {activeTab === 'email' && <EmailManagement />}
+                {activeTab === 'images' && <ImageManagement />}
+                {/* {activeTab === 'logo' && <LogoManagement />} */}
+                {activeTab === 'seo' && <SeoManagement />}
+                {activeTab === 'payment-methods' && <PaymentMethodManagement />}
+                {activeTab === 'payment-records' && <PaymentRecordsManagement />}
+                {activeTab === 'purchase-history' && <PurchaseHistoryManagement />}
+                {activeTab === 'settings' && <SettingsManagement />}
+                {activeTab === 'bug-reports' && <BugReportManagement />}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </main>
       </div>
     </div>

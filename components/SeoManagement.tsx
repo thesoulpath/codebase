@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Save, Search, Globe, RefreshCw, Eye, EyeOff, Upload, Trash2 } from 'lucide-react';
-import { Button } from './ui/button';
+import { BaseButton } from './ui/BaseButton';
+import { BaseInput } from './ui/BaseInput';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
+
 
 import { useAuth } from '../hooks/useAuth';
 
@@ -246,74 +247,80 @@ export function SeoManagement() {
   ] as const;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="dashboard-container p-6 space-y-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
         <div>
-          <h2 className="text-2xl font-heading text-[#EAEAEA] mb-2">SEO Management</h2>
-          <p className="text-[#C0C0C0]">Optimize your website for search engines and social media</p>
+          <h1 className="dashboard-text-primary text-3xl font-bold">SEO Management</h1>
+          <p className="dashboard-text-secondary">Optimize your website for search engines and social media</p>
         </div>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col items-center lg:items-end space-y-3">
+          {/* Unsaved Changes Indicator */}
           {hasUnsavedChanges && (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
               <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-yellow-400">Unsaved changes</span>
+              <span className="text-sm text-yellow-400 font-medium">Unsaved changes</span>
             </div>
           )}
           
-          <Button
-            onClick={discardChanges}
-            variant="outline"
-            size="sm"
-            disabled={!hasUnsavedChanges}
-            className="border-[#C0C0C0]/30 text-[#C0C0C0] hover:bg-[#C0C0C0]/10"
-          >
-            <RefreshCw size={16} className="mr-2" />
-            Discard
-          </Button>
-          
-          <Button
-            onClick={resetToDefault}
-            variant="outline"
-            size="sm"
-            className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-          >
-            <Trash2 size={16} className="mr-2" />
-            Reset All
-          </Button>
-          
-          <Button
-            onClick={() => setShowPreview(!showPreview)}
-            variant="outline"
-            size="sm"
-            className="border-[#FFD700]/30 text-[#FFD700] hover:bg-[#FFD700]/10"
-          >
-            {showPreview ? <EyeOff size={16} className="mr-2" /> : <Eye size={16} className="mr-2" />}
-            Preview
-          </Button>
-          
-          <Button
-            onClick={saveSeoSettings}
-            disabled={isSaving || !hasUnsavedChanges}
-            className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90"
-          >
-            {isSaving ? (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-4 h-4 border-2 border-[#0A0A23] border-t-transparent rounded-full mr-2"
-              />
-            ) : (
-              <Save size={16} className="mr-2" />
-            )}
-            Save Changes
-          </Button>
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2 lg:gap-3">
+            <BaseButton
+              onClick={discardChanges}
+              disabled={!hasUnsavedChanges}
+              variant="outline"
+              size="sm"
+              className="border-[var(--color-border-500)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)] hover:text-[var(--color-text-primary)] transition-all duration-200"
+            >
+              <RefreshCw size={16} className="mr-2" />
+              Discard
+            </BaseButton>
+            
+            <BaseButton
+              onClick={resetToDefault}
+              variant="outline"
+              size="sm"
+              className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 transition-all duration-200"
+            >
+              <Trash2 size={16} className="mr-2" />
+              Reset All
+            </BaseButton>
+            
+            <BaseButton
+              onClick={() => setShowPreview(!showPreview)}
+              variant="outline"
+              size="sm"
+              className={`border-[var(--color-accent-500)]/30 text-[var(--color-accent-500)] hover:bg-[var(--color-accent-500)]/10 hover:border-[var(--color-accent-500)]/50 transition-all duration-200 ${
+                showPreview ? 'bg-[var(--color-accent-500)]/10 border-[var(--color-accent-500)]/50' : ''
+              }`}
+            >
+              {showPreview ? <EyeOff size={16} className="mr-2" /> : <Eye size={16} className="mr-2" />}
+              Preview
+            </BaseButton>
+            
+            <BaseButton
+              onClick={saveSeoSettings}
+              disabled={isSaving || !hasUnsavedChanges}
+              size="sm"
+              className="dashboard-button-primary min-w-[120px]"
+            >
+              {isSaving ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="w-4 h-4 border-2 border-[var(--color-background-primary)] border-t-transparent rounded-full mr-2"
+                />
+              ) : (
+                <Save size={16} className="mr-2" />
+              )}
+              Save Changes
+            </BaseButton>
+          </div>
         </div>
       </div>
 
       {/* SEO Score Card */}
-      <Card className="bg-[#191970]/20 border-[#FFD700]/20">
+              <Card className="bg-[var(--color-surface-primary)] border-[var(--color-accent-500)]">
         <CardContent className="p-4">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div className="text-center">
@@ -339,7 +346,7 @@ export function SeoManagement() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Section Selector */}
         <div className="lg:col-span-1">
-          <Card className="bg-[#191970]/30 border-[#C0C0C0]/20">
+          <Card className="bg-[var(--color-surface-primary)] border-[var(--color-border-500)]">
             <CardHeader>
               <CardTitle className="text-[#EAEAEA] text-lg">SEO Sections</CardTitle>
             </CardHeader>
@@ -353,8 +360,8 @@ export function SeoManagement() {
                       onClick={() => setActiveSection(section.id)}
                       className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                         activeSection === section.id
-                          ? 'bg-[#FFD700]/10 text-[#FFD700] border border-[#FFD700]/30'
-                          : 'text-[#C0C0C0] hover:text-[#EAEAEA] hover:bg-[#C0C0C0]/5'
+                          ? 'dashboard-language-tab-active'
+                          : 'dashboard-language-tab-inactive hover:bg-[var(--color-surface-secondary)]'
                       }`}
                     >
                       <div className="flex items-center space-x-2">
@@ -371,7 +378,7 @@ export function SeoManagement() {
 
         {/* Settings Editor */}
         <div className="lg:col-span-3">
-          <Card className="bg-[#191970]/30 border-[#C0C0C0]/20">
+          <Card className="bg-[var(--color-surface-primary)] border-[var(--color-border-500)]">
             <CardHeader>
               <CardTitle className="text-[#EAEAEA] text-lg">
                 {sections.find(s => s.id === activeSection)?.label} Settings
@@ -384,12 +391,12 @@ export function SeoManagement() {
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="title" className="text-[#C0C0C0]">Page Title</Label>
-                      <Input
+                      <BaseInput
                         id="title"
                         value={seoSettings.title}
                         onChange={(e) => updateSetting('title', e.target.value)}
                         placeholder="Enter page title..."
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                       <p className="text-xs text-[#C0C0C0]/70">
                         Length: {seoSettings.title.length}/60 characters (recommended: 50-60)
@@ -403,7 +410,7 @@ export function SeoManagement() {
                         value={seoSettings.description}
                         onChange={(e) => updateSetting('description', e.target.value)}
                         placeholder="Enter meta description..."
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA] min-h-[80px]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)] min-h-[80px]"
                       />
                       <p className="text-xs text-[#C0C0C0]/70">
                         Length: {seoSettings.description.length}/155 characters (recommended: 150-155)
@@ -417,18 +424,18 @@ export function SeoManagement() {
                         value={seoSettings.keywords}
                         onChange={(e) => updateSetting('keywords', e.target.value)}
                         placeholder="Enter keywords separated by commas..."
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA] min-h-[60px]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)] min-h-[60px]"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="author" className="text-[#C0C0C0]">Author</Label>
-                      <Input
+                      <BaseInput
                         id="author"
                         value={seoSettings.author}
                         onChange={(e) => updateSetting('author', e.target.value)}
                         placeholder="Enter author name..."
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
                   </>
@@ -441,12 +448,12 @@ export function SeoManagement() {
                     
                     <div className="space-y-2">
                       <Label htmlFor="ogTitle" className="text-[#C0C0C0]">OG Title</Label>
-                      <Input
+                      <BaseInput
                         id="ogTitle"
                         value={seoSettings.ogTitle}
                         onChange={(e) => updateSetting('ogTitle', e.target.value)}
                         placeholder="Enter Open Graph title..."
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
 
@@ -457,14 +464,14 @@ export function SeoManagement() {
                         value={seoSettings.ogDescription}
                         onChange={(e) => updateSetting('ogDescription', e.target.value)}
                         placeholder="Enter Open Graph description..."
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA] min-h-[60px]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)] min-h-[60px]"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label className="text-[#C0C0C0]">OG Image</Label>
                       {seoSettings.ogImage && (
-                        <div className="p-3 bg-[#0A0A23]/30 border border-[#C0C0C0]/20 rounded-lg">
+                        <div className="p-3 bg-[var(--color-surface-secondary)] border border-[var(--color-border-500)] rounded-lg">
                           <img src={seoSettings.ogImage} alt="OG Preview" className="max-h-32 object-contain" />
                         </div>
                       )}
@@ -478,7 +485,7 @@ export function SeoManagement() {
                         }}
                         className="hidden"
                       />
-                      <Button
+                      <BaseButton
                         onClick={() => document.getElementById('og-upload')?.click()}
                         variant="outline"
                         disabled={uploadingImage === 'og'}
@@ -494,7 +501,7 @@ export function SeoManagement() {
                           <Upload size={16} className="mr-2" />
                         )}
                         Upload OG Image
-                      </Button>
+                      </BaseButton>
                       <p className="text-xs text-[#C0C0C0]/70">
                         Recommended: 1200x630px JPG or PNG
                       </p>
@@ -504,12 +511,12 @@ export function SeoManagement() {
                     
                     <div className="space-y-2">
                       <Label htmlFor="twitterTitle" className="text-[#C0C0C0]">Twitter Title</Label>
-                      <Input
+                      <BaseInput
                         id="twitterTitle"
                         value={seoSettings.twitterTitle}
                         onChange={(e) => updateSetting('twitterTitle', e.target.value)}
                         placeholder="Enter Twitter title..."
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
 
@@ -520,14 +527,14 @@ export function SeoManagement() {
                         value={seoSettings.twitterDescription}
                         onChange={(e) => updateSetting('twitterDescription', e.target.value)}
                         placeholder="Enter Twitter description..."
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA] min-h-[60px]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)] min-h-[60px]"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label className="text-[#C0C0C0]">Twitter Image</Label>
                       {seoSettings.twitterImage && (
-                        <div className="p-3 bg-[#0A0A23]/30 border border-[#C0C0C0]/20 rounded-lg">
+                        <div className="p-3 bg-[var(--color-surface-secondary)] border border-[var(--color-border-500)] rounded-lg">
                           <img src={seoSettings.twitterImage} alt="Twitter Preview" className="max-h-32 object-contain" />
                         </div>
                       )}
@@ -541,7 +548,7 @@ export function SeoManagement() {
                         }}
                         className="hidden"
                       />
-                      <Button
+                      <BaseButton
                         onClick={() => document.getElementById('twitter-upload')?.click()}
                         variant="outline"
                         disabled={uploadingImage === 'twitter'}
@@ -557,7 +564,7 @@ export function SeoManagement() {
                           <Upload size={16} className="mr-2" />
                         )}
                         Upload Twitter Image
-                      </Button>
+                      </BaseButton>
                     </div>
                   </>
                 )}
@@ -567,56 +574,56 @@ export function SeoManagement() {
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="robots" className="text-[#C0C0C0]">Robots Meta Tag</Label>
-                      <Input
+                      <BaseInput
                         id="robots"
                         value={seoSettings.robots}
                         onChange={(e) => updateSetting('robots', e.target.value)}
                         placeholder="e.g., index, follow"
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="canonical" className="text-[#C0C0C0]">Canonical URL</Label>
-                      <Input
+                      <BaseInput
                         id="canonical"
                         value={seoSettings.canonical}
                         onChange={(e) => updateSetting('canonical', e.target.value)}
                         placeholder="https://soulpath.lat"
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="language" className="text-[#C0C0C0]">Language Code</Label>
-                      <Input
+                      <BaseInput
                         id="language"
                         value={seoSettings.language}
                         onChange={(e) => updateSetting('language', e.target.value)}
                         placeholder="en"
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="googleSiteVerification" className="text-[#C0C0C0]">Google Site Verification</Label>
-                      <Input
+                      <BaseInput
                         id="googleSiteVerification"
                         value={seoSettings.googleSiteVerification || ''}
                         onChange={(e) => updateSetting('googleSiteVerification', e.target.value)}
                         placeholder="Enter verification code..."
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="bingSiteVerification" className="text-[#C0C0C0]">Bing Site Verification</Label>
-                      <Input
+                      <BaseInput
                         id="bingSiteVerification"
                         value={seoSettings.bingSiteVerification || ''}
                         onChange={(e) => updateSetting('bingSiteVerification', e.target.value)}
                         placeholder="Enter verification code..."
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
                   </>
@@ -627,34 +634,34 @@ export function SeoManagement() {
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="googleAnalyticsId" className="text-[#C0C0C0]">Google Analytics ID</Label>
-                      <Input
+                      <BaseInput
                         id="googleAnalyticsId"
                         value={seoSettings.googleAnalyticsId || ''}
                         onChange={(e) => updateSetting('googleAnalyticsId', e.target.value)}
                         placeholder="GA4-XXXXXXXXX"
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="googleTagManagerId" className="text-[#C0C0C0]">Google Tag Manager ID</Label>
-                      <Input
+                      <BaseInput
                         id="googleTagManagerId"
                         value={seoSettings.googleTagManagerId || ''}
                         onChange={(e) => updateSetting('googleTagManagerId', e.target.value)}
                         placeholder="GTM-XXXXXXX"
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="facebookPixelId" className="text-[#C0C0C0]">Facebook Pixel ID</Label>
-                      <Input
+                      <BaseInput
                         id="facebookPixelId"
                         value={seoSettings.facebookPixelId || ''}
                         onChange={(e) => updateSetting('facebookPixelId', e.target.value)}
                         placeholder="Enter Facebook Pixel ID..."
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
                   </>
@@ -665,45 +672,45 @@ export function SeoManagement() {
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="organizationName" className="text-[#C0C0C0]">Organization Name</Label>
-                      <Input
+                      <BaseInput
                         id="organizationName"
                         value={seoSettings.organizationName}
                         onChange={(e) => updateSetting('organizationName', e.target.value)}
                         placeholder="SoulPath Astrology"
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="organizationType" className="text-[#C0C0C0]">Organization Type</Label>
-                      <Input
+                      <BaseInput
                         id="organizationType"
                         value={seoSettings.organizationType}
                         onChange={(e) => updateSetting('organizationType', e.target.value)}
                         placeholder="ProfessionalService"
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="contactEmail" className="text-[#C0C0C0]">Contact Email</Label>
-                      <Input
+                      <BaseInput
                         id="contactEmail"
                         value={seoSettings.contactEmail}
                         onChange={(e) => updateSetting('contactEmail', e.target.value)}
                         placeholder="info@soulpath.lat"
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="contactPhone" className="text-[#C0C0C0]">Contact Phone</Label>
-                      <Input
+                      <BaseInput
                         id="contactPhone"
                         value={seoSettings.contactPhone}
                         onChange={(e) => updateSetting('contactPhone', e.target.value)}
                         placeholder="+1-XXX-XXX-XXXX"
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]"
                       />
                     </div>
 
@@ -714,7 +721,7 @@ export function SeoManagement() {
                         value={seoSettings.address}
                         onChange={(e) => updateSetting('address', e.target.value)}
                         placeholder="Enter business address..."
-                        className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA] min-h-[60px]"
+                        className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)] text-[var(--color-text-primary)] min-h-[60px]"
                       />
                     </div>
                   </>
@@ -727,7 +734,7 @@ export function SeoManagement() {
 
       {/* Preview */}
       {showPreview && (
-        <Card className="bg-[#191970]/30 border-[#C0C0C0]/20">
+        <Card className="bg-[var(--color-surface-primary)] border-[var(--color-border-500)]">
           <CardHeader>
             <CardTitle className="text-[#EAEAEA] text-lg">SEO Preview</CardTitle>
           </CardHeader>
@@ -769,36 +776,44 @@ export function SeoManagement() {
           animate={{ opacity: 1, y: 0 }}
           className="fixed bottom-6 right-6 z-50"
         >
-          <Card className="bg-[#191970]/90 backdrop-blur-lg border-[#FFD700]/30 shadow-lg shadow-[#FFD700]/20">
+          <Card className="bg-[var(--color-surface-primary)]/95 backdrop-blur-lg border-[var(--color-accent-500)]/40 shadow-xl shadow-[var(--color-accent-500)]/30">
             <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                <span className="text-[#EAEAEA] text-sm">You have unsaved changes</span>
-                <div className="flex space-x-2">
-                  <Button
+              <div className="flex items-center justify-between space-x-4">
+                {/* Status Indicator */}
+                <div className="flex items-center space-x-3">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+                  <span className="text-[var(--color-text-primary)] text-sm font-medium">Unsaved changes</span>
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="flex items-center space-x-3">
+                  <BaseButton
                     onClick={discardChanges}
                     variant="outline"
                     size="sm"
-                    className="border-[#C0C0C0]/30 text-[#C0C0C0] hover:bg-[#C0C0C0]/10"
+                    className="border-[var(--color-border-500)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)] hover:text-[var(--color-text-primary)] transition-all duration-200 min-w-[80px]"
                   >
+                    <RefreshCw size={14} className="mr-1" />
                     Discard
-                  </Button>
-                  <Button
+                  </BaseButton>
+                  
+                  <BaseButton
                     onClick={saveSeoSettings}
                     disabled={isSaving}
                     size="sm"
-                    className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90"
+                    className="dashboard-button-primary min-w-[80px]"
                   >
                     {isSaving ? (
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        className="w-3 h-3 border-2 border-[#0A0A23] border-t-transparent rounded-full"
+                        className="w-3 h-3 border-2 border-[var(--color-background-primary)] border-t-transparent rounded-full mr-1"
                       />
                     ) : (
-                      'Save'
+                      <Save size={14} className="mr-1" />
                     )}
-                  </Button>
+                    Save
+                  </BaseButton>
                 </div>
               </div>
             </CardContent>

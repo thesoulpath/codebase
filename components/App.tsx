@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { BookingSection } from '@/components/BookingSection';
 import { AdminDashboard } from '@/components/AdminDashboard';
-import { LoginModal } from '@/components/LoginModal';
+import LoginModal from '@/components/LoginModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslations, useLanguage } from '@/hooks/useTranslations';
 
@@ -17,16 +17,17 @@ import { ApproachSection } from './ApproachSection';
 import { SessionSection } from './SessionSection';
 import { AboutSection } from './AboutSection';
 import { MobileMenu } from './MobileMenu';
+import { BugReportButton } from './BugReportButton';
 
 export function App() {
   const { language, setLanguage } = useLanguage();
-  const { t, isLoading: isLoadingTranslations, reloadTranslations } = useTranslations(undefined, language);
+  const { t, reloadTranslations } = useTranslations(undefined, language);
   const [currentSection, setCurrentSection] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [hasExplicitlyClosed, setHasExplicitlyClosed] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, signIn } = useAuth();
 
   // Debug logging for language changes
   console.log('🌐 App Component - Current language:', language);
@@ -162,7 +163,8 @@ export function App() {
   }
 
   // Don't render navigation elements until translations are loaded
-  if (isLoadingTranslations || !t || !t.nav || !t.cta) {
+  // Only check for essential translations to avoid endless loading
+  if (!t || !t.hero || !t.nav) {
     return (
       <div className="min-h-screen bg-[#0A0A23] flex items-center justify-center">
         <div className="text-[#FFD700] text-xl">Loading...</div>
@@ -192,6 +194,8 @@ export function App() {
         isMenuOpen={isMenuOpen}
         setIsMenuOpen={setIsMenuOpen}
         onLoginClick={handleLoginClick}
+        user={user}
+        isAdmin={isAdmin}
       />
       
       {/* Mobile Menu */}
@@ -259,6 +263,9 @@ export function App() {
         ))}
       </div>
 
+      {/* Bug Report Button */}
+      <BugReportButton />
+
       {/* Navigation arrows */}
       {currentSection > 0 && (
         <motion.button
@@ -323,9 +330,22 @@ export function App() {
       <LoginModal 
         isOpen={showLoginModal} 
         onClose={() => setShowLoginModal(false)}
-        onLogout={() => {
-          setShowLoginModal(false);
-          setShowAdmin(false);
+        onLogin={async (email: string, password: string) => {
+          try {
+            const { data, error } = await signIn(email, password);
+            if (error) {
+              console.error('Login error:', error);
+              return false;
+            }
+            if (data?.user) {
+              setShowLoginModal(false);
+              return true;
+            }
+            return false;
+          } catch (error) {
+            console.error('Login failed:', error);
+            return false;
+          }
         }}
       />
     </div>

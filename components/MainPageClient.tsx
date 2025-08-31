@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
 import { useProfileImage } from '@/hooks/useProfileImage';
 import { useTranslations, useLanguage } from '@/hooks/useTranslations';
+import { useAuth } from '@/hooks/useAuth';
 import { AdminDashboard } from '@/components/AdminDashboard';
-import { LoginModal } from '@/components/LoginModal';
+import LoginModal from '@/components/LoginModal';
 
 interface MainPageClientProps {
   content: Record<string, string>;
@@ -279,6 +280,7 @@ export default function MainPageClient({
   const { t, isLoading: isLoadingTranslations } = useTranslations(initialContent);
   const { } = useProfileImage(initialProfileImage);
   const { logoSettings: _ } = useLogo(initialLogoSettings);
+  const { signIn } = useAuth();
   
   const [currentSection, setCurrentSection] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -452,7 +454,25 @@ export default function MainPageClient({
       
       <LoginModal 
         isOpen={showLoginModal} 
-        onClose={() => setShowLoginModal(false)} 
+        onClose={() => setShowLoginModal(false)}
+        onLogin={async (email: string, password: string) => {
+          try {
+            const { data, error } = await signIn(email, password);
+            if (error) {
+              console.error('Login error:', error);
+              return false;
+            }
+            if (data?.user) {
+              setShowLoginModal(false);
+              setShowAdmin(true);
+              return true;
+            }
+            return false;
+          } catch (error) {
+            console.error('Login failed:', error);
+            return false;
+          }
+        }}
       />
     </div>
   );

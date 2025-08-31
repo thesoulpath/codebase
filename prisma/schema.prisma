@@ -16,6 +16,11 @@ model Profile {
   role      String?   @default("user")
   createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Bug Report relationships
+  reportedBugs BugReport[] @relation("BugReportReporter")
+  assignedBugs BugReport[] @relation("BugReportAssignee")
+  bugComments  BugComment[] @relation("BugCommentAuthor")
 
   @@map("profiles")
 }
@@ -329,6 +334,10 @@ model EmailConfig {
   smtpPass  String?   @default("") @map("smtp_pass")
   fromEmail String?   @default("noreply@soulpath.lat") @map("from_email")
   fromName  String?   @default("SOULPATH") @map("from_name")
+  brevoApiKey String? @map("brevo_api_key")
+  senderEmail String? @map("sender_email")
+  senderName String? @map("sender_name")
+  adminEmail String? @map("admin_email")
   createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -641,4 +650,65 @@ model kv_store_f839855f {
 model soultpath {
   id         BigInt   @id @default(autoincrement())
   created_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+// Bug Report System
+model BugReport {
+  id          String      @id @default(cuid())
+  title       String      @db.VarChar(255)
+  description String      @db.Text
+  screenshot  String?     @db.Text // Base64 encoded screenshot
+  status      BugStatus   @default(OPEN)
+  priority    Priority    @default(MEDIUM)
+  category    String?     @db.VarChar(100)
+  reporterId  String?     @map("reporter_id")
+  assignedTo  String?     @map("assigned_to")
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  resolvedAt  DateTime?   @map("resolved_at") @db.Timestamptz(6)
+  archivedAt  DateTime?   @map("archived_at") @db.Timestamptz(6)
+  
+  // Relationships
+  reporter    Profile?    @relation("BugReportReporter", fields: [reporterId], references: [id])
+  assignee    Profile?    @relation("BugReportAssignee", fields: [assignedTo], references: [id])
+  comments    BugComment[]
+  
+  @@index([status], map: "idx_bug_reports_status")
+  @@index([priority], map: "idx_bug_reports_priority")
+  @@index([reporterId], map: "idx_bug_reports_reporter")
+  @@index([assignedTo], map: "idx_bug_reports_assignee")
+  @@index([createdAt], map: "idx_bug_reports_created")
+  @@map("bug_reports")
+}
+
+model BugComment {
+  id           String     @id @default(cuid())
+  content      String     @db.Text
+  authorId     String     @map("author_id")
+  bugReportId  String     @map("bug_report_id")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Relationships
+  author       Profile    @relation("BugCommentAuthor", fields: [authorId], references: [id])
+  bugReport    BugReport  @relation(fields: [bugReportId], references: [id], onDelete: Cascade)
+  
+  @@index([bugReportId], map: "idx_bug_comments_bug_report")
+  @@index([authorId], map: "idx_bug_comments_author")
+  @@map("bug_comments")
+}
+
+enum BugStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  ARCHIVED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }

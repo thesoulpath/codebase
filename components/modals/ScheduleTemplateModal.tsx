@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Calendar, Save, X } from 'lucide-react';
+import { BaseModal } from '@/components/ui/BaseModal';
+import { BaseInput } from '@/components/ui/BaseInput';
+import { BaseButton } from '@/components/ui/BaseButton';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Clock, Calendar, Save, X } from 'lucide-react';
 
 interface SessionDuration {
   id: number;
@@ -22,13 +22,12 @@ interface ScheduleTemplate {
   day_of_week: string;
   start_time: string;
   end_time: string;
-  capacity: number;
-  is_available: boolean;
-  session_duration_id: number | null;
-  auto_available: boolean;
+  session_duration_id: number;
+  max_capacity: number;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
-  session_durations: SessionDuration | null;
+  session_durations: SessionDuration;
 }
 
 interface ScheduleTemplateModalProps {
@@ -52,10 +51,9 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
     day_of_week: '',
     start_time: '',
     end_time: '',
-    capacity: '3',
-    is_available: true,
     session_duration_id: '',
-    auto_available: true
+    max_capacity: '',
+    is_active: true
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -66,10 +64,9 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
         day_of_week: scheduleTemplate.day_of_week,
         start_time: scheduleTemplate.start_time,
         end_time: scheduleTemplate.end_time,
-        capacity: scheduleTemplate.capacity.toString(),
-        is_available: scheduleTemplate.is_available,
-        session_duration_id: scheduleTemplate.session_duration_id?.toString() || '',
-        auto_available: scheduleTemplate.auto_available
+        session_duration_id: scheduleTemplate.session_duration_id.toString(),
+        max_capacity: scheduleTemplate.max_capacity.toString(),
+        is_active: scheduleTemplate.is_active
       });
     } else {
       resetForm();
@@ -81,10 +78,9 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
       day_of_week: '',
       start_time: '',
       end_time: '',
-      capacity: '3',
-      is_available: true,
       session_duration_id: '',
-      auto_available: true
+      max_capacity: '',
+      is_active: true
     });
     setErrors({});
   };
@@ -104,12 +100,21 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
       newErrors.end_time = 'End time is required';
     }
 
-    if (formData.start_time && formData.end_time && formData.start_time >= formData.end_time) {
-      newErrors.end_time = 'End time must be after start time';
+    if (!formData.session_duration_id) {
+      newErrors.session_duration_id = 'Session duration is required';
     }
 
-    if (!formData.capacity || parseInt(formData.capacity) <= 0) {
-      newErrors.capacity = 'Capacity must be a positive number';
+    if (!formData.max_capacity) {
+      newErrors.max_capacity = 'Max capacity is required';
+    }
+
+    if (formData.start_time && formData.end_time) {
+      const start = new Date(`2000-01-01T${formData.start_time}`);
+      const end = new Date(`2000-01-01T${formData.end_time}`);
+      
+      if (start >= end) {
+        newErrors.end_time = 'End time must be after start time';
+      }
     }
 
     setErrors(newErrors);
@@ -119,17 +124,13 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
-      return;
+    if (validateForm()) {
+      onSubmit({
+        ...formData,
+        max_capacity: parseInt(formData.max_capacity),
+        session_duration_id: parseInt(formData.session_duration_id)
+      });
     }
-
-    const submitData = {
-      ...formData,
-      capacity: parseInt(formData.capacity),
-      session_duration_id: formData.session_duration_id ? parseInt(formData.session_duration_id) : null
-    };
-
-    onSubmit(submitData);
   };
 
   const handleClose = () => {
@@ -138,156 +139,160 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="dashboard-modal max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="dashboard-modal-title">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              {mode === 'create' ? 'Create New Schedule Template' : 'Edit Schedule Template'}
-            </div>
-          </DialogTitle>
-          <DialogDescription className="dashboard-modal-description">
-            {mode === 'create' 
-              ? 'Define a recurring availability pattern for a specific day and time'
-              : 'Update the schedule template configuration'
-            }
-          </DialogDescription>
-        </DialogHeader>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={mode === 'create' ? 'Create Schedule Template' : 'Edit Schedule Template'}
+      description="Configure schedule template settings"
+      size="lg"
+      variant="default"
+    >
+      <BaseModal.Header icon={<Calendar className="w-5 h-5 text-[var(--color-accent-500)]" />}>
+        <h3 className="text-[var(--font-size-lg)] font-[var(--font-weight-medium)] text-[var(--color-text-primary)]">
+          {mode === 'create' ? 'Create New Schedule Template' : 'Edit Schedule Template'}
+        </h3>
+      </BaseModal.Header>
 
+      <BaseModal.Content>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="dashboard-label">Day of Week *</Label>
-              <Select
-                value={formData.day_of_week}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, day_of_week: value }))}
-              >
-                <SelectTrigger className="dashboard-select">
-                  <SelectValue placeholder="Select day" />
-                </SelectTrigger>
-                <SelectContent className="dashboard-dropdown-content">
-                  <SelectItem value="monday" className="dashboard-dropdown-item">Monday</SelectItem>
-                  <SelectItem value="tuesday" className="dashboard-dropdown-item">Tuesday</SelectItem>
-                  <SelectItem value="wednesday" className="dashboard-dropdown-item">Wednesday</SelectItem>
-                  <SelectItem value="thursday" className="dashboard-dropdown-item">Thursday</SelectItem>
-                  <SelectItem value="friday" className="dashboard-dropdown-item">Friday</SelectItem>
-                  <SelectItem value="saturday" className="dashboard-dropdown-item">Saturday</SelectItem>
-                  <SelectItem value="sunday" className="dashboard-dropdown-item">Sunday</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.day_of_week && <p className="text-red-500 text-sm">{errors.day_of_week}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="dashboard-label">Capacity *</Label>
-              <Select
-                value={formData.capacity}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, capacity: value }))}
-              >
-                <SelectTrigger className="dashboard-select">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="dashboard-dropdown-content">
-                  <SelectItem value="1" className="dashboard-dropdown-item">1 client</SelectItem>
-                  <SelectItem value="2" className="dashboard-dropdown-item">2 clients</SelectItem>
-                  <SelectItem value="3" className="dashboard-dropdown-item">3 clients</SelectItem>
-                  <SelectItem value="4" className="dashboard-dropdown-item">4 clients</SelectItem>
-                  <SelectItem value="5" className="dashboard-dropdown-item">5 clients</SelectItem>
-                  <SelectItem value="6" className="dashboard-dropdown-item">6 clients</SelectItem>
-                  <SelectItem value="8" className="dashboard-dropdown-item">8 clients</SelectItem>
-                  <SelectItem value="10" className="dashboard-dropdown-item">10 clients</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.capacity && <p className="text-red-500 text-sm">{errors.capacity}</p>}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="dashboard-label">Start Time *</Label>
-              <Input
-                className={`dashboard-input ${errors.start_time ? 'border-red-500' : ''}`}
-                type="time"
-                value={formData.start_time}
-                onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
-              />
-              {errors.start_time && <p className="text-red-500 text-sm">{errors.start_time}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="dashboard-label">End Time *</Label>
-              <Input
-                className={`dashboard-input ${errors.end_time ? 'border-red-500' : ''}`}
-                type="time"
-                value={formData.end_time}
-                onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
-              />
-              {errors.end_time && <p className="text-red-500 text-sm">{errors.end_time}</p>}
-            </div>
-          </div>
-
+          {/* Day of Week */}
           <div className="space-y-2">
-            <Label className="dashboard-label">Session Duration (Optional)</Label>
+            <Label htmlFor="day_of_week">Day of Week</Label>
             <Select
-              value={formData.session_duration_id}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, session_duration_id: value }))}
+              value={formData.day_of_week}
+              onValueChange={(value) => setFormData({ ...formData, day_of_week: value })}
             >
-              <SelectTrigger className="dashboard-select">
-                <SelectValue placeholder="Any duration" />
+              <SelectTrigger className="bg-[var(--color-surface-primary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]">
+                <SelectValue placeholder="Select day of week" />
               </SelectTrigger>
-              <SelectContent className="dashboard-dropdown-content">
-                <SelectItem value="" className="dashboard-dropdown-item">Any duration</SelectItem>
-                {sessionDurations.map((duration) => (
-                  <SelectItem key={duration.id} value={duration.id.toString()} className="dashboard-dropdown-item">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      {duration.name} ({duration.duration_minutes} min)
-                    </div>
+              <SelectContent className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)]">
+                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                  <SelectItem key={day} value={day} className="text-[var(--color-text-primary)] hover:bg-[var(--color-surface-tertiary)]">
+                    {day}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errors.day_of_week && (
+              <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
+                {errors.day_of_week}
+              </p>
+            )}
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is_available"
-                checked={formData.is_available}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_available: checked }))}
-              />
-              <Label htmlFor="is_available" className="dashboard-label">Available for Booking</Label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="auto_available"
-                checked={formData.auto_available}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, auto_available: checked }))}
-              />
-              <Label htmlFor="auto_available" className="dashboard-label">Auto-generate Available Slots</Label>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="dashboard-button-outline"
-              onClick={handleClose}
+          {/* Session Duration */}
+          <div className="space-y-2">
+            <Label htmlFor="session_duration_id">Session Duration</Label>
+            <Select
+              value={formData.session_duration_id}
+              onValueChange={(value) => setFormData({ ...formData, session_duration_id: value })}
             >
-              <X className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-            <Button type="submit" className="dashboard-button-primary">
-              <Save className="w-4 h-4 mr-2" />
-              {mode === 'create' ? 'Create Template' : 'Update Template'}
-            </Button>
+              <SelectTrigger className="bg-[var(--color-surface-primary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]">
+                <SelectValue placeholder="Select session duration" />
+              </SelectTrigger>
+              <SelectContent className="bg-[var(--color-surface-secondary)] border-[var(--color-border-500)]">
+                {sessionDurations.map((duration) => (
+                  <SelectItem key={duration.id} value={duration.id.toString()} className="text-[var(--color-text-primary)] hover:bg-[var(--color-surface-tertiary)]">
+                    {duration.name} ({duration.duration_minutes} min)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.session_duration_id && (
+              <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
+                {errors.session_duration_id}
+              </p>
+            )}
+          </div>
+
+          {/* Time Range */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="start_time">Start Time</Label>
+              <BaseInput
+                id="start_time"
+                type="time"
+                value={formData.start_time}
+                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                required
+              />
+              {errors.start_time && (
+                <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
+                  {errors.start_time}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="end_time">End Time</Label>
+              <BaseInput
+                id="end_time"
+                type="time"
+                value={formData.end_time}
+                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                required
+              />
+              {errors.end_time && (
+                <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
+                  {errors.end_time}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Max Capacity */}
+          <div className="space-y-2">
+            <Label htmlFor="max_capacity">Max Capacity</Label>
+            <BaseInput
+              id="max_capacity"
+              type="number"
+              min="1"
+              value={formData.max_capacity}
+              onChange={(e) => setFormData({ ...formData, max_capacity: e.target.value })}
+              placeholder="Enter maximum capacity"
+              required
+            />
+            {errors.max_capacity && (
+              <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
+                {errors.max_capacity}
+              </p>
+            )}
+          </div>
+
+          {/* Active Status */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="is_active"
+              checked={formData.is_active}
+              onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+            />
+            <Label htmlFor="is_active" className="text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-secondary)]">
+              Active
+            </Label>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </BaseModal.Content>
+
+      <BaseModal.Footer>
+        <div className="flex justify-end space-x-3">
+          <BaseButton
+            variant="outline"
+            onClick={handleClose}
+            leftIcon={<X className="w-4 h-4" />}
+          >
+            Cancel
+          </BaseButton>
+          
+          <BaseButton
+            variant="primary"
+            onClick={handleSubmit}
+            leftIcon={<Save className="w-4 h-4" />}
+          >
+            {mode === 'create' ? 'Create Template' : 'Update Template'}
+          </BaseButton>
+        </div>
+      </BaseModal.Footer>
+    </BaseModal>
   );
 };
 

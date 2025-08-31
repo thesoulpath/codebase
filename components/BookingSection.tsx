@@ -230,9 +230,9 @@ export function BookingSection({ t, language }: BookingSectionProps) {
                     <SelectTrigger className="bg-[#191970]/20 border-[#C0C0C0]/20 text-[#EAEAEA]">
                       <SelectValue placeholder={t?.booking?.selectDate || 'Select a date'} />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#191970] border-[#C0C0C0]/20">
+                    <SelectContent className="dashboard-dropdown-content">
                       {availableDates.map((date) => (
-                        <SelectItem key={date} value={date}>
+                        <SelectItem key={date} value={date} className="dashboard-dropdown-item">
                           {formatDate(date)}
                         </SelectItem>
                       ))}
@@ -249,9 +249,9 @@ export function BookingSection({ t, language }: BookingSectionProps) {
                     <SelectTrigger className="bg-[#191970]/20 border-[#C0C0C0]/20 text-[#EAEAEA]">
                       <SelectValue placeholder={t?.booking?.selectTime || 'Select a time'} />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#191970] border-[#C0C0C0]/20">
+                    <SelectContent className="dashboard-dropdown-content">
                       {availableTimes.map((time) => (
-                        <SelectItem key={time} value={time}>
+                        <SelectItem key={time} value={time} className="dashboard-dropdown-item">
                           {formatTime(time)}
                         </SelectItem>
                       ))}

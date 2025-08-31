@@ -2,15 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, RefreshCw, Edit, Globe } from 'lucide-react';
-import { Button } from './ui/button';
+import { Save, RefreshCw, Globe } from 'lucide-react';
+import { BaseButton } from './ui/BaseButton';
+import { BaseInput } from './ui/BaseInput';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useAuth } from '../hooks/useAuth';
 import { defaultTranslations, getNestedValue, setNestedValue } from '../lib/data/translations';
+
 
 interface ContentManagementProps {
   onClose?: () => void;
@@ -89,7 +90,7 @@ export function ContentManagement({ }: ContentManagementProps) {
     
     return (
       <div className="space-y-2">
-        <Label htmlFor={path} className="text-sm font-medium text-[#EAEAEA]">
+        <Label htmlFor={path} className="dashboard-label">
           {label}
         </Label>
         {type === 'textarea' ? (
@@ -97,15 +98,15 @@ export function ContentManagement({ }: ContentManagementProps) {
             id={path}
             value={value}
             onChange={(e) => updateField(path, e.target.value)}
-            className="bg-[#191970]/20 border-[#FFD700]/20 text-[#EAEAEA] placeholder:text-[#C0C0C0]/50"
+            className="dashboard-input"
             rows={3}
           />
         ) : (
-          <Input
+          <BaseInput
             id={path}
             value={value}
             onChange={(e) => updateField(path, e.target.value)}
-            className="bg-[#191970]/20 border-[#FFD700]/20 text-[#EAEAEA] placeholder:text-[#C0C0C0]/50"
+            className="dashboard-input"
           />
         )}
       </div>
@@ -125,56 +126,55 @@ export function ContentManagement({ }: ContentManagementProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="dashboard-container p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Edit className="w-6 h-6 text-[#FFD700]" />
-          <h2 className="text-2xl font-heading text-[#EAEAEA]">Content Management</h2>
+        <div>
+          <h1 className="dashboard-text-primary text-3xl font-bold">Content Management</h1>
+          <p className="dashboard-text-secondary">Manage website content and translations</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button
+        <div className="flex gap-2">
+          <BaseButton
             onClick={loadContent}
-            variant="outline"
-            size="sm"
-            className="border-[#FFD700] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#0a0a0a]"
+            className="dashboard-button-reload"
           >
             <RefreshCw size={16} className="mr-2" />
             Reload
-          </Button>
-          <Button
+          </BaseButton>
+          <BaseButton
             onClick={saveContent}
             disabled={isSaving}
-            className="bg-[#FFD700] text-[#0a0a0a] hover:bg-[#FFA500]"
+            className="dashboard-button-primary"
           >
             <Save size={16} className="mr-2" />
             {isSaving ? 'Saving...' : 'Save Changes'}
-          </Button>
+          </BaseButton>
         </div>
       </div>
 
-      <div className="bg-[#191970]/20 border border-[#FFD700]/20 rounded-lg p-4">
+      <Card className="dashboard-card">
+        <CardContent className="p-6">
         <div className="flex items-center space-x-4 mb-6">
           <div className="flex items-center space-x-2">
             <Globe className="w-5 h-5 text-[#FFD700]" />
             <span className="text-[#EAEAEA] font-medium">Language:</span>
           </div>
-          <div className="flex bg-[#0a0a0a] rounded-lg p-1">
+          <div className="dashboard-language-tabs">
             <button
               onClick={() => setActiveLanguage('en')}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              className={`dashboard-language-tab ${
                 activeLanguage === 'en'
-                  ? 'bg-[#FFD700] text-[#0a0a0a]'
-                  : 'text-[#C0C0C0] hover:text-[#EAEAEA]'
+                  ? 'dashboard-language-tab-active'
+                  : 'dashboard-language-tab-inactive'
               }`}
             >
               English
             </button>
             <button
               onClick={() => setActiveLanguage('es')}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              className={`dashboard-language-tab ${
                 activeLanguage === 'es'
-                  ? 'bg-[#FFD700] text-[#0a0a0a]'
-                  : 'text-[#C0C0C0] hover:text-[#EAEAEA]'
+                  ? 'dashboard-language-tab-active'
+                  : 'dashboard-language-tab-inactive'
               }`}
             >
               Español
@@ -183,29 +183,29 @@ export function ContentManagement({ }: ContentManagementProps) {
         </div>
 
         <Tabs value={activeSection} onValueChange={setActiveSection} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-[#0a0a0a] border border-[#FFD700]/20">
-            <TabsTrigger value="hero" className="text-[#C0C0C0] data-[state=active]:text-[#FFD700]">
+          <TabsList className="dashboard-tabs">
+            <TabsTrigger value="hero" className="dashboard-tab">
               Hero
             </TabsTrigger>
-            <TabsTrigger value="approach" className="text-[#C0C0C0] data-[state=active]:text-[#FFD700]">
+            <TabsTrigger value="approach" className="dashboard-tab">
               Approach
             </TabsTrigger>
-            <TabsTrigger value="session" className="text-[#C0C0C0] data-[state=active]:text-[#FFD700]">
+            <TabsTrigger value="session" className="dashboard-tab">
               Session
             </TabsTrigger>
-            <TabsTrigger value="about" className="text-[#C0C0C0] data-[state=active]:text-[#FFD700]">
+            <TabsTrigger value="about" className="dashboard-tab">
               About
             </TabsTrigger>
-            <TabsTrigger value="booking" className="text-[#C0C0C0] data-[state=active]:text-[#FFD700]">
+            <TabsTrigger value="booking" className="dashboard-tab">
               Booking
             </TabsTrigger>
           </TabsList>
 
           <div className="mt-6">
             <TabsContent value="hero" className="space-y-4">
-              <Card className="bg-[#191970]/20 border-[#FFD700]/20">
+              <Card className="dashboard-card">
                 <CardHeader>
-                  <CardTitle className="text-[#FFD700]">Hero Section</CardTitle>
+                  <CardTitle className="dashboard-card-title">Hero Section</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {renderField('hero.title', 'Hero Title')}
@@ -217,9 +217,9 @@ export function ContentManagement({ }: ContentManagementProps) {
             </TabsContent>
 
             <TabsContent value="approach" className="space-y-4">
-              <Card className="bg-[#191970]/20 border-[#FFD700]/20">
+              <Card className="dashboard-card">
                 <CardHeader>
-                  <CardTitle className="text-[#FFD700]">Approach Section</CardTitle>
+                  <CardTitle className="dashboard-card-title">Approach Section</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {renderField('approach.title', 'Approach Title')}
@@ -230,9 +230,9 @@ export function ContentManagement({ }: ContentManagementProps) {
             </TabsContent>
 
             <TabsContent value="session" className="space-y-4">
-              <Card className="bg-[#191970]/20 border-[#FFD700]/20">
+              <Card className="dashboard-card">
                 <CardHeader>
-                  <CardTitle className="text-[#FFD700]">Session Section</CardTitle>
+                  <CardTitle className="dashboard-card-title">Session Section</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {renderField('session.title', 'Session Title')}
@@ -243,9 +243,9 @@ export function ContentManagement({ }: ContentManagementProps) {
             </TabsContent>
 
             <TabsContent value="about" className="space-y-4">
-              <Card className="bg-[#191970]/20 border-[#FFD700]/20">
+              <Card className="dashboard-card">
                 <CardHeader>
-                  <CardTitle className="text-[#FFD700]">About Section</CardTitle>
+                  <CardTitle className="dashboard-card-title">About Section</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {renderField('about.title', 'About Title')}
@@ -256,9 +256,9 @@ export function ContentManagement({ }: ContentManagementProps) {
             </TabsContent>
 
             <TabsContent value="booking" className="space-y-4">
-              <Card className="bg-[#191970]/20 border-[#FFD700]/20">
+              <Card className="dashboard-card">
                 <CardHeader>
-                  <CardTitle className="text-[#FFD700]">Booking Section</CardTitle>
+                  <CardTitle className="dashboard-card-title">Booking Section</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {renderField('booking.title', 'Booking Title')}
@@ -271,7 +271,8 @@ export function ContentManagement({ }: ContentManagementProps) {
             </TabsContent>
           </div>
         </Tabs>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

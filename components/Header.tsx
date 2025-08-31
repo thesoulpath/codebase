@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { Menu, X, LogIn, Settings } from 'lucide-react';
+import { Menu, X, LogIn, Settings, User } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 import { useLogo } from '../hooks/useLogo';
 
@@ -108,8 +109,8 @@ export function Header({
           <div className="hidden sm:flex items-center space-x-2">
             <button 
               onClick={() => setLanguage('en')}
-              className={`text-sm px-2 py-1 rounded transition-colors touch-manipulation ${
-                language === 'en' ? 'text-[#FFD700] bg-[#FFD700]/10' : 'text-[#C0C0C0] hover:text-[#FFD700]'
+              className={`touch-manipulation ${
+                language === 'en' ? 'header-button-language-active' : 'header-button-language-inactive'
               }`}
             >
               EN
@@ -117,13 +118,27 @@ export function Header({
             <span className="text-[#C0C0C0]/50">|</span>
             <button 
               onClick={() => setLanguage('es')}
-              className={`text-sm px-2 py-1 rounded transition-colors touch-manipulation ${
-                language === 'es' ? 'text-[#FFD700] bg-[#FFD700]/10' : 'text-[#C0C0C0] hover:text-[#FFD700]'
+              className={`touch-manipulation ${
+                language === 'es' ? 'header-button-language-active' : 'header-button-language-inactive'
               }`}
             >
               ES
             </button>
           </div>
+          
+          {/* User Account Access */}
+          {user && !isAdmin && (
+            <Link href="/account">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="hidden sm:flex items-center space-x-1 header-button-account"
+              >
+                <User size={14} />
+                <span>Account</span>
+              </motion.button>
+            </Link>
+          )}
           
           {/* Admin Login Button */}
           {user && isAdmin ? (
@@ -131,7 +146,7 @@ export function Header({
               onClick={onLoginClick}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="hidden sm:flex items-center space-x-1 text-[#FFD700] bg-[#FFD700]/10 px-2 py-1 rounded transition-colors"
+              className="hidden sm:flex items-center space-x-1 header-button-account"
             >
               <Settings size={14} />
               <span>Dashboard</span>
@@ -141,7 +156,7 @@ export function Header({
               onClick={onLoginClick}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="hidden sm:flex items-center space-x-1 text-[#C0C0C0] hover:text-[#FFD700] transition-colors text-sm px-2 py-1 rounded hover:bg-[#FFD700]/10"
+              className="hidden sm:flex items-center space-x-1 header-button-language-inactive"
             >
               <LogIn size={14} />
               <span>{t.nav.login || 'Login'}</span>
@@ -152,7 +167,7 @@ export function Header({
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#FFD700]/10 hover:bg-[#FFD700]/20 text-[#C0C0C0] hover:text-[#FFD700] transition-all duration-300 touch-manipulation focus-visible"
+            className="w-10 h-10 flex items-center justify-center rounded-lg header-button-menu touch-manipulation focus-visible"
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={isMenuOpen}
           >

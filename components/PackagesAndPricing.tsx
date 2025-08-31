@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { BaseButton } from '@/components/ui/BaseButton';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { useAuth } from '../hooks/useAuth';
 import PackageDefinitionModal from './modals/PackageDefinitionModal';
 import PackagePriceModal from './modals/PackagePriceModal';
 import DeleteConfirmationModal from './modals/DeleteConfirmationModal';
+
 
 interface Currency {
   id: number;
@@ -431,21 +432,21 @@ const PackagesAndPricing: React.FC = () => {
           <p className="dashboard-text-secondary">Manage package definitions and multi-currency pricing</p>
         </div>
         <div className="flex gap-2">
-          <Button 
+          <BaseButton 
             className="dashboard-button-primary"
             onClick={() => setShowCreateDefinitionModal(true)}
           >
             <Plus className="w-4 h-4 mr-2" />
             New Package
-          </Button>
-          <Button 
+          </BaseButton>
+          <BaseButton 
             variant="outline" 
             className="dashboard-button-outline"
             onClick={() => setShowCreatePriceModal(true)}
           >
             <DollarSign className="w-4 h-4 mr-2" />
             New Price
-          </Button>
+          </BaseButton>
         </div>
       </div>
 
@@ -525,14 +526,14 @@ const PackagesAndPricing: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button 
+                <BaseButton 
                   variant="outline" 
                   className="dashboard-button-outline"
                   onClick={fetchPackageDefinitions}
                 >
                   <Filter className="w-4 h-4 mr-2" />
                   Apply Filters
-                </Button>
+                </BaseButton>
               </div>
 
               {/* Package Definitions Table */}
@@ -570,7 +571,7 @@ const PackagesAndPricing: React.FC = () => {
                         </td>
                         <td>
                           <div className="flex gap-2">
-                            <Button
+                            <BaseButton
                               size="sm"
                               variant="outline"
                               className="dashboard-button-outline"
@@ -580,8 +581,8 @@ const PackagesAndPricing: React.FC = () => {
                               }}
                             >
                               <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
+                            </BaseButton>
+                            <BaseButton
                               size="sm"
                               variant="outline"
                               className="dashboard-button-danger"
@@ -592,7 +593,7 @@ const PackagesAndPricing: React.FC = () => {
                               }}
                             >
                               <Trash2 className="w-4 h-4" />
-                            </Button>
+                            </BaseButton>
                           </div>
                         </td>
                       </tr>
@@ -670,14 +671,14 @@ const PackagesAndPricing: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button 
+                <BaseButton 
                   variant="outline" 
                   className="dashboard-button-outline"
                   onClick={fetchPackagePrices}
                 >
                   <Filter className="w-4 h-4 mr-2" />
                   Apply Filters
-                </Button>
+                </BaseButton>
               </div>
 
               {/* Package Prices Table */}
@@ -713,7 +714,7 @@ const PackagesAndPricing: React.FC = () => {
                         </td>
                         <td>
                           <div className="flex gap-2">
-                            <Button
+                            <BaseButton
                               size="sm"
                               variant="outline"
                               className="dashboard-button-outline"
@@ -723,8 +724,8 @@ const PackagesAndPricing: React.FC = () => {
                               }}
                             >
                               <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
+                            </BaseButton>
+                            <BaseButton
                               size="sm"
                               variant="outline"
                               className="dashboard-button-danger"
@@ -735,7 +736,7 @@ const PackagesAndPricing: React.FC = () => {
                               }}
                             >
                               <Trash2 className="w-4 h-4" />
-                            </Button>
+                            </BaseButton>
                           </div>
                         </td>
                       </tr>

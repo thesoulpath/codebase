@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 
 export function ConstellationBackground() {
@@ -29,10 +29,11 @@ export function ConstellationBackground() {
     });
   };
 
-  const smallStars = generateStars(60, 'small');
-  const mediumStars = generateStars(25, 'medium');
-  const largeStars = generateStars(12, 'large');
-  const cosmicStars = generateStars(8, 'cosmic');
+  // Use useMemo to prevent regeneration on every render
+  const smallStars = useMemo(() => generateStars(60, 'small'), []);
+  const mediumStars = useMemo(() => generateStars(25, 'medium'), []);
+  const largeStars = useMemo(() => generateStars(12, 'large'), []);
+  const cosmicStars = useMemo(() => generateStars(8, 'cosmic'), []);
 
   // Floating particles with orbital motion
   const generateOrbitals = (count: number) => {
@@ -52,7 +53,7 @@ export function ConstellationBackground() {
     });
   };
 
-  const orbitals = generateOrbitals(15);
+  const orbitals = useMemo(() => generateOrbitals(15), []);
 
   // Shooting stars
   const generateShootingStars = (count: number) => {
@@ -71,7 +72,7 @@ export function ConstellationBackground() {
     });
   };
 
-  const shootingStars = generateShootingStars(6);
+  const shootingStars = useMemo(() => generateShootingStars(6), []);
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -143,7 +144,7 @@ export function ConstellationBackground() {
               top: `${star.y}%`,
               width: `${star.size}px`,
               height: `${star.size}px`,
-              background: Math.random() > 0.6 ? '#FFD700' : '#FFFFFF',
+              background: seededRandom(star.id * 1000 + 100) > 0.6 ? '#FFD700' : '#FFFFFF',
               boxShadow: `0 0 ${star.size * 2}px rgba(255, 215, 0, 0.3)`,
               filter: 'blur(0.5px)',
             }}
@@ -253,7 +254,7 @@ export function ConstellationBackground() {
               repeat: Infinity,
               delay: star.delay,
               ease: "easeOut",
-              repeatDelay: 10 + Math.random() * 10,
+              repeatDelay: 10 + seededRandom(star.id * 1000 + 200) * 10,
             }}
           >
             <div
@@ -276,10 +277,10 @@ export function ConstellationBackground() {
             key={`nebula-${i}`}
             className="absolute rounded-full"
             style={{
-              left: `${Math.random() * 80 + 10}%`,
-              top: `${Math.random() * 80 + 10}%`,
-              width: `${50 + Math.random() * 100}px`,
-              height: `${50 + Math.random() * 100}px`,
+              left: `${seededRandom(i * 1000 + 300) * 80 + 10}%`,
+              top: `${seededRandom(i * 1000 + 301) * 80 + 10}%`,
+              width: `${50 + seededRandom(i * 1000 + 302) * 100}px`,
+              height: `${50 + seededRandom(i * 1000 + 303) * 100}px`,
               background: `radial-gradient(ellipse, 
                 rgba(255, 215, 0, 0.1) 0%, 
                 rgba(192, 192, 192, 0.05) 30%, 
@@ -293,7 +294,7 @@ export function ConstellationBackground() {
               rotate: [0, 180, 360],
             }}
             transition={{
-              duration: 20 + Math.random() * 15,
+              duration: 20 + seededRandom(i * 1000 + 304) * 15,
               repeat: Infinity,
               delay: i * 2,
               ease: "easeInOut"
@@ -309,8 +310,8 @@ export function ConstellationBackground() {
             key={`trail-${i}`}
             className="absolute"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              left: `${seededRandom(i * 1000 + 400) * 100}%`,
+              top: `${seededRandom(i * 1000 + 401) * 100}%`,
             }}
           >
             {[...Array(5)].map((_, j) => (
@@ -328,7 +329,7 @@ export function ConstellationBackground() {
                   y: [0, Math.cos(i * 30) * 10, 0],
                 }}
                 transition={{
-                  duration: 3 + Math.random() * 2,
+                  duration: 3 + seededRandom(i * 1000 + 402) * 2,
                   repeat: Infinity,
                   delay: j * 0.3 + i * 0.5,
                   ease: "easeInOut"
@@ -346,12 +347,12 @@ export function ConstellationBackground() {
             key={`interactive-${i}`}
             className="absolute rounded-full"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              width: `${1 + Math.random()}px`,
-              height: `${1 + Math.random()}px`,
-              background: Math.random() > 0.5 ? '#FFD700' : '#FFFFFF',
-              boxShadow: `0 0 ${2 + Math.random() * 3}px rgba(255, 215, 0, 0.4)`,
+              left: `${seededRandom(i * 1000 + 500) * 100}%`,
+              top: `${seededRandom(i * 1000 + 501) * 100}%`,
+              width: `${1 + seededRandom(i * 1000 + 502)}px`,
+              height: `${1 + seededRandom(i * 1000 + 503)}px`,
+              background: seededRandom(i * 1000 + 504) > 0.5 ? '#FFD700' : '#FFFFFF',
+              boxShadow: `0 0 ${2 + seededRandom(i * 1000 + 505) * 3}px rgba(255, 215, 0, 0.4)`,
             }}
             animate={{
               opacity: [0.2, 0.8, 0.2],
@@ -361,7 +362,7 @@ export function ConstellationBackground() {
               rotate: [0, 180, 360],
             }}
             transition={{
-              duration: 8 + Math.random() * 5,
+              duration: 8 + seededRandom(i * 1000 + 506) * 5,
               repeat: Infinity,
               delay: i * 0.2,
               ease: "easeInOut"

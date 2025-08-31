@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
+import { BaseButton } from './ui/BaseButton';
+import { BaseInput } from './ui/BaseInput';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Switch } from './ui/switch';
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from './ui/badge';
 import { Mail, Send, TestTube, Save, Eye, Settings, Video, Info, AlertCircle, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+
 
 
 interface EmailTemplate {
@@ -854,19 +855,18 @@ export function EmailManagement() {
   const currentTemplate = emailTemplates[activeTemplate]?.[activeLanguage];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="dashboard-container p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-heading text-[#EAEAEA] mb-2">Email Management</h2>
-          <p className="text-[#C0C0C0]">Configure email templates and settings for automated communications</p>
+          <h1 className="dashboard-text-primary text-3xl font-bold">Email Management</h1>
+          <p className="dashboard-text-secondary">Configure email templates and settings for automated communications</p>
         </div>
         
-        <div className="flex items-center space-x-3">
-          <Button
+        <div className="flex gap-2">
+          <BaseButton
             onClick={saveEmailConfig}
             disabled={isSaving}
-            className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90"
+            className="dashboard-button-primary"
           >
             {isSaving ? (
               <motion.div
@@ -878,109 +878,109 @@ export function EmailManagement() {
               <Save size={16} className="mr-2" />
             )}
             Save Config
-          </Button>
+        </BaseButton>
           
-          <Button
+          <BaseButton
             onClick={saveEmailTemplates}
             disabled={isSaving}
-            className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90"
+            className="dashboard-button-primary"
           >
             {isSaving ? (
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-4 h-4 border-2 border-[#0A0A23] border-t-transparent rounded-full mr-2"
+                className="w-4 h-4 border-t-transparent rounded-full mr-2"
               />
             ) : (
               <Save size={16} className="mr-2" />
             )}
             Save Templates
-          </Button>
-        </div>
+          </BaseButton>
+            </div>
       </div>
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-center space-x-3">
           <AlertCircle size={20} className="text-red-400" />
           <span className="text-red-400">{error}</span>
-        </div>
+      </div>
       )}
 
-      <Tabs defaultValue="config" className="space-y-6">
-        <TabsList className="bg-[#0A0A23]/50 border border-[#C0C0C0]/20">
-          <TabsTrigger value="config" className="data-[state=active]:bg-[#FFD700] data-[state=active]:text-[#0A0A23]">
+      <Tabs defaultValue="config" className="w-full">
+        <TabsList className="dashboard-tabs">
+          <TabsTrigger value="config" className="dashboard-tab">
             <Settings size={16} className="mr-2" />
             Configuration
           </TabsTrigger>
-          <TabsTrigger value="templates" className="data-[state=active]:bg-[#FFD700] data-[state=active]:text-[#0A0A23]">
+          <TabsTrigger value="templates" className="dashboard-tab">
             <Mail size={16} className="mr-2" />
             Templates
           </TabsTrigger>
-          <TabsTrigger value="test" className="data-[state=active]:bg-[#FFD700] data-[state=active]:text-[#0A0A23]">
+          <TabsTrigger value="test" className="dashboard-tab">
             <TestTube size={16} className="mr-2" />
             Testing
           </TabsTrigger>
         </TabsList>
 
         {/* Email Configuration Tab */}
-        <TabsContent value="config">
-          <Card className="bg-[#191970]/30 border-[#C0C0C0]/20">
-            <CardHeader>
-              <CardTitle className="text-[#EAEAEA] flex items-center space-x-2">
+        <TabsContent value="config" className="space-y-4">
+          <Card className="dashboard-card">
+        <CardHeader>
+              <CardTitle className="dashboard-card-title flex items-center space-x-2">
                 <Settings size={20} />
                 <span>Email Service Configuration</span>
               </CardTitle>
-            </CardHeader>
+        </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
                     <Label className="text-[#C0C0C0]">Brevo API Key</Label>
-                    <Input
-                      type="password"
-                      value={emailConfig.brevoApiKey}
-                      onChange={(e) => setEmailConfig(prev => ({ ...prev, brevoApiKey: e.target.value }))}
+                    <BaseInput
+                type="password"
+                value={emailConfig.brevoApiKey}
+                onChange={(e) => setEmailConfig(prev => ({ ...prev, brevoApiKey: e.target.value }))}
                       placeholder="Enter your Brevo API key"
                       className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
-                    />
-                  </div>
-                  
+              />
+            </div>
+            
                   <div>
                     <Label className="text-[#C0C0C0]">Sender Email</Label>
-                    <Input
-                      type="email"
-                      value={emailConfig.senderEmail}
-                      onChange={(e) => setEmailConfig(prev => ({ ...prev, senderEmail: e.target.value }))}
+                    <BaseInput
+                type="email"
+                value={emailConfig.senderEmail}
+                onChange={(e) => setEmailConfig(prev => ({ ...prev, senderEmail: e.target.value }))}
                       placeholder="noreply@yourdomain.com"
                       className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
-                    />
+              />
                   </div>
-                </div>
-                
+            </div>
+            
                 <div className="space-y-4">
                   <div>
                     <Label className="text-[#C0C0C0]">Sender Name</Label>
-                    <Input
-                      value={emailConfig.senderName}
-                      onChange={(e) => setEmailConfig(prev => ({ ...prev, senderName: e.target.value }))}
+                    <BaseInput
+                value={emailConfig.senderName}
+                onChange={(e) => setEmailConfig(prev => ({ ...prev, senderName: e.target.value }))}
                       placeholder="SoulPath Astrology"
                       className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
-                    />
-                  </div>
-                  
+              />
+            </div>
+            
                   <div>
                     <Label className="text-[#C0C0C0]">Admin Email</Label>
-                    <Input
-                      type="email"
-                      value={emailConfig.adminEmail}
-                      onChange={(e) => setEmailConfig(prev => ({ ...prev, adminEmail: e.target.value }))}
+                    <BaseInput
+                type="email"
+                value={emailConfig.adminEmail}
+                onChange={(e) => setEmailConfig(prev => ({ ...prev, adminEmail: e.target.value }))}
                       placeholder="admin@yourdomain.com"
                       className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
-                    />
+              />
                   </div>
-                </div>
-              </div>
-
+            </div>
+          </div>
+          
               {/* Video Conference Settings */}
               <div className="space-y-4 border-t border-[#C0C0C0]/20 pt-6">
                 <h3 className="text-[#EAEAEA] font-heading text-lg flex items-center space-x-2">
@@ -991,7 +991,7 @@ export function EmailManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-[#C0C0C0]">English Sessions</Label>
-                    <Input
+                    <BaseInput
                       value={emailConfig.defaultVideoLinks?.en || ''}
                       onChange={(e) => setEmailConfig(prev => ({ 
                         ...prev, 
@@ -1003,11 +1003,11 @@ export function EmailManagement() {
                       placeholder="https://meet.google.com/your-room-en"
                       className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
                     />
-                  </div>
-                  
+          </div>
+          
                   <div>
                     <Label className="text-[#C0C0C0]">Spanish Sessions</Label>
-                    <Input
+                    <BaseInput
                       value={emailConfig.defaultVideoLinks?.es || ''}
                       onChange={(e) => setEmailConfig(prev => ({ 
                         ...prev, 
@@ -1019,11 +1019,11 @@ export function EmailManagement() {
                       placeholder="https://meet.google.com/your-room-es"
                       className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
                     />
-                  </div>
-                </div>
+            </div>
+            </div>
               </div>
-            </CardContent>
-          </Card>
+        </CardContent>
+      </Card>
         </TabsContent>
 
         {/* Email Templates Tab */}
@@ -1032,9 +1032,9 @@ export function EmailManagement() {
             {/* Template Selector */}
             <div className="lg:col-span-1">
               <Card className="bg-[#191970]/30 border-[#C0C0C0]/20">
-                <CardHeader>
+        <CardHeader>
                   <CardTitle className="text-[#EAEAEA] text-sm">Templates</CardTitle>
-                </CardHeader>
+        </CardHeader>
                 <CardContent className="space-y-2">
                   {Object.keys(emailTemplates).map((templateKey) => (
                     <button
@@ -1077,19 +1077,19 @@ export function EmailManagement() {
                         🇪🇸 ES
                       </button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+          </div>
+        </CardContent>
+      </Card>
             </div>
 
             {/* Template Editor */}
             <div className="lg:col-span-3">
               <Card className="bg-[#191970]/30 border-[#C0C0C0]/20">
-                <CardHeader>
+        <CardHeader>
                   <CardTitle className="text-[#EAEAEA] flex items-center justify-between">
                     <span>Edit Template - {activeLanguage === 'en' ? 'English' : 'Español'}</span>
                     <div className="flex items-center space-x-2">
-                      <Button
+                      <BaseButton
                         onClick={() => setShowPlaceholderHelper(!showPlaceholderHelper)}
                         variant="outline"
                         size="sm"
@@ -1097,8 +1097,8 @@ export function EmailManagement() {
                       >
                         <Info size={14} className="mr-1" />
                         Placeholders
-                      </Button>
-                      <Button
+                      </BaseButton>
+                      <BaseButton
                         onClick={handlePreview}
                         variant="outline"
                         size="sm"
@@ -1106,7 +1106,7 @@ export function EmailManagement() {
                       >
                         <Eye size={14} className="mr-1" />
                         Preview
-                      </Button>
+                      </BaseButton>
                     </div>
                   </CardTitle>
                 </CardHeader>
@@ -1116,12 +1116,12 @@ export function EmailManagement() {
                       {/* Subject */}
                       <div>
                         <Label className="text-[#C0C0C0]">Subject Line</Label>
-                        <Input
+                        <BaseInput
                           value={currentTemplate.subject || ''}
                           onChange={(e) => updateTemplate('subject', e.target.value)}
                           className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
                         />
-                      </div>
+                  </div>
 
                       {/* Video Conference Settings */}
                       <div className="space-y-3 border border-[#C0C0C0]/20 rounded-lg p-4">
@@ -1136,8 +1136,8 @@ export function EmailManagement() {
                             onCheckedChange={(checked) => updateVideoLinkSettings('isActive', checked)}
                           />
                           <Label className="text-[#C0C0C0]">Enable video conference links</Label>
-                        </div>
-                        
+                  </div>
+
                         {currentTemplate.videoConferenceLink?.isActive && (
                           <>
                             <div className="flex items-center space-x-3">
@@ -1146,20 +1146,20 @@ export function EmailManagement() {
                                 onCheckedChange={(checked) => updateVideoLinkSettings('includeInTemplate', checked)}
                               />
                               <Label className="text-[#C0C0C0]">Include video link in template</Label>
-                            </div>
+                    </div>
                             
                             <div>
                               <Label className="text-[#C0C0C0]">Default Video Conference URL</Label>
-                              <Input
+                              <BaseInput
                                 value={currentTemplate.videoConferenceLink?.url || ''}
                                 onChange={(e) => updateVideoLinkSettings('url', e.target.value)}
                                 placeholder="https://meet.google.com/your-room"
                                 className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA]"
                               />
-                            </div>
+                    </div>
                           </>
-                        )}
-                      </div>
+                  )}
+                </div>
 
                       {/* HTML Content */}
                       <div>
@@ -1170,18 +1170,18 @@ export function EmailManagement() {
                           className="bg-[#0A0A23]/50 border-[#C0C0C0]/30 text-[#EAEAEA] min-h-[400px] font-mono text-sm"
                           placeholder="Enter your HTML email template..."
                         />
-                      </div>
+                </div>
                     </>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+          )}
+        </CardContent>
+      </Card>
+        </div>
           </div>
 
           {/* Placeholder Helper */}
-          <AnimatePresence>
+      <AnimatePresence>
             {showPlaceholderHelper && (
-              <motion.div
+          <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
@@ -1220,9 +1220,9 @@ export function EmailManagement() {
                     </div>
                   </CardContent>
                 </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
         </TabsContent>
 
         {/* Testing Tab */}
@@ -1238,7 +1238,7 @@ export function EmailManagement() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label className="text-[#C0C0C0]">Test Email Address</Label>
-                  <Input
+                  <BaseInput
                     type="email"
                     value={testEmail}
                     onChange={(e) => setTestEmail(e.target.value)}
@@ -1275,13 +1275,13 @@ export function EmailManagement() {
                 </div>
               </div>
               
-              <Button
+              <BaseButton
                 onClick={testEmailSending}
                 disabled={isTesting || !testEmail}
-                className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90"
+                className="dashboard-button-primary"
               >
                 {isTesting ? (
-                  <motion.div
+            <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                     className="w-4 h-4 border-2 border-[#0A0A23] border-t-transparent rounded-full mr-2"
@@ -1290,7 +1290,7 @@ export function EmailManagement() {
                   <Send size={16} className="mr-2" />
                 )}
                 Send Test Email
-              </Button>
+              </BaseButton>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1315,14 +1315,14 @@ export function EmailManagement() {
             >
               <div className="flex items-center justify-between p-4 border-b border-[#C0C0C0]/20">
                 <h3 className="text-[#EAEAEA] font-heading text-lg">Email Preview</h3>
-                <Button
+                <BaseButton
                   onClick={() => setShowPreview(false)}
                   variant="ghost"
                   size="sm"
                   className="text-[#C0C0C0] hover:text-[#EAEAEA]"
                 >
                   <X size={20} />
-                </Button>
+                </BaseButton>
               </div>
               
               <div className="p-4 h-[calc(90vh-80px)] overflow-auto">

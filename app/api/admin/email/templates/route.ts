@@ -16,8 +16,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('email_templates')
-      .select('*')
-      .single();
+      .select('*');
 
     if (error) {
       console.error('Error fetching email templates:', error);
@@ -25,28 +24,31 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform the data to match the expected format
-    const transformedData = {
-      en: {
-        subject: data?.en?.subject || '',
-        html: data?.en?.html || '',
-        videoConferenceLink: {
-          isActive: data?.en?.videoConferenceLink?.isActive || false,
-          url: data?.en?.videoConferenceLink?.url || '',
-          includeInTemplate: data?.en?.videoConferenceLink?.includeInTemplate !== false
+    // Group templates by language and template key
+    const transformedData: any = {};
+    
+    if (data && data.length > 0) {
+      data.forEach((template: any) => {
+        const lang = template.language || 'en';
+        const key = template.templateKey;
+        
+        if (!transformedData[lang]) {
+          transformedData[lang] = {};
         }
-      },
-      es: {
-        subject: data?.es?.subject || '',
-        html: data?.es?.html || '',
-        videoConferenceLink: {
-          isActive: data?.es?.videoConferenceLink?.isActive || false,
-          url: data?.es?.videoConferenceLink?.url || '',
-          includeInTemplate: data?.es?.videoConferenceLink?.includeInTemplate !== false
-        }
-      }
-    };
+        
+        transformedData[lang][key] = {
+          subject: template.subject || '',
+          html: template.body || '',
+          videoConferenceLink: {
+            isActive: false,
+            url: '',
+            includeInTemplate: false
+          }
+        };
+      });
+    }
 
-    return NextResponse.json({ emailTemplates: transformedData });
+    return NextResponse.json({ templates: transformedData });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -61,19 +63,55 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
+    const { templates } = body;
     
-    const { data, error } = await supabase
-      .from('email_templates')
-      .upsert(body, { onConflict: 'id' })
-      .select()
-      .single();
+    if (!templates) {
+      return NextResponse.json({ error: 'Templates data is required' }, { status: 400 });
+    }
 
-    if (error) {
-      console.error('Error updating email templates:', error);
+    // Convert the nested structure to flat rows for the email_templates table
+    const templateRows: Array<{
+      template_key: string;
+      language: string;
+      subject: string;
+      body: string;
+    }> = [];
+    
+    Object.entries(templates).forEach(([lang, langTemplates]: [string, any]) => {
+      Object.entries(langTemplates).forEach(([key, template]: [string, any]) => {
+        templateRows.push({
+          template_key: key,
+          language: lang,
+          subject: template.subject || '',
+          body: template.html || ''
+        });
+      });
+    });
+
+    // Delete existing templates and insert new ones
+    const { error: deleteError } = await supabase
+      .from('email_templates')
+      .delete()
+      .neq('id', 0); // Delete all rows
+
+    if (deleteError) {
+      console.error('Error deleting existing templates:', deleteError);
       return NextResponse.json({ error: 'Failed to update email templates' }, { status: 500 });
     }
 
-    return NextResponse.json({ emailTemplates: data });
+    if (templateRows.length > 0) {
+      const { error: insertError } = await supabase
+        .from('email_templates')
+        .insert(templateRows)
+        .select();
+
+      if (insertError) {
+        console.error('Error inserting new templates:', insertError);
+        return NextResponse.json({ error: 'Failed to update email templates' }, { status: 500 });
+      }
+    }
+
+    return NextResponse.json({ success: true, message: 'Templates updated successfully' });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -44,7 +44,6 @@ export async function GET(
       .order('date', { ascending: false });
 
     if (bookingsError) {
-      console.error('Error fetching client bookings:', bookingsError);
       return NextResponse.json({ error: 'Failed to fetch client bookings' }, { status: 500 });
     }
 
@@ -57,7 +56,10 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false,
+      error: 'Internal server error',
+      message: 'An unexpected error occurred'
+    }, { status: 500 });
   }
 }

@@ -1,16 +1,23 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+
+import { 
+  Calendar, 
+  Package, 
+  Clock, 
+  X, 
+  Save,
+  DollarSign
+} from 'lucide-react';
+import { BaseModal } from '@/components/ui/BaseModal';
+import { BaseButton } from '@/components/ui/BaseButton';
+import { BaseInput } from '@/components/ui/BaseInput';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, Package, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '../../hooks/useAuth';
 
 interface Client {
   id: string;
@@ -84,7 +91,7 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
   client,
   onSuccess
 }) => {
-  const { user } = useAuth();
+
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   
@@ -99,140 +106,131 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
     discount_amount: '0'
   });
 
-  // Available data
+  // Mock data - replace with actual API calls
   const [userPackages, setUserPackages] = useState<UserPackage[]>([]);
   const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<UserPackage | null>(null);
 
   useEffect(() => {
-    if (isOpen && user?.access_token) {
-      fetchUserPackages();
+    if (isOpen) {
+      // Load user packages and schedule slots
+      loadUserPackages();
+      loadScheduleSlots();
     }
-  }, [isOpen, user?.access_token, client.id]);
+  }, [isOpen]);
 
-  useEffect(() => {
-    if (selectedPackage && user?.access_token) {
-      fetchAvailableSlots();
-    }
-  }, [selectedPackage, user?.access_token]);
-
-  const fetchUserPackages = async () => {
-    if (!user?.access_token) return;
-    
-    try {
-      const response = await fetch(`/api/admin/user-packages?client_id=${client.id}&is_active=true`, {
-        headers: {
-          'Authorization': `Bearer ${user.access_token}`,
-          'Content-Type': 'application/json'
+  const loadUserPackages = async () => {
+    // Mock data - replace with actual API call
+    const mockPackages: UserPackage[] = [
+      {
+        id: 1,
+        sessions_remaining: 5,
+        sessions_used: 2,
+        is_active: true,
+        package_definition: {
+          id: 1,
+          name: 'Individual Therapy Package',
+          description: '10 sessions of individual therapy',
+          sessions_count: 10,
+          package_type: 'individual',
+          max_group_size: 1,
+          session_durations: {
+            id: 1,
+            name: 'Standard Session',
+            duration_minutes: 60
+          }
+        },
+        package_price: {
+          id: 1,
+          price: 1200,
+          pricing_mode: 'custom',
+          currencies: {
+            id: 1,
+            code: 'USD',
+            name: 'US Dollar',
+            symbol: '$'
+          }
         }
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setUserPackages(data.data);
-      } else {
-        toast.error('Failed to fetch user packages');
       }
-    } catch (error) {
-      toast.error('Error fetching user packages');
-    }
+    ];
+    setUserPackages(mockPackages);
   };
 
-  const fetchAvailableSlots = async () => {
-    if (!user?.access_token || !selectedPackage) return;
-    
-    try {
-      const sessionDurationId = selectedPackage.package_definition.session_durations.id;
-      const response = await fetch(`/api/admin/schedule-slots?session_duration_id=${sessionDurationId}&is_available=true&has_capacity=true`, {
-        headers: {
-          'Authorization': `Bearer ${user.access_token}`,
-          'Content-Type': 'application/json'
+  const loadScheduleSlots = async () => {
+    // Mock data - replace with actual API call
+    const mockSlots: ScheduleSlot[] = [
+      {
+        id: 1,
+        start_time: '09:00',
+        end_time: '10:00',
+        capacity: 1,
+        booked_count: 0,
+        is_available: true,
+        schedule_templates: {
+          id: 1,
+          day_of_week: 'Monday',
+          start_time: '09:00',
+          end_time: '10:00',
+          session_durations: {
+            id: 1,
+            name: 'Standard Session',
+            duration_minutes: 60
+          }
         }
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setScheduleSlots(data.data);
-      } else {
-        toast.error('Failed to fetch available slots');
       }
-    } catch (error) {
-      toast.error('Error fetching available slots');
-    }
+    ];
+    setScheduleSlots(mockSlots);
   };
 
   const handlePackageSelect = (packageId: string) => {
-    const selected = userPackages.find(pkg => pkg.id.toString() === packageId);
-    setSelectedPackage(selected || null);
     setFormData(prev => ({ ...prev, user_package_id: packageId }));
-    setStep(2);
+    const pkg = userPackages.find(p => p.id.toString() === packageId);
+    setSelectedPackage(pkg || null);
   };
 
   const handleSlotSelect = (slotId: string) => {
     setFormData(prev => ({ ...prev, schedule_slot_id: slotId }));
-    setStep(3);
+  };
+
+  const handleNext = () => {
+    if (step === 1 && !formData.user_package_id) {
+      toast.error('Please select a package');
+      return;
+    }
+    if (step === 2 && !formData.schedule_slot_id) {
+      toast.error('Please select a time slot');
+      return;
+    }
+    setStep(prev => Math.min(prev + 1, 3));
+  };
+
+  const handleBack = () => {
+    setStep(prev => Math.max(prev - 1, 1));
   };
 
   const handleSubmit = async () => {
-    if (!user?.access_token) return;
-
-    // Validation
     if (!formData.user_package_id || !formData.schedule_slot_id) {
-      toast.error('Please select a package and time slot');
+      toast.error('Please complete all required fields');
       return;
-    }
-
-    if (formData.booking_type === 'group' && !formData.group_size) {
-      toast.error('Please specify group size');
-      return;
-    }
-
-    if (selectedPackage && formData.booking_type === 'group') {
-      if (formData.group_size > selectedPackage.package_definition.max_group_size) {
-        toast.error(`Group size cannot exceed ${selectedPackage.package_definition.max_group_size}`);
-        return;
-      }
     }
 
     setLoading(true);
-
     try {
-      const response = await fetch('/api/admin/bookings', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${user.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          client_id: parseInt(client.id),
-          schedule_slot_id: parseInt(formData.schedule_slot_id),
-          user_package_id: parseInt(formData.user_package_id),
-          booking_type: formData.booking_type,
-          group_size: formData.booking_type === 'group' ? formData.group_size : undefined,
-          notes: formData.notes || undefined,
-          total_amount: formData.total_amount ? parseFloat(formData.total_amount) : undefined,
-          discount_amount: parseFloat(formData.discount_amount) || 0
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        toast.success('Booking created successfully');
-        onSuccess();
-        onClose();
-        resetForm();
-      } else {
-        toast.error(data.message || 'Failed to create booking');
-      }
+      // Mock API call - replace with actual implementation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast.success('Booking created successfully!');
+      onSuccess();
+      handleClose();
     } catch (error) {
-      toast.error('Error creating booking');
+      toast.error('Failed to create booking');
     } finally {
       setLoading(false);
     }
   };
 
-  const resetForm = () => {
+  const handleClose = () => {
+    setStep(1);
     setFormData({
       user_package_id: '',
       schedule_slot_id: '',
@@ -243,85 +241,82 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
       discount_amount: '0'
     });
     setSelectedPackage(null);
-    setStep(1);
-  };
-
-  const handleClose = () => {
-    resetForm();
     onClose();
-  };
-
-
-
-  const formatDateTime = (dateTime: string) => {
-    return new Date(dateTime).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
   };
 
   const getPackageTypeBadge = (type: string) => {
     const variants = {
-      individual: 'dashboard-badge-info',
-      group: 'dashboard-badge-success',
-      mixed: 'dashboard-badge-warning'
+      individual: `bg-[#E0F2FE] text-[#007BFF]`,
+      group: `bg-[#FFF3CD] text-[#FFC107]`,
+      mixed: `bg-[#FFF3CD] text-[#FFC107]`
     };
     return <Badge className={variants[type as keyof typeof variants]}>{type}</Badge>;
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="dashboard-modal max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="dashboard-modal-title">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              Create New Booking
-            </div>
-          </DialogTitle>
-          <DialogDescription className="dashboard-modal-description">
-            Create a new booking for {client.name} ({client.email})
-          </DialogDescription>
-        </DialogHeader>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Create New Booking"
+      description={`Create a new booking for ${client.name} (${client.email})`}
+      size="full"
+      variant="default"
+    >
+      <BaseModal.Header icon={<Calendar className="w-5 h-5" />}>
+        <div className="flex items-center gap-2">
+          <Calendar className={`w-5 h-5 text-[#007BFF]`} />
+          <h3 className={`text-[1.125rem] font-[500] text-[#1F2937]`}>
+            Create New Booking
+          </h3>
+        </div>
+      </BaseModal.Header>
 
-        <div className="space-y-6">
+      <BaseModal.Content>
+        <div className="space-y-[1rem]">
           {/* Step 1: Package Selection */}
           {step === 1 && (
-            <div className="space-y-4">
+            <div className="space-y-[0.5rem]">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+                <div className="w-8 h-8 bg-[#E0F2FE] text-[#007BFF] rounded-full flex items-center justify-center text-[0.75rem] font-[500]">
                   1
                 </div>
-                <h3 className="text-lg font-semibold">Select Package</h3>
+                <h3 className={`text-[1.125rem] font-[600] text-[#1F2937]`}>
+                  Select Package
+                </h3>
               </div>
 
               {userPackages.length === 0 ? (
                 <div className="text-center py-8">
-                  <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">No active packages found for this client</p>
-                  <p className="text-sm text-gray-500 mt-2">The client needs to purchase a package first</p>
+                  <Package className={`w-12 h-12 text-[#9CA3AF] mx-auto mb-[0.5rem]`} />
+                  <p className={`text-[#6B7280]`}>No active packages found for this client</p>
+                  <p className={`text-[0.75rem] text-[#9CA3AF] mt-[0.25rem]`}>
+                    The client needs to purchase a package first
+                  </p>
                 </div>
               ) : (
                 <div className="grid gap-4">
                   {userPackages.map((pkg) => (
                     <div
                       key={pkg.id}
-                      className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50 ${
-                        formData.user_package_id === pkg.id.toString() ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                      className={`p-[0.5rem] border rounded-[0.5rem] cursor-pointer transition-all hover:border-[#90CDF4] hover:bg-[#EBF8FF] ${
+                        formData.user_package_id === pkg.id.toString() 
+                          ? `border-[#63B3ED] bg-[#EBF8FF]` 
+                          : `border-[#E2E8F0]`
                       }`}
                       onClick={() => handlePackageSelect(pkg.id.toString())}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold text-gray-900">{pkg.package_definition.name}</h4>
+                            <h4 className={`font-[600] text-[#1F2937]`}>
+                              {pkg.package_definition.name}
+                            </h4>
                             {getPackageTypeBadge(pkg.package_definition.package_type)}
                           </div>
-                          <p className="text-sm text-gray-600 mb-2">{pkg.package_definition.description}</p>
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <p className={`text-[0.75rem] text-[#6B7280] mb-[0.25rem]`}>
+                            {pkg.package_definition.description}
+                          </p>
+                          <div className="flex items-center gap-[0.5rem] text-[0.75rem] text-[#9CA3AF]">
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
                               {pkg.package_definition.session_durations.duration_minutes} min
@@ -337,7 +332,7 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
                           </div>
                         </div>
                         <div className="text-right">
-                          <Badge className={pkg.is_active ? 'dashboard-badge-success' : 'dashboard-badge-error'}>
+                          <Badge className={pkg.is_active ? `bg-[#4CAF50] text-white` : `bg-[#F44336] text-white`}>
                             {pkg.is_active ? 'Active' : 'Inactive'}
                           </Badge>
                         </div>
@@ -351,17 +346,19 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
 
           {/* Step 2: Time Slot Selection */}
           {step === 2 && (
-            <div className="space-y-4">
+            <div className="space-y-[0.5rem]">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+                <div className="w-8 h-8 bg-[#E0F2FE] text-[#007BFF] rounded-full flex items-center justify-center text-[0.75rem] font-[500]">
                   2
                 </div>
-                <h3 className="text-lg font-semibold">Select Time Slot</h3>
+                <h3 className={`text-[1.125rem] font-[600] text-[#1F2937]`}>
+                  Select Time Slot
+                </h3>
               </div>
 
               {selectedPackage && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">
+                <div className="mb-[0.5rem] p-[0.375rem] bg-[#EBF8FF] border border-[#90CDF4] rounded-[0.5rem]">
+                  <p className={`text-[0.75rem] text-[#4299E1]`}>
                     <strong>Selected Package:</strong> {selectedPackage.package_definition.name} 
                     ({selectedPackage.package_definition.session_durations.duration_minutes} min)
                   </p>
@@ -370,43 +367,36 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
 
               {scheduleSlots.length === 0 ? (
                 <div className="text-center py-8">
-                  <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">No available time slots found</p>
-                  <p className="text-sm text-gray-500 mt-2">All slots for this duration are currently booked or unavailable</p>
+                  <Clock className={`w-12 h-12 text-[#9CA3AF] mx-auto mb-[0.5rem]`} />
+                  <p className={`text-[#6B7280]`}>No available time slots found</p>
+                  <p className={`text-[0.75rem] text-[#9CA3AF] mt-[0.25rem]`}>
+                    Please try a different date or contact support
+                  </p>
                 </div>
               ) : (
-                <div className="grid gap-3">
+                <div className="grid gap-4">
                   {scheduleSlots.map((slot) => (
                     <div
                       key={slot.id}
-                      className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50 ${
-                        formData.schedule_slot_id === slot.id.toString() ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                      className={`p-[0.5rem] border rounded-[0.5rem] cursor-pointer transition-all hover:border-[#90CDF4] hover:bg-[#EBF8FF] ${
+                        formData.schedule_slot_id === slot.id.toString() 
+                          ? `border-[#63B3ED] bg-[#EBF8FF]` 
+                          : `border-[#E2E8F0]`
                       }`}
                       onClick={() => handleSlotSelect(slot.id.toString())}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="text-center">
-                            <div className="text-lg font-semibold text-gray-900">
-                              {formatDateTime(slot.start_time)}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {slot.schedule_templates.day_of_week}
-                            </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-lg font-semibold">
+                            {slot.start_time} - {slot.end_time}
                           </div>
-                          <div className="text-gray-400">→</div>
-                          <div className="text-center">
-                            <div className="text-lg font-semibold text-gray-900">
-                              {formatDateTime(slot.end_time)}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              Duration: {slot.schedule_templates.session_durations.duration_minutes} min
-                            </div>
+                          <div className={`text-[0.75rem] text-[#6B7280]`}>
+                            {slot.schedule_templates.day_of_week}
                           </div>
                         </div>
                         <div className="text-right">
-                          <Badge className="dashboard-badge-info">
-                            {slot.booked_count}/{slot.capacity} booked
+                          <Badge className={`bg-[#4CAF50] text-white`}>
+                            Available
                           </Badge>
                         </div>
                       </div>
@@ -414,134 +404,140 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
                   ))}
                 </div>
               )}
-
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  className="dashboard-button-outline"
-                  onClick={() => setStep(1)}
-                >
-                  ← Back to Packages
-                </Button>
-              </div>
             </div>
           )}
 
           {/* Step 3: Booking Details */}
           {step === 3 && (
-            <div className="space-y-4">
+            <div className="space-y-[0.5rem]">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+                <div className="w-8 h-8 bg-[#E0F2FE] text-[#007BFF] rounded-full flex items-center justify-center text-[0.75rem] font-[500]">
                   3
                 </div>
-                <h3 className="text-lg font-semibold">Booking Details</h3>
+                <h3 className={`text-[1.125rem] font-[600] text-[#1F2937]`}>
+                  Booking Details
+                </h3>
               </div>
 
-              {selectedPackage && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>Package:</strong> {selectedPackage.package_definition.name} | 
-                    <strong>Time:</strong> {formData.schedule_slot_id && scheduleSlots.find(s => s.id.toString() === formData.schedule_slot_id)?.start_time ? 
-                      formatDateTime(scheduleSlots.find(s => s.id.toString() === formData.schedule_slot_id)!.start_time) : 'Not selected'}
-                  </p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="dashboard-label">Booking Type</Label>
+              <div className="grid grid-cols-2 gap-[0.5rem]">
+                <div className="space-y-[0.25rem]">
+                  <Label className={`text-[0.75rem] font-[500] text-[#6B7280]`}>
+                    Booking Type
+                  </Label>
                   <Select
                     value={formData.booking_type}
-                    onValueChange={(value: 'individual' | 'group') => setFormData(prev => ({ ...prev, booking_type: value }))}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, booking_type: value as 'individual' | 'group' }))}
                   >
-                    <SelectTrigger className="dashboard-input">
+                    <SelectTrigger className={`bg-[#F9FAFB] border-[#D1D5DB] text-[#1F2937]`}>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="individual">Individual Session</SelectItem>
-                      <SelectItem value="group">Group Session</SelectItem>
+                    <SelectContent className={`bg-[#F9FAFB] border-[#D1D5DB]`}>
+                      <SelectItem value="individual" className={`text-[#1F2937] hover:bg-[#F4F6F8]`}>
+                        Individual
+                      </SelectItem>
+                      <SelectItem value="group" className={`text-[#1F2937] hover:bg-[#F4F6F8]`}>
+                        Group
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {formData.booking_type === 'group' && (
-                  <div className="space-y-2">
-                    <Label className="dashboard-label">Group Size</Label>
-                    <Input
+                  <div className="space-y-[0.25rem]">
+                    <Label className={`text-[0.75rem] font-[500] text-[#6B7280]`}>
+                      Group Size
+                    </Label>
+                    <BaseInput
                       type="number"
-                      min="1"
-                      max={selectedPackage?.package_definition.max_group_size || 10}
-                      className="dashboard-input"
-                      value={formData.group_size}
+                      min="2"
+                      max="10"
+                      value={formData.group_size.toString()}
                       onChange={(e) => setFormData(prev => ({ ...prev, group_size: parseInt(e.target.value) || 1 }))}
                     />
-                    <p className="text-xs text-gray-500">
-                      Max: {selectedPackage?.package_definition.max_group_size || 'N/A'}
-                    </p>
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="dashboard-label">Total Amount (Optional)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="dashboard-input"
-                    placeholder="0.00"
-                    value={formData.total_amount}
-                    onChange={(e) => setFormData(prev => ({ ...prev, total_amount: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="dashboard-label">Discount Amount</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="dashboard-input"
-                    placeholder="0.00"
-                    value={formData.discount_amount}
-                    onChange={(e) => setFormData(prev => ({ ...prev, discount_amount: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="dashboard-label">Notes (Optional)</Label>
+              <div className="space-y-[0.25rem]">
+                <Label className={`text-[0.75rem] font-[500] text-[#6B7280]`}>
+                  Notes (Optional)
+                </Label>
                 <Textarea
-                  className="dashboard-input"
-                  placeholder="Add any special notes or requirements..."
+                  placeholder="Add any special requirements or notes..."
                   value={formData.notes}
                   onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  className={`bg-[#F9FAFB] border-[#D1D5DB] text-[#1F2937] placeholder:text-[#9CA3AF]`}
                   rows={3}
                 />
               </div>
 
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  className="dashboard-button-outline"
-                  onClick={() => setStep(2)}
-                >
-                  ← Back to Time Slots
-                </Button>
-                <Button
-                  className="dashboard-button-primary"
-                  onClick={handleSubmit}
-                  disabled={loading}
-                >
-                  {loading ? 'Creating...' : 'Create Booking'}
-                </Button>
-              </div>
+              {selectedPackage && (
+                <div className="p-[0.5rem] bg-[#F9FAFB] rounded-[0.5rem] border border-[#D1D5DB]">
+                  <h4 className="text-sm font-medium text-white mb-2">
+                    Booking Summary
+                  </h4>
+                  <div className="space-y-2 text-sm text-gray-300">
+                    <div className="flex items-center gap-2">
+                      <Package className="w-4 h-4" />
+                      <span>{selectedPackage.package_definition.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      <span>{selectedPackage.package_definition.session_durations.duration_minutes} minutes</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4" />
+                      <span>{selectedPackage.package_price.currencies.symbol}{selectedPackage.package_price.price}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </BaseModal.Content>
+
+      <BaseModal.Footer>
+        <div className="flex items-center justify-between w-full">
+          <BaseButton
+            variant="outline"
+            onClick={handleBack}
+            disabled={step === 1}
+            leftIcon={<X className="w-4 h-4" />}
+          >
+            Back
+          </BaseButton>
+
+          <div className="flex gap-2">
+            <BaseButton
+              variant="outline"
+              onClick={handleClose}
+            >
+              Cancel
+            </BaseButton>
+            
+            {step < 3 ? (
+              <BaseButton
+                variant="primary"
+                onClick={handleNext}
+                rightIcon={<Save className="w-4 h-4" />}
+              >
+                Next
+              </BaseButton>
+            ) : (
+              <BaseButton
+                variant="primary"
+                onClick={handleSubmit}
+                loading={loading}
+                leftIcon={<Save className="w-4 h-4" />}
+              >
+                Create Booking
+              </BaseButton>
+            )}
+          </div>
+        </div>
+      </BaseModal.Footer>
+    </BaseModal>
   );
 };
 

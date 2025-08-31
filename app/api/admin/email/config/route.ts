@@ -33,7 +33,11 @@ export async function GET(request: NextRequest) {
         smtp_user: '',
         smtp_pass: '',
         from_email: 'noreply@soulpath.lat',
-        from_name: 'SOULPATH'
+        from_name: 'SOULPATH',
+        brevo_api_key: '',
+        sender_email: '',
+        sender_name: '',
+        admin_email: ''
       };
       
       console.log('✅ Returning default email config');

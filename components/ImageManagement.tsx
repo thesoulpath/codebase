@@ -5,17 +5,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { 
   Upload, Image, HardDrive, Globe, Clock, Edit, Trash2, 
-  CheckCircle, Filter
+  Filter
 } from 'lucide-react';
-import { Button } from './ui/button';
+import { BaseButton } from './ui/BaseButton';
+import { BaseInput } from './ui/BaseInput';
 import { useAuth } from '../hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
-
-
+import { colors, spacing, typography, borders } from '@/lib/design-system';
 
 interface ImageData {
   profileImage?: string;
@@ -42,10 +41,8 @@ export function ImageManagement() {
     isPublic: 'all',
     size: 'all'
   });
-  const [totalSize, setTotalSize] = useState(0);
-  const [lastUpload, setLastUpload] = useState<string | null>(null);
-
-
+  const [totalSize] = useState(0);
+  const [lastUpload] = useState<string | null>(null);
 
   // Simple formatting functions
   const formatFileSize = (bytes: number) => {
@@ -102,228 +99,209 @@ export function ImageManagement() {
     }
   };
 
-
-
-
-
-
-
-
-
-  const openEditModal = (image: any) => {
+  const handleEdit = (image: any) => {
     setEditingImage(image);
     setEditFormData({
-      name: image.name,
+      name: image.name || '',
       alt: image.alt || '',
       category: image.category || 'general'
     });
     setShowEditModal(true);
   };
 
+  const handleDelete = (image: any) => {
+    setDeletingImage(image);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingImage) return;
+
+    try {
+      const response = await fetch(`/api/admin/images?id=${deletingImage.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user?.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setSuccess('Image deleted successfully');
+        loadImages();
+        setShowDeleteModal(false);
+        setDeletingImage(null);
+      } else {
+        setError('Failed to delete image');
+      }
+    } catch (err: any) {
+      setError(`Error deleting image: ${err.message}`);
+    }
+  };
+
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      setError(null);
+    
+    if (!editingImage) return;
 
-      const response = await fetch(`/api/admin/images/${editingImage.id}`, {
+    try {
+      const response = await fetch(`/api/admin/images?id=${editingImage.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${user?.access_token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          name: editFormData.name,
-          alt: editFormData.alt,
-          category: editFormData.category
-        })
+        body: JSON.stringify(editFormData)
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Update failed: ${response.status}`);
+      if (response.ok) {
+        setSuccess('Image updated successfully');
+        loadImages();
+        setShowEditModal(false);
+        setEditingImage(null);
+      } else {
+        setError('Failed to update image');
       }
-
-      const updatedImage = { ...editingImage, ...editFormData };
-      setImages(prev => ({ ...prev, [editingImage.key]: updatedImage }));
-      setShowEditModal(false);
-      setSuccess(`Image updated successfully!`);
-      setTimeout(() => setSuccess(null), 3000);
-      
-      // Trigger profile image reload on the homepage
-      window.dispatchEvent(new CustomEvent('profileImageUpdated'));
     } catch (err: any) {
-      console.error('Error updating image:', err);
-      setError(`Failed to update image: ${err.message}`);
-    }
-  };
-
-  const openDeleteModal = (image: any) => {
-    setDeletingImage(image);
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteImage = async () => {
-    if (!deletingImage) return;
-
-    try {
-      setError(null);
-
-      const response = await fetch(`/api/admin/images/${deletingImage.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${user?.access_token}`
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Delete failed: ${response.status}`);
-      }
-
-      const updatedImages = { ...images };
-      delete updatedImages[deletingImage.key as keyof ImageData];
-      setImages(updatedImages);
-      setShowDeleteModal(false);
-      setSuccess(`Image deleted successfully!`);
-      setTimeout(() => setSuccess(null), 3000);
-      
-      // Trigger profile image reload on the homepage
-      window.dispatchEvent(new CustomEvent('profileImageUpdated'));
-    } catch (err: any) {
-      console.error('Error deleting image:', err);
-      setError(`Failed to delete image: ${err.message}`);
+      setError(`Error updating image: ${err.message}`);
     }
   };
 
   const applyFilters = () => {
-            setIsLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    const filtered = Object.values(images).filter(image => {
-      const matchesType = filters.type === 'all' || image.type === filters.type;
-      const matchesStatus = filters.isPublic === 'all' || (image.isPublic ? 'true' : 'false') === filters.isPublic;
-      const matchesSize = filters.size === 'all' || (image.size < 1024 * 1024 ? 'small' : image.size < 5 * 1024 * 1024 ? 'medium' : 'large') === filters.size;
-      return matchesType && matchesStatus && matchesSize;
-    });
-
-    setFilteredImages(filtered);
-    setIsLoading(false);
+    // Filter logic would go here
+    console.log('Applying filters:', filters);
   };
 
   const clearFilters = () => {
-    setFilters({ type: 'all', isPublic: 'all', size: 'all' });
-    setFilteredImages(Object.values(images));
-    setIsLoading(false);
+    setFilters({
+      type: 'all',
+      isPublic: 'all',
+      size: 'all'
+    });
   };
 
-  const [filteredImages, setFilteredImages] = useState<any[]>(Object.values(images));
-
-  useEffect(() => {
-    setFilteredImages(Object.values(images));
-  }, [images]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [filters, images]);
-
-  // Calculate stats from images data
-  useEffect(() => {
-    if (images && Object.keys(images).length > 0) {
-      // Calculate total size (placeholder - would need actual file sizes from database)
-      const calculatedTotalSize = Object.keys(images).length * 1024 * 1024; // 1MB per image as placeholder
-      setTotalSize(calculatedTotalSize);
-      
-      // Set last upload to current time if we have images
-      setLastUpload(new Date().toISOString());
-    }
-  }, [images]);
-
-  if (isLoading || !user?.access_token) {
+  if (isLoading) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 bg-[#191970]/30 rounded"></div>
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="p-6 bg-[#191970]/20 rounded-lg">
-              <div className="h-6 bg-[#191970]/30 rounded mb-4"></div>
-              <div className="h-32 bg-[#191970]/30 rounded"></div>
-            </div>
-          ))}
+      <div className={`flex items-center justify-center min-h-[400px]`}>
+        <div className="text-center">
+          <div className={`w-16 h-16 border-4 border-[${colors.accent[500]}] border-t-transparent rounded-full animate-spin mx-auto mb-[${spacing[4]}]`}></div>
+          <p className={`text-[${colors.text.secondary}]`}>Loading images...</p>
         </div>
       </div>
     );
   }
 
+  if (error && !images || Object.keys(images).length === 0) {
+    return (
+      <div className={`text-center py-[${spacing[12]}]`}>
+        <div className={`w-24 h-24 bg-[${colors.semantic.surface.secondary}] rounded-full flex items-center justify-center mx-auto mb-[${spacing[4]}]`}>
+          <Image className={`w-12 h-12 text-[${colors.text.secondary}]`} />
+        </div>
+        <h3 className={`text-[${typography.fontSize.xl}] font-[${typography.fontWeight.semibold}] text-[${colors.text.primary}] mb-[${spacing[2]}]`}>
+          No images found
+        </h3>
+        <p className={`text-[${colors.text.secondary}] mb-[${spacing[6]}]`}>
+          Upload your first image to get started
+        </p>
+        <BaseButton
+          onClick={() => setShowUploadModal(true)}
+          variant="primary"
+          size="lg"
+          leftIcon={<Upload className="w-5 h-5" />}
+        >
+          Upload First Image
+        </BaseButton>
+      </div>
+    );
+  }
+
   return (
-    <div className="dashboard-container p-6 space-y-6">
+    <div className={`p-[${spacing[6]}] space-y-[${spacing[6]}]`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="dashboard-text-primary text-3xl font-bold tracking-tight">Image Management</h2>
-          <p className="dashboard-text-secondary">
+          <h2 className={`text-[${typography.fontSize['3xl']}] font-[${typography.fontWeight.bold}] tracking-tight text-[${colors.text.primary}]`}>
+            Image Management
+          </h2>
+          <p className={`text-[${colors.text.secondary}]`}>
             Manage website images, logos, and visual assets
           </p>
         </div>
-        <Button onClick={() => setShowUploadModal(true)} className="dashboard-button-primary">
-          <Upload className="mr-2 h-4 w-4" />
+        <BaseButton 
+          onClick={() => setShowUploadModal(true)} 
+          variant="primary"
+          size="lg"
+          leftIcon={<Upload className="w-4 h-4" />}
+        >
           Upload Image
-        </Button>
+        </BaseButton>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="dashboard-stats-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="dashboard-stats-label">Total Images</CardTitle>
-            <Image className="h-4 w-4 dashboard-text-muted" />
+      <div className={`grid gap-[${spacing[4]}] md:grid-cols-2 lg:grid-cols-4`}>
+        <Card className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}]`}>
+          <CardHeader className={`flex flex-row items-center justify-between space-y-0 pb-[${spacing[2]}]`}>
+            <CardTitle className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+              Total Images
+            </CardTitle>
+            <Image className={`h-4 w-4 text-[${colors.text.tertiary}]`} />
           </CardHeader>
           <CardContent>
-            <div className="dashboard-stats-value">{Object.keys(images).length}</div>
-            <p className="dashboard-stats-label">
+            <div className={`text-[${typography.fontSize['2xl']}] font-[${typography.fontWeight.bold}] text-[${colors.text.primary}]`}>
+              {Object.keys(images).length}
+            </div>
+            <p className={`text-[${typography.fontSize.sm}] text-[${colors.text.secondary}]`}>
               Stored images
             </p>
           </CardContent>
         </Card>
 
-        <Card className="dashboard-stats-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="dashboard-stats-label">Total Size</CardTitle>
-            <HardDrive className="h-4 w-4 dashboard-text-muted" />
+        <Card className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}]`}>
+          <CardHeader className={`flex flex-row items-center justify-between space-y-0 pb-[${spacing[2]}]`}>
+            <CardTitle className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+              Total Size
+            </CardTitle>
+            <HardDrive className={`h-4 w-4 text-[${colors.text.tertiary}]`} />
           </CardHeader>
           <CardContent>
-            <div className="dashboard-stats-value">{formatFileSize(totalSize)}</div>
-            <p className="dashboard-stats-label">
+            <div className={`text-[${typography.fontSize['2xl']}] font-[${typography.fontWeight.bold}] text-[${colors.text.primary}]`}>
+              {formatFileSize(totalSize)}
+            </div>
+            <p className={`text-[${typography.fontSize.sm}] text-[${colors.text.secondary}]`}>
               Storage used
             </p>
           </CardContent>
         </Card>
 
-        <Card className="dashboard-stats-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="dashboard-stats-label">Public Images</CardTitle>
-            <Globe className="h-4 w-4 dashboard-text-muted" />
+        <Card className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}]`}>
+          <CardHeader className={`flex flex-row items-center justify-between space-y-0 pb-[${spacing[2]}]`}>
+            <CardTitle className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+              Public Images
+            </CardTitle>
+            <Globe className={`h-4 w-4 text-[${colors.text.tertiary}]`} />
           </CardHeader>
           <CardContent>
-            <div className="dashboard-stats-value">
-              {Object.values(images).filter(img => img.isPublic).length}
+            <div className={`text-[${typography.fontSize['2xl']}] font-[${typography.fontWeight.bold}] text-[${colors.text.primary}]`}>
+              {Object.values(images).filter((img: any) => img.isPublic).length}
             </div>
-            <p className="dashboard-stats-label">
+            <p className={`text-[${typography.fontSize.sm}] text-[${colors.text.secondary}]`}>
               Publicly accessible
             </p>
           </CardContent>
         </Card>
 
-        <Card className="dashboard-stats-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="dashboard-stats-label">Last Upload</CardTitle>
-            <Clock className="h-4 w-4 dashboard-text-muted" />
+        <Card className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}]`}>
+          <CardHeader className={`flex flex-row items-center justify-between space-y-0 pb-[${spacing[2]}]`}>
+            <CardTitle className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+              Last Upload
+            </CardTitle>
+            <Clock className={`h-4 w-4 text-[${colors.text.tertiary}]`} />
           </CardHeader>
           <CardContent>
-            <div className="dashboard-stats-value">
+            <div className={`text-[${typography.fontSize['2xl']}] font-[${typography.fontWeight.bold}] text-[${colors.text.primary}]`}>
               {lastUpload ? formatDate(lastUpload) : 'N/A'}
             </div>
-            <p className="dashboard-stats-label">
+            <p className={`text-[${typography.fontSize.sm}] text-[${colors.text.secondary}]`}>
               Last backup
             </p>
           </CardContent>
@@ -332,14 +310,14 @@ export function ImageManagement() {
 
       {/* Error and Success Display */}
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-4">
-          <p className="text-red-400">{error}</p>
+        <div className={`bg-[${colors.status.error}]/10 border border-[${colors.status.error}]/20 rounded-[${borders.radius.lg}] p-[${spacing[4]}] mb-[${spacing[4]}]`}>
+          <p className={`text-[${colors.status.error}]`}>{error}</p>
         </div>
       )}
       
       {success && (
-        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 mb-4">
-          <p className="text-green-400">{success}</p>
+        <div className={`bg-[${colors.status.success}]/10 border border-[${colors.status.success}]/20 rounded-[${borders.radius.lg}] p-[${spacing[4]}] mb-[${spacing[4]}]`}>
+          <p className={`text-[${colors.status.success}]`}>{success}</p>
         </div>
       )}
 
@@ -350,38 +328,46 @@ export function ImageManagement() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowUploadModal(false)}
+            className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50`}
           >
             <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              className="w-full max-w-md bg-[#0A0A23] rounded-lg border border-[#C0C0C0]/20 p-6"
-              onClick={(e) => e.stopPropagation()}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className={`bg-[${colors.semantic.surface.primary}] rounded-[${borders.radius.lg}] p-[${spacing[6]}] max-w-md w-full mx-[${spacing[4]}]`}
             >
-              <h3 className="dashboard-text-primary font-heading text-lg mb-4">Upload Image</h3>
-              <p className="dashboard-text-secondary mb-4">Upload modal functionality coming soon...</p>
-              <Button onClick={() => setShowUploadModal(false)} className="dashboard-button-primary">
+              <h3 className={`text-[${typography.fontSize.lg}] font-[${typography.fontWeight.medium}] text-[${colors.text.primary}] mb-[${spacing[4]}]`}>
+                Upload Image
+              </h3>
+              <p className={`text-[${colors.text.secondary}] mb-[${spacing[4]}]`}>
+                Upload modal functionality coming soon...
+              </p>
+              <BaseButton 
+                onClick={() => setShowUploadModal(false)} 
+                variant="primary"
+                className="w-full"
+              >
                 Close
-              </Button>
+              </BaseButton>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Filters */}
-      <Card className="dashboard-card">
+      <Card className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}]`}>
         <CardHeader>
-          <CardTitle className="dashboard-card-title">Filters</CardTitle>
+          <CardTitle className={`text-[${typography.fontSize.lg}] text-[${colors.text.primary}]`}>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="dashboard-filter-grid">
-            <div className="dashboard-filter-item">
-              <Label htmlFor="filter_type" className="dashboard-filter-label">Image Type</Label>
+          <div className={`grid grid-cols-1 md:grid-cols-3 gap-[${spacing[4]}]`}>
+            <div className={`space-y-[${spacing[2]}]`}>
+              <Label htmlFor="filter_type" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                Image Type
+              </Label>
               <Select value={filters.type} onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}>
-                <SelectTrigger className="dashboard-select">
-                  <SelectValue placeholder="All types" />
+                <SelectTrigger className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}] text-[${colors.text.primary}]`}>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="dashboard-dropdown-content">
                   <SelectItem value="all" className="dashboard-dropdown-item">All types</SelectItem>
@@ -393,11 +379,13 @@ export function ImageManagement() {
               </Select>
             </div>
 
-            <div className="dashboard-filter-item">
-              <Label htmlFor="filter_status" className="dashboard-filter-label">Status</Label>
+            <div className={`space-y-[${spacing[2]}]`}>
+              <Label htmlFor="filter_status" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                Status
+              </Label>
               <Select value={filters.isPublic} onValueChange={(value) => setFilters(prev => ({ ...prev, isPublic: value }))}>
-                <SelectTrigger className="dashboard-select">
-                  <SelectValue placeholder="All statuses" />
+                <SelectTrigger className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}] text-[${colors.text.primary}]`}>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="dashboard-dropdown-content">
                   <SelectItem value="all" className="dashboard-dropdown-item">All statuses</SelectItem>
@@ -407,11 +395,13 @@ export function ImageManagement() {
               </Select>
             </div>
 
-            <div className="dashboard-filter-item">
-              <Label htmlFor="filter_size" className="dashboard-filter-label">File Size</Label>
+            <div className={`space-y-[${spacing[2]}]`}>
+              <Label htmlFor="filter_size" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                File Size
+              </Label>
               <Select value={filters.size} onValueChange={(value) => setFilters(prev => ({ ...prev, size: value }))}>
-                <SelectTrigger className="dashboard-select">
-                  <SelectValue placeholder="All sizes" />
+                <SelectTrigger className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}] text-[${colors.text.primary}]`}>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="dashboard-dropdown-content">
                   <SelectItem value="all" className="dashboard-dropdown-item">All sizes</SelectItem>
@@ -423,144 +413,154 @@ export function ImageManagement() {
             </div>
           </div>
 
-          <div className="flex gap-2 mt-4">
-            <Button onClick={applyFilters} className="dashboard-button-primary">
-              <Filter className="mr-2 h-4 w-4" />
-              Apply Filters
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={clearFilters}
-              className="dashboard-button-outline"
+          <div className={`flex justify-end space-x-[${spacing[2]}] pt-[${spacing[4]}]`}>
+            <BaseButton
+              onClick={applyFilters}
+              variant="primary"
+              leftIcon={<Filter className="w-4 h-4" />}
             >
-              Clear Filters
-            </Button>
+              Apply Filters
+            </BaseButton>
+            <BaseButton
+              onClick={clearFilters}
+              variant="outline"
+              className={`border-[${colors.border[500]}] text-[${colors.text.secondary}] hover:bg-[${colors.semantic.surface.secondary}] hover:text-[${colors.text.primary}]`}
+            >
+              Clear
+            </BaseButton>
           </div>
         </CardContent>
       </Card>
 
       {/* Images Grid */}
-      <Card className="dashboard-card">
+      <Card className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}]`}>
         <CardHeader>
-          <CardTitle className="dashboard-card-title">All Images</CardTitle>
-          <CardDescription className="dashboard-card-description">
-            Manage website images, logos, and visual assets
+          <CardTitle className={`text-[${typography.fontSize.lg}] text-[${colors.text.primary}]`}>All Images</CardTitle>
+          <CardDescription className={`text-[${colors.text.secondary}]`}>
+            Manage and organize your image assets
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="dashboard-loading">
-              <div className="dashboard-loading-spinner">Loading images...</div>
+            <div className={`text-center py-[${spacing[12]}]`}>
+              <div className={`w-16 h-16 border-4 border-[${colors.accent[500]}] border-t-transparent rounded-full animate-spin mx-auto mb-[${spacing[4]}]`}></div>
+              <p className={`text-[${colors.text.secondary}]`}>Loading images...</p>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredImages.map((image) => (
-                <div key={image.id} className="border border-[#C0C0C0]/20 rounded-lg p-4 space-y-3 bg-[#191970]/30">
-                  <div className="relative">
-                    <img
-                      src={image.url}
-                      alt={image.alt || image.name}
-                      className="w-full h-32 object-cover rounded-lg"
-                    />
-                    <div className="absolute top-2 right-2 flex gap-1">
-                      {!image.isPublic && (
-                        <Badge variant="secondary" className="dashboard-badge-error">Private</Badge>
-                      )}
-                      <Badge variant="secondary" className="dashboard-badge">
-                        {image.type}
-                      </Badge>
-                    </div>
+            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[${spacing[4]}]`}>
+              {Object.entries(images).map(([key, image]: [string, any]) => (
+                <div key={key} className={`bg-[${colors.semantic.surface.secondary}] rounded-[${borders.radius.lg}] p-[${spacing[4]}] border border-[${colors.border[500]}]`}>
+                  <div className={`flex items-center justify-between mb-[${spacing[3]}]`}>
+                    {image.isPublic ? (
+                      <Badge variant="secondary" className={`bg-[${colors.status.success}] text-white`}>Public</Badge>
+                    ) : (
+                      <Badge variant="secondary" className={`bg-[${colors.status.error}] text-white`}>Private</Badge>
+                    )}
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="dashboard-text-primary font-medium truncate">{image.name}</span>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditModal(image)}
-                          className="dashboard-button-outline"
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openDeleteModal(image)}
-                          className="dashboard-button-danger"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
+                  
+                  <div className={`h-32 bg-[${colors.semantic.surface.tertiary}] rounded-[${borders.radius.md}] mb-[${spacing[3]}] flex items-center justify-center`}>
+                    <Image className={`w-8 h-8 text-[${colors.text.tertiary}]`} />
+                  </div>
+                  
+                  <div className={`space-y-[${spacing[2]}]`}>
+                    <span className={`text-[${colors.text.primary}] font-[${typography.fontWeight.medium}] truncate block`}>
+                      {image.name}
+                    </span>
+                    
+                    <div className={`flex space-x-[${spacing[2]}]`}>
+                      <BaseButton
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(image)}
+                        className="flex-1"
+                        leftIcon={<Edit className="w-4 h-4" />}
+                      >
+                        Edit
+                      </BaseButton>
+                      <BaseButton
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleDelete(image)}
+                        leftIcon={<Trash2 className="w-4 h-4" />}
+                      >
+                        Delete
+                      </BaseButton>
                     </div>
-
-                    <div className="text-xs dashboard-text-muted">
-                      <div className="flex items-center gap-1">
-                        <HardDrive className="h-3 w-3" />
-                        {formatFileSize(image.size)}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatDate(image.uploadedAt)}
-                      </div>
+                    
+                    <div className={`text-[${typography.fontSize.xs}] text-[${colors.text.tertiary}]`}>
+                      {image.uploadedAt && `Uploaded: ${formatDate(image.uploadedAt)}`}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-
-          {filteredImages.length === 0 && (
-            <div className="dashboard-empty">
-              <div className="dashboard-empty-icon">No images found</div>
+          
+          {!isLoading && Object.keys(images).length === 0 && (
+            <div className={`text-center py-[${spacing[12]}]`}>
+              <div className={`w-16 h-16 bg-[${colors.semantic.surface.secondary}] rounded-full flex items-center justify-center mx-auto mb-[${spacing[4]}]`}>
+                <Image className={`w-8 h-8 text-[${colors.text.tertiary}]`} />
+              </div>
+              <p className={`text-[${colors.text.secondary}]`}>No images found</p>
             </div>
           )}
         </CardContent>
       </Card>
 
       {/* Edit Modal */}
-      {showEditModal && editingImage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="dashboard-card w-full max-w-md mx-4">
-            <CardHeader>
-              <CardTitle className="dashboard-card-title">Edit Image</CardTitle>
-              <CardDescription className="dashboard-card-description">
-                Update image details and settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleEditSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit_name" className="dashboard-filter-label">Name</Label>
-                  <Input
+      <AnimatePresence>
+        {showEditModal && editingImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50`}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#1a1a2e] rounded-lg p-6 w-full max-w-md mx-4"
+            >
+              <CardHeader>
+                <CardTitle className={`text-[${typography.fontSize.lg}] text-[${colors.text.primary}]`}>Edit Image</CardTitle>
+                <CardDescription className={`text-[${colors.text.secondary}]`}>
+                  Update image details and settings
+                </CardDescription>
+              </CardHeader>
+              
+              <form onSubmit={handleEditSubmit} className={`space-y-[${spacing[4]}]`}>
+                <div className={`space-y-[${spacing[2]}]`}>
+                  <Label htmlFor="edit_name" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                    Name
+                  </Label>
+                  <BaseInput
                     id="edit_name"
                     value={editFormData.name}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="dashboard-input"
-                    required
+                    placeholder="Image name"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit_alt" className="dashboard-filter-label">Alt Text</Label>
-                  <Input
+                
+                <div className={`space-y-[${spacing[2]}]`}>
+                  <Label htmlFor="edit_alt" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                    Alt Text
+                  </Label>
+                  <BaseInput
                     id="edit_alt"
-                    value={editFormData.alt || ''}
+                    value={editFormData.alt}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, alt: e.target.value }))}
-                    className="dashboard-input"
-                    placeholder="Image description for accessibility"
+                    placeholder="Alternative text for accessibility"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit_category" className="dashboard-filter-label">Category</Label>
-                  <Select 
-                    value={editFormData.category} 
-                    onValueChange={(value) => setEditFormData(prev => ({ ...prev, category: value }))}
-                  >
-                    <SelectTrigger className="dashboard-select">
-                      <SelectValue placeholder="Select category" />
+                
+                <div className={`space-y-[${spacing[2]}]`}>
+                  <Label htmlFor="edit_category" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                    Category
+                  </Label>
+                  <Select value={editFormData.category} onValueChange={(value) => setEditFormData(prev => ({ ...prev, category: value }))}>
+                    <SelectTrigger className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}] text-[${colors.text.primary}]`}>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="dashboard-dropdown-content">
                       <SelectItem value="general" className="dashboard-dropdown-item">General</SelectItem>
@@ -571,74 +571,73 @@ export function ImageManagement() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="flex gap-2 pt-4">
-                  <Button type="submit" className="dashboard-button-primary flex-1">
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Update Image
-                  </Button>
-                  <Button
+                
+                <div className={`flex space-x-[${spacing[2]}] pt-[${spacing[4]}]`}>
+                  <BaseButton
                     type="button"
                     variant="outline"
                     onClick={() => setShowEditModal(false)}
-                    className="dashboard-button-outline"
+                    className="flex-1"
                   >
                     Cancel
-                  </Button>
+                  </BaseButton>
+                  <BaseButton
+                    type="submit"
+                    variant="primary"
+                    className="flex-1"
+                  >
+                    Update
+                  </BaseButton>
                 </div>
               </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && deletingImage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="dashboard-card w-full max-w-md mx-4">
-            <CardHeader>
-              <CardTitle className="dashboard-card-title">Delete Image</CardTitle>
-              <CardDescription className="dashboard-card-description">
-                Are you sure you want to delete this image? This action cannot be undone.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 border border-[#C0C0C0]/20 rounded-lg bg-[#191970]/20">
-                  <img
-                    src={deletingImage.url}
-                    alt={deletingImage.alt || deletingImage.name}
-                    className="w-16 h-16 object-cover rounded-lg"
-                  />
-                  <div>
-                    <p className="dashboard-text-primary font-medium">{deletingImage.name}</p>
-                    <p className="dashboard-text-muted text-sm">{deletingImage.type}</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleDeleteImage}
-                    className="dashboard-button-danger flex-1"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Image
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowDeleteModal(false)}
-                    className="dashboard-button-outline"
-                  >
-                    Cancel
-                  </Button>
-                </div>
+      <AnimatePresence>
+        {showDeleteModal && deletingImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50`}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#1a1a2e] rounded-lg p-6 max-w-md w-full mx-4"
+            >
+              <h3 className={`text-[${typography.fontSize.lg}] font-[${typography.fontWeight.medium}] text-[${colors.text.primary}] mb-[${spacing[4]}]`}>
+                Delete Image
+              </h3>
+              <p className={`text-[${colors.text.secondary}] mb-[${spacing[6]}]`}>
+                Are you sure you want to delete "{deletingImage?.name}"? This action cannot be undone.
+              </p>
+              
+              <div className={`flex space-x-[${spacing[2]}]`}>
+                <BaseButton
+                  variant="outline"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </BaseButton>
+                <BaseButton
+                  variant="danger"
+                  onClick={confirmDelete}
+                  className="flex-1"
+                  leftIcon={<Trash2 className="w-4 h-4" />}
+                >
+                  Delete
+                </BaseButton>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
-};
-
-export default ImageManagement;
+}
