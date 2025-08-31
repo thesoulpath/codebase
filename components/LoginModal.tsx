@@ -11,16 +11,17 @@ import { toast } from 'sonner';
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onLogout?: () => void;
 }
 
-export function LoginModal({ isOpen, onClose }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLogout }: LoginModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, signOut } = useAuth();
 
   // Load saved email on component mount
   React.useEffect(() => {
@@ -89,10 +90,53 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     onClose();
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      // Clear form data
+      setEmail('');
+      setPassword('');
+      setError('');
+      
+      // Show logout message
+      toast.success('Successfully logged out');
+      
+      // Call the onLogout callback if provided
+      if (onLogout) {
+        onLogout();
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Error during logout');
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md bg-gradient-to-br from-[#191970]/95 to-[#0A0A23]/95 border border-[#C0C0C0]/20 backdrop-blur-lg">
         <DialogHeader>
+          {/* Header with Close and Logout buttons */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClose}
+                className="text-[#C0C0C0] hover:text-[#EAEAEA] hover:bg-[#C0C0C0]/10 px-3 py-1"
+              >
+                ✕ Close
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-red-400 hover:text-red-300 hover:bg-red-400/10 px-3 py-1"
+              >
+                🚪 Logout
+              </Button>
+            </div>
+          </div>
+          
           <DialogTitle className="text-2xl font-heading text-[#EAEAEA] text-center flex items-center justify-center space-x-2">
             <motion.div
               animate={{ rotate: [0, 360] }}

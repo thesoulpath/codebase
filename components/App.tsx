@@ -307,7 +307,11 @@ export function App() {
       {/* Login Modal */}
       <LoginModal 
         isOpen={showLoginModal} 
-        onClose={() => setShowLoginModal(false)} 
+        onClose={() => setShowLoginModal(false)}
+        onLogout={() => {
+          setShowLoginModal(false);
+          setShowAdmin(false);
+        }}
       />
     </div>
   );
