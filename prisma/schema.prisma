@@ -212,6 +212,19 @@ model Booking {
   userPackageId         Int?                 @map("user_package_id")
   bookingType           String?              @default("individual") @map("booking_type") @db.VarChar(20)
   
+  // Database constraints (enforced by triggers and check constraints)
+  // - schedule_id must reference valid schedule if provided
+  // - client_id must reference valid client if provided  
+  // - user_package_id must reference valid user_package if provided
+  // - package_id must reference valid soul_package if provided
+  // - currency_id must reference valid currency if provided
+  // - group_booking_tier_id must reference valid group_booking_tier if provided
+  // - status must be one of: 'pending', 'confirmed', 'cancelled', 'completed', 'no_show'
+  // - booking_type must be one of: 'individual', 'group'
+  // - group_size must be >= 1
+  // - amounts must be >= 0
+  // - schedule capacity is enforced by database trigger
+  
   // Legacy relationships
   client                Client               @relation("ClientBookingsLegacy", fields: [clientEmail], references: [email], onDelete: NoAction, onUpdate: NoAction)
   currencies            Currency?            @relation(fields: [currency_id], references: [id], onDelete: NoAction, onUpdate: NoAction)

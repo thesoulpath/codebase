@@ -736,8 +736,15 @@ async function main() {
   ]);
   console.log('✅ Test user packages created:', userPackages.length);
 
-  // 18. Create test bookings
+  // 18. Create test bookings with proper constraints
   console.log('📋 Creating test bookings...');
+  
+  // First, update schedule capacity to accommodate bookings
+  await prisma.schedule.updateMany({
+    where: { id: { in: [1, 2] } },
+    data: { capacity: 5 } // Increase capacity to allow bookings
+  });
+  
   const bookings = await Promise.all([
     prisma.booking.upsert({
       where: { id: 1 },
@@ -749,7 +756,7 @@ async function main() {
         sessionType: 'Wellness Session',
         status: 'confirmed',
         notes: 'Test booking for development',
-        schedule_id: 1,
+        schedule_id: 1, // Proper schedule constraint
         start_time: '10:00',
         end_time: '11:00',
         package_id: 1,
@@ -774,7 +781,7 @@ async function main() {
         sessionType: 'Wellness Session',
         status: 'confirmed',
         notes: 'Sesión en español',
-        schedule_id: 2,
+        schedule_id: 2, // Proper schedule constraint
         start_time: '14:00',
         end_time: '15:00',
         package_id: 2,
