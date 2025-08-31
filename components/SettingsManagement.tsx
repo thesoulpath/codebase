@@ -14,6 +14,9 @@ export function SettingsManagement() {
   const [isSeedingCustomers, setIsSeedingCustomers] = useState(false);
   const [seedCustomersStatus, setSeedCustomersStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [seedCustomersMessage, setSeedCustomersMessage] = useState('');
+  const [isSeedingSchedules, setIsSeedingSchedules] = useState(false);
+  const [seedSchedulesStatus, setSeedSchedulesStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [seedSchedulesMessage, setSeedSchedulesMessage] = useState('');
 
   const handleSeedContent = async () => {
     if (!confirm('Are you sure you want to seed the homepage content? This will overwrite existing content.')) {
@@ -102,6 +105,47 @@ export function SettingsManagement() {
       setSeedCustomersMessage('Network error occurred while seeding customers');
     } finally {
       setIsSeedingCustomers(false);
+    }
+  };
+
+  const handleSeedSchedules = async () => {
+    if (!confirm('Are you sure you want to seed sample schedules? This will create 30 days of sample availability slots.')) {
+      return;
+    }
+
+    if (!user?.access_token) {
+      setSeedSchedulesStatus('error');
+      setSeedSchedulesMessage('Authentication required. Please log in again.');
+      return;
+    }
+
+    setIsSeedingSchedules(true);
+    setSeedSchedulesStatus('idle');
+    setSeedSchedulesMessage('');
+
+    try {
+      const response = await fetch('http://localhost:3001/api/admin/seed/schedules', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSeedSchedulesStatus('success');
+        setSeedSchedulesMessage(`Successfully created ${data.count} sample schedules!`);
+      } else {
+        const error = await response.json();
+        setSeedSchedulesStatus('error');
+        setSeedSchedulesMessage(error.message || 'Failed to seed schedules');
+      }
+    } catch (error) {
+      setSeedSchedulesStatus('error');
+      setSeedSchedulesMessage('Network error occurred while seeding schedules');
+    } finally {
+      setIsSeedingSchedules(false);
     }
   };
 
@@ -245,6 +289,64 @@ export function SettingsManagement() {
                 <li>• <strong>Maria Garcia</strong> - Spanish speaker, birth data, relationship questions</li>
                 <li>• <strong>John Smith</strong> - English speaker, birth data, career guidance</li>
                 <li>• <strong>Ana Rodriguez</strong> - Spanish speaker, birth data, life purpose questions</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-[#0A0A23]/30 rounded-lg p-4">
+            <h4 className="text-lg font-medium text-[#EAEAEA] mb-2">Seed Sample Schedules</h4>
+            <p className="text-[#C0C0C0] mb-4">
+              This will create 30 days of sample availability slots with morning, afternoon, and evening sessions. 
+              Each day includes 5 time slots with different session types and capacities.
+            </p>
+            
+            <div className="flex items-center space-x-4">
+              <Button
+                onClick={handleSeedSchedules}
+                disabled={isSeedingSchedules}
+                className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90 disabled:opacity-50"
+              >
+                {isSeedingSchedules ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-[#0A0A23] border-t-transparent rounded-full animate-spin mr-2" />
+                    Seeding Schedules...
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} className="mr-2" />
+                    Seed Sample Schedules
+                  </>
+                )}
+              </Button>
+              
+              {seedSchedulesStatus !== 'idle' && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg ${
+                    seedSchedulesStatus === 'success' 
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  }`}
+                >
+                  {seedSchedulesStatus === 'success' ? (
+                    <CheckCircle size={16} />
+                  ) : (
+                    <XCircle size={16} />
+                  )}
+                  <span className="text-sm">{seedSchedulesMessage}</span>
+                </motion.div>
+              )}
+            </div>
+
+            <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+              <h5 className="text-sm font-medium text-green-400 mb-2">Sample Schedule Data:</h5>
+              <ul className="text-green-300/80 text-xs space-y-1">
+                <li>• <strong>30 days</strong> of availability slots</li>
+                <li>• <strong>5 sessions per day</strong> (9:00, 11:00, 14:00, 16:00, 18:00)</li>
+                <li>• <strong>90-minute</strong> birth chart reading sessions</li>
+                <li>• <strong>60-minute</strong> relationship and career sessions</li>
+                <li>• <strong>Variable capacity</strong> (2-3 clients per session)</li>
               </ul>
             </div>
           </div>
