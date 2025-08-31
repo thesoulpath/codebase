@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -19,7 +19,18 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const { signIn } = useAuth();
+
+  // Load saved email on component mount
+  React.useEffect(() => {
+    const savedEmail = localStorage.getItem('soulpath_admin_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+      console.log('Loaded saved email from storage:', savedEmail);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +53,13 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
           return;
         }
         
+        // Save credentials if remember me is checked
+        if (rememberMe) {
+          localStorage.setItem('soulpath_admin_email', email);
+        } else {
+          localStorage.removeItem('soulpath_admin_email');
+        }
+        
         // Successfully logged in as admin - close modal and clear form
         onClose();
         setEmail('');
@@ -62,7 +80,10 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   };
 
   const handleClose = () => {
-    setEmail('');
+    // Only clear email if remember me is not checked
+    if (!rememberMe) {
+      setEmail('');
+    }
     setPassword('');
     setError('');
     onClose();
@@ -125,6 +146,30 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+          </div>
+
+          {/* Remember Me Checkbox */}
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <input
+                id="rememberMe"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 text-[#FFD700] bg-[#191970]/30 border-[#C0C0C0]/20 rounded focus:ring-[#FFD700]/50 focus:ring-2"
+              />
+              <Label 
+                htmlFor="rememberMe" 
+                className="text-sm text-[#C0C0C0] cursor-pointer select-none"
+              >
+                Remember my email address
+              </Label>
+            </div>
+            {rememberMe && (
+              <p className="text-xs text-[#C0C0C0]/60 ml-6">
+                Your email will be saved locally for convenience
+              </p>
+            )}
           </div>
 
           {error && (
