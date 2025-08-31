@@ -63,6 +63,17 @@ export const buttonStyles = {
   },
 };
 
+// Sidebar Navigation Button Styles
+export const sidebarButtonStyles = {
+  base: 'w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors',
+  variants: {
+    active: 'bg-[var(--color-accent-500)] text-black',
+    inactive: 'text-[var(--color-text-secondary)] hover:bg-[var(--color-sidebar-700)] hover:text-[var(--color-text-primary)]',
+  },
+  icon: 'w-5 h-5',
+  label: 'font-medium',
+};
+
 // Input Styles
 export const inputStyles = {
   base: 'bg-[var(--color-surface-secondary)] border border-[var(--color-border-500)] text-[var(--color-text-primary)] rounded-[var(--border-radius-md)] px-[var(--spacing-3)] py-[var(--spacing-2)] transition-all duration-200',

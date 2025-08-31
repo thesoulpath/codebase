@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { BaseButton } from '@/components/ui/BaseButton';
 import { useAuth } from '../hooks/useAuth';
+import { sidebarButtonStyles, combineStyles } from '@/lib/styles/common';
 import { ClientManagement } from './ClientManagement';
 import BookingsManagement from './BookingsManagement';
 import ScheduleManagement from './ScheduleManagement';
@@ -140,14 +141,13 @@ export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps)
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                  activeTab === key
-                    ? 'bg-[var(--color-accent-500)] text-black'
-                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-sidebar-700)] hover:text-[var(--color-text-primary)]'
-                }`}
+                className={combineStyles(
+                  sidebarButtonStyles.base,
+                  activeTab === key ? sidebarButtonStyles.variants.active : sidebarButtonStyles.variants.inactive
+                )}
               >
-                <Icon size={18} />
-                <span className="font-medium">{label}</span>
+                <Icon size={18} className={sidebarButtonStyles.icon} />
+                <span className={sidebarButtonStyles.label}>{label}</span>
               </button>
             ))}
           </div>
