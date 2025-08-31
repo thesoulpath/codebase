@@ -24,6 +24,7 @@ export function App() {
   const [currentSection, setCurrentSection] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [hasExplicitlyClosed, setHasExplicitlyClosed] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const { user, isAdmin } = useAuth();
 
@@ -106,6 +107,7 @@ export function App() {
   const handleLoginClick = () => {
     if (user && isAdmin) {
       setShowAdmin(true);
+      setHasExplicitlyClosed(false); // Reset the flag when user wants to access admin again
     } else {
       setShowLoginModal(true);
     }
@@ -120,7 +122,7 @@ export function App() {
       }
       
       // Only auto-redirect if not already on admin dashboard and not explicitly closed
-      if (!showAdmin) {
+      if (!showAdmin && !hasExplicitlyClosed) {
         // Small delay to ensure smooth transition and show loading state
         const timer = setTimeout(() => {
           setShowAdmin(true);
@@ -131,8 +133,9 @@ export function App() {
     } else if (!user) {
       // If user logs out, return to main page
       setShowAdmin(false);
+      setHasExplicitlyClosed(false); // Reset the flag when user logs out
     }
-  }, [user, isAdmin, showLoginModal, showAdmin]);
+  }, [user, isAdmin, showLoginModal, showAdmin, hasExplicitlyClosed]);
 
   // Show loading state while redirecting to admin dashboard
   if (user && isAdmin && !showAdmin && !showLoginModal) {
@@ -163,6 +166,7 @@ export function App() {
   if (showAdmin) {
     return <AdminDashboard onClose={() => {
       setShowAdmin(false);
+      setHasExplicitlyClosed(true); // Mark that user explicitly closed the dashboard
       // Reload translations when closing admin to pick up any content changes
       reloadTranslations();
     }} />;
