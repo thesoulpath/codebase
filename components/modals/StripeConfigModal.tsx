@@ -139,32 +139,32 @@ const StripeConfigModal: React.FC<StripeConfigModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Stripe Configuration"
-      size="xl"
+      size="6xl"
     >
-      <div className="space-y-6">
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center gap-3 pb-4 border-b">
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-            <CreditCard className="w-5 h-5 text-blue-600" />
+        <div className="flex items-center gap-3 pb-3 border-b border-[var(--color-border-500)]">
+          <div className="w-8 h-8 bg-[var(--color-accent-100)] rounded-lg flex items-center justify-center">
+            <CreditCard className="w-4 h-4 text-[var(--color-accent-600)]" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Configure Stripe Payment Gateway</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="text-base font-semibold text-[var(--color-text-primary)]">Configure Stripe Payment Gateway</h3>
+            <p className="text-xs text-[var(--color-text-secondary)]">
               Set up your Stripe account credentials and payment preferences
             </p>
           </div>
         </div>
 
         {/* API Keys Section */}
-        <div className="space-y-4">
-          <h4 className="text-md font-medium text-gray-900 flex items-center gap-2">
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-[var(--color-text-primary)] flex items-center gap-2">
             <Settings className="w-4 h-4" />
             API Configuration
           </h4>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="publishableKey" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="publishableKey" className="text-sm font-medium text-[var(--color-text-primary)]">
                 Publishable Key
               </Label>
               <BaseInput
@@ -173,18 +173,18 @@ const StripeConfigModal: React.FC<StripeConfigModalProps> = ({
                 value={config.publishableKey}
                 onChange={(e) => setConfig(prev => ({ ...prev, publishableKey: e.target.value }))}
                 placeholder="pk_test_..."
-                className={errors.publishableKey ? 'border-red-500' : ''}
+                className={errors.publishableKey ? 'border-[var(--color-status-error)]' : ''}
               />
               {errors.publishableKey && (
-                <p className="text-sm text-red-600">{errors.publishableKey}</p>
+                <p className="text-sm text-[var(--color-status-error)]">{errors.publishableKey}</p>
               )}
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-[var(--color-text-tertiary)]">
                 Found in your Stripe Dashboard under Developers → API keys
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="secretKey" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="secretKey" className="text-sm font-medium text-[var(--color-text-primary)]">
                 Secret Key
               </Label>
               <div className="relative">
@@ -194,27 +194,27 @@ const StripeConfigModal: React.FC<StripeConfigModalProps> = ({
                   value={config.secretKey}
                   onChange={(e) => setConfig(prev => ({ ...prev, secretKey: e.target.value }))}
                   placeholder="sk_test_..."
-                  className={errors.secretKey ? 'border-red-500' : ''}
+                  className={errors.secretKey ? 'border-[var(--color-status-error)]' : ''}
                 />
                 <button
                   type="button"
                   onClick={() => setShowSecretKey(!showSecretKey)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
                 >
                   {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {errors.secretKey && (
-                <p className="text-sm text-red-600">{errors.secretKey}</p>
+                <p className="text-sm text-[var(--color-status-error)]">{errors.secretKey}</p>
               )}
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-[var(--color-text-tertiary)]">
                 Keep this secure and never expose it in client-side code
               </p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="webhookSecret" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="webhookSecret" className="text-sm font-medium text-[var(--color-text-primary)]">
               Webhook Secret
             </Label>
             <div className="relative">
@@ -224,44 +224,44 @@ const StripeConfigModal: React.FC<StripeConfigModalProps> = ({
                 value={config.webhookSecret}
                 onChange={(e) => setConfig(prev => ({ ...prev, webhookSecret: e.target.value }))}
                 placeholder="whsec_..."
-                className={errors.webhookSecret ? 'border-red-500' : ''}
+                className={errors.webhookSecret ? 'border-[var(--color-status-error)]' : ''}
               />
               <button
                 type="button"
                 onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
               >
                 {showWebhookSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
             {errors.webhookSecret && (
-              <p className="text-sm text-red-600">{errors.webhookSecret}</p>
+              <p className="text-sm text-[var(--color-status-error)]">{errors.webhookSecret}</p>
             )}
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[var(--color-text-tertiary)]">
               Found in your Stripe Dashboard under Developers → Webhooks
             </p>
           </div>
         </div>
 
         {/* Payment Preferences Section */}
-        <div className="space-y-4">
-          <h4 className="text-md font-medium text-gray-900">Payment Preferences</h4>
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-[var(--color-text-primary)]">Payment Preferences</h4>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="currency" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="currency" className="text-sm font-medium text-[var(--color-text-primary)]">
                 Default Currency
               </Label>
               <Select
                 value={config.currency}
                 onValueChange={(value) => setConfig(prev => ({ ...prev, currency: value }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="dashboard-select">
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dashboard-dropdown-content">
                   {CURRENCIES.map((currency) => (
-                    <SelectItem key={currency.code} value={currency.code}>
+                    <SelectItem key={currency.code} value={currency.code} className="dashboard-dropdown-item">
                       {currency.name}
                     </SelectItem>
                   ))}
@@ -270,31 +270,31 @@ const StripeConfigModal: React.FC<StripeConfigModalProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">
+              <Label className="text-sm font-medium text-[var(--color-text-primary)]">
                 Supported Countries
               </Label>
-              <div className="max-h-32 overflow-y-auto border rounded-md p-2">
+              <div className="max-h-32 overflow-y-auto border border-[var(--color-border-500)] rounded-md p-2 bg-[var(--color-surface-secondary)]">
                 {COUNTRIES.map((country) => (
                   <label key={country.code} className="flex items-center space-x-2 py-1">
                     <input
                       type="checkbox"
                       checked={config.supportedCountries.includes(country.code)}
                       onChange={() => handleCountryToggle(country.code)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-[var(--color-border-500)] text-[var(--color-accent-500)] focus:ring-[var(--color-accent-500)] bg-[var(--color-surface-secondary)]"
                     />
-                    <span className="text-sm text-gray-700">{country.name}</span>
+                    <span className="text-sm text-[var(--color-text-primary)]">{country.name}</span>
                   </label>
                 ))}
               </div>
               {errors.supportedCountries && (
-                <p className="text-sm text-red-600">{errors.supportedCountries}</p>
+                <p className="text-sm text-[var(--color-status-error)]">{errors.supportedCountries}</p>
               )}
             </div>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label htmlFor="automaticTaxes" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="automaticTaxes" className="text-sm font-medium text-[var(--color-text-primary)]">
                 Enable Automatic Tax Calculation
               </Label>
               <Switch
@@ -303,12 +303,12 @@ const StripeConfigModal: React.FC<StripeConfigModalProps> = ({
                 onCheckedChange={(checked) => setConfig(prev => ({ ...prev, automaticTaxes: checked }))}
               />
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[var(--color-text-tertiary)]">
               Automatically calculate and collect sales tax based on customer location
             </p>
 
             <div className="flex items-center justify-between">
-              <Label htmlFor="allowPromotionCodes" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="allowPromotionCodes" className="text-sm font-medium text-[var(--color-text-primary)]">
                 Allow Promotion Codes
               </Label>
               <Switch
@@ -317,16 +317,16 @@ const StripeConfigModal: React.FC<StripeConfigModalProps> = ({
                 onCheckedChange={(checked) => setConfig(prev => ({ ...prev, allowPromotionCodes: checked }))}
               />
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[var(--color-text-tertiary)]">
               Allow customers to enter Stripe promotion codes during checkout
             </p>
           </div>
         </div>
 
         {/* Help Section */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h5 className="text-sm font-medium text-blue-900 mb-2">Need Help?</h5>
-          <ul className="text-xs text-blue-800 space-y-1">
+        <div className="bg-[var(--color-accent-50)] border border-[var(--color-accent-200)] rounded-lg p-3">
+          <h5 className="text-xs font-medium text-[var(--color-accent-900)] mb-1">Need Help?</h5>
+          <ul className="text-xs text-[var(--color-accent-800)] space-y-0.5">
             <li>• Get your API keys from the <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="underline">Stripe Dashboard</a></li>
             <li>• Set up webhooks at <a href="https://dashboard.stripe.com/webhooks" target="_blank" rel="noopener noreferrer" className="underline">Stripe Webhooks</a></li>
             <li>• Test with <a href="https://stripe.com/docs/testing" target="_blank" rel="noopener noreferrer" className="underline">Stripe test cards</a></li>
@@ -334,7 +334,7 @@ const StripeConfigModal: React.FC<StripeConfigModalProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3 pt-4 border-t">
+        <div className="flex gap-3 pt-3 border-t border-[var(--color-border-500)]">
           <BaseButton
             onClick={handleSave}
             variant="primary"

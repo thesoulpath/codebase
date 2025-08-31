@@ -10,20 +10,33 @@ export function ConstellationBackground() {
     return x - Math.floor(x);
   };
 
+  // Helper function to format numbers consistently
+  const formatNumber = (num: number, precision: number = 4) => {
+    return Number(num.toFixed(precision));
+  };
+
   // Generate star data with different properties
   const generateStars = (count: number, type: 'small' | 'medium' | 'large' | 'cosmic') => {
     return [...Array(count)].map((_, i) => {
       const seed = i * 1000 + (type === 'small' ? 1 : type === 'medium' ? 2 : type === 'large' ? 3 : 4);
+      const x = seededRandom(seed) * 100;
+      const y = seededRandom(seed + 1) * 100;
+      const brightness = seededRandom(seed + 2) * 0.8 + 0.2;
+      const speed = seededRandom(seed + 3) * 0.5 + 0.1;
+      const direction = seededRandom(seed + 4) * 360;
+      const pulseDuration = type === 'cosmic' ? 4 + seededRandom(seed + 5) * 3 : 2 + seededRandom(seed + 5) * 3;
+      const delay = seededRandom(seed + 6) * 4;
+      
       return {
         id: i,
-        x: seededRandom(seed) * 100,
-        y: seededRandom(seed + 1) * 100,
+        x: formatNumber(x, 4),
+        y: formatNumber(y, 4),
         size: type === 'small' ? 1 : type === 'medium' ? 1.5 : type === 'large' ? 2 : 3,
-        brightness: seededRandom(seed + 2) * 0.8 + 0.2,
-        speed: seededRandom(seed + 3) * 0.5 + 0.1,
-        direction: seededRandom(seed + 4) * 360,
-        pulseDuration: type === 'cosmic' ? 4 + seededRandom(seed + 5) * 3 : 2 + seededRandom(seed + 5) * 3,
-        delay: seededRandom(seed + 6) * 4,
+        brightness: formatNumber(brightness, 4),
+        speed: formatNumber(speed, 4),
+        direction: formatNumber(direction, 4),
+        pulseDuration: formatNumber(pulseDuration, 4),
+        delay: formatNumber(delay, 4),
         type
       };
     });
@@ -39,16 +52,25 @@ export function ConstellationBackground() {
   const generateOrbitals = (count: number) => {
     return [...Array(count)].map((_, i) => {
       const seed = i * 2000 + 1000;
+      const centerX = 20 + seededRandom(seed) * 60;
+      const centerY = 20 + seededRandom(seed + 1) * 60;
+      const radius = 50 + seededRandom(seed + 2) * 100;
+      const speed = 0.3 + seededRandom(seed + 3) * 0.7;
+      const startAngle = seededRandom(seed + 4) * 360;
+      const size = 1 + seededRandom(seed + 5) * 2;
+      const opacity = 0.3 + seededRandom(seed + 6) * 0.4;
+      const color = seededRandom(seed + 7) > 0.7 ? '#FFD700' : '#C0C0C0';
+      
       return {
         id: i,
-        centerX: 20 + seededRandom(seed) * 60,
-        centerY: 20 + seededRandom(seed + 1) * 60,
-        radius: 50 + seededRandom(seed + 2) * 100,
-        speed: 0.3 + seededRandom(seed + 3) * 0.7,
-        startAngle: seededRandom(seed + 4) * 360,
-        size: 1 + seededRandom(seed + 5) * 2,
-        opacity: 0.3 + seededRandom(seed + 6) * 0.4,
-        color: seededRandom(seed + 7) > 0.7 ? '#FFD700' : '#C0C0C0'
+        centerX: formatNumber(centerX, 4),
+        centerY: formatNumber(centerY, 4),
+        radius: formatNumber(radius, 4),
+        speed: formatNumber(speed, 4),
+        startAngle: formatNumber(startAngle, 4),
+        size: formatNumber(size, 4),
+        opacity: formatNumber(opacity, 4),
+        color
       };
     });
   };
@@ -59,20 +81,89 @@ export function ConstellationBackground() {
   const generateShootingStars = (count: number) => {
     return [...Array(count)].map((_, i) => {
       const seed = i * 3000 + 2000;
+      const startX = seededRandom(seed) * 120 - 10;
+      const startY = seededRandom(seed + 1) * 120 - 10;
+      const endX = seededRandom(seed + 2) * 120 - 10;
+      const endY = seededRandom(seed + 3) * 120 - 10;
+      const duration = 2 + seededRandom(seed + 4) * 3;
+      const delay = seededRandom(seed + 5) * 15;
+      const size = 1 + seededRandom(seed + 6);
+      
       return {
         id: i,
-        startX: seededRandom(seed) * 120 - 10,
-        startY: seededRandom(seed + 1) * 120 - 10,
-        endX: seededRandom(seed + 2) * 120 - 10,
-        endY: seededRandom(seed + 3) * 120 - 10,
-        duration: 2 + seededRandom(seed + 4) * 3,
-        delay: seededRandom(seed + 5) * 15,
-        size: 1 + seededRandom(seed + 6)
+        startX: formatNumber(startX, 4),
+        startY: formatNumber(startY, 4),
+        endX: formatNumber(endX, 4),
+        endY: formatNumber(endY, 4),
+        duration: formatNumber(duration, 4),
+        delay: formatNumber(delay, 4),
+        size: formatNumber(size, 4)
       };
     });
   };
 
   const shootingStars = useMemo(() => generateShootingStars(6), []);
+
+  // Pre-calculate nebula data
+  const nebulaData = useMemo(() => {
+    return [...Array(8)].map((_, i) => {
+      const seed = i * 1000 + 300;
+      const x = seededRandom(seed) * 80 + 10;
+      const y = seededRandom(seed + 1) * 80 + 10;
+      const width = 50 + seededRandom(seed + 2) * 100;
+      const height = 50 + seededRandom(seed + 3) * 100;
+      const duration = 20 + seededRandom(seed + 4) * 15;
+      
+      return {
+        id: i,
+        x: formatNumber(x, 4),
+        y: formatNumber(y, 4),
+        width: formatNumber(width, 4),
+        height: formatNumber(height, 4),
+        duration: formatNumber(duration, 4)
+      };
+    });
+  }, []);
+
+  // Pre-calculate trail data
+  const trailData = useMemo(() => {
+    return [...Array(12)].map((_, i) => {
+      const seed = i * 1000 + 400;
+      const x = seededRandom(seed) * 100;
+      const y = seededRandom(seed + 1) * 100;
+      const duration = 3 + seededRandom(seed + 2) * 2;
+      
+      return {
+        id: i,
+        x: formatNumber(x, 4),
+        y: formatNumber(y, 4),
+        duration: formatNumber(duration, 4)
+      };
+    });
+  }, []);
+
+  // Pre-calculate interactive particle data
+  const interactiveData = useMemo(() => {
+    return [...Array(20)].map((_, i) => {
+      const seed = i * 1000 + 500;
+      const x = seededRandom(seed) * 100;
+      const y = seededRandom(seed + 1) * 100;
+      const size = 1 + seededRandom(seed + 2);
+      const color = seededRandom(seed + 3) > 0.5 ? '#FFD700' : '#FFFFFF';
+      const shadowSize = 2 + seededRandom(seed + 4) * 3;
+      const duration = 8 + seededRandom(seed + 5) * 5;
+      
+      return {
+        id: i,
+        x: formatNumber(x, 4),
+        y: formatNumber(y, 4),
+        size: formatNumber(size, 4),
+        color,
+        shadowSize: formatNumber(shadowSize, 4),
+        duration: formatNumber(duration, 4)
+      };
+    });
+  }, []);
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -135,34 +226,37 @@ export function ConstellationBackground() {
 
       {/* Layer 3: Large stars with golden glow */}
       <div className="absolute inset-0 opacity-35">
-        {largeStars.map((star) => (
-          <motion.div
-            key={`large-${star.id}`}
-            className="absolute rounded-full"
-            style={{
-              left: `${star.x}%`,
-              top: `${star.y}%`,
-              width: `${star.size}px`,
-              height: `${star.size}px`,
-              background: seededRandom(star.id * 1000 + 100) > 0.6 ? '#FFD700' : '#FFFFFF',
-              boxShadow: `0 0 ${star.size * 2}px rgba(255, 215, 0, 0.3)`,
-              filter: 'blur(0.5px)',
-            }}
-            animate={{
-              opacity: [star.brightness * 0.4, star.brightness, star.brightness * 0.4],
-              scale: [1, 1.6, 1],
-              x: [0, Math.sin(star.direction) * 12, Math.sin(star.direction + 180) * 6, 0],
-              y: [0, Math.cos(star.direction) * 10, Math.cos(star.direction + 180) * 5, 0],
-              rotate: [0, 360],
-            }}
-            transition={{
-              duration: star.pulseDuration,
-              repeat: Infinity,
-              delay: star.delay,
-              ease: "easeInOut"
-            }}
-          />
-        ))}
+        {largeStars.map((star) => {
+          const isGolden = seededRandom(star.id * 1000 + 100) > 0.6;
+          return (
+            <motion.div
+              key={`large-${star.id}`}
+              className="absolute rounded-full"
+              style={{
+                left: `${star.x}%`,
+                top: `${star.y}%`,
+                width: `${star.size}px`,
+                height: `${star.size}px`,
+                background: isGolden ? '#FFD700' : '#FFFFFF',
+                boxShadow: `0 0 ${star.size * 2}px rgba(255, 215, 0, 0.3)`,
+                filter: 'blur(0.5px)',
+              }}
+              animate={{
+                opacity: [star.brightness * 0.4, star.brightness, star.brightness * 0.4],
+                scale: [1, 1.6, 1],
+                x: [0, Math.sin(star.direction) * 12, Math.sin(star.direction + 180) * 6, 0],
+                y: [0, Math.cos(star.direction) * 10, Math.cos(star.direction + 180) * 5, 0],
+                rotate: [0, 360],
+              }}
+              transition={{
+                duration: star.pulseDuration,
+                repeat: Infinity,
+                delay: star.delay,
+                ease: "easeInOut"
+              }}
+            />
+          );
+        })}
       </div>
 
       {/* Layer 4: Cosmic dust particles */}
@@ -272,15 +366,15 @@ export function ConstellationBackground() {
 
       {/* Layer 7: Nebula clouds */}
       <div className="absolute inset-0 opacity-5">
-        {[...Array(8)].map((_, i) => (
+        {nebulaData.map((nebula) => (
           <motion.div
-            key={`nebula-${i}`}
+            key={`nebula-${nebula.id}`}
             className="absolute rounded-full"
             style={{
-              left: `${seededRandom(i * 1000 + 300) * 80 + 10}%`,
-              top: `${seededRandom(i * 1000 + 301) * 80 + 10}%`,
-              width: `${50 + seededRandom(i * 1000 + 302) * 100}px`,
-              height: `${50 + seededRandom(i * 1000 + 303) * 100}px`,
+              left: `${nebula.x}%`,
+              top: `${nebula.y}%`,
+              width: `${nebula.width}px`,
+              height: `${nebula.height}px`,
               background: `radial-gradient(ellipse, 
                 rgba(255, 215, 0, 0.1) 0%, 
                 rgba(192, 192, 192, 0.05) 30%, 
@@ -294,9 +388,9 @@ export function ConstellationBackground() {
               rotate: [0, 180, 360],
             }}
             transition={{
-              duration: 20 + seededRandom(i * 1000 + 304) * 15,
+              duration: nebula.duration,
               repeat: Infinity,
-              delay: i * 2,
+              delay: nebula.id * 2,
               ease: "easeInOut"
             }}
           />
@@ -305,13 +399,13 @@ export function ConstellationBackground() {
 
       {/* Layer 8: Particle trails */}
       <div className="absolute inset-0 opacity-8">
-        {[...Array(12)].map((_, i) => (
+        {trailData.map((trail) => (
           <motion.div
-            key={`trail-${i}`}
+            key={`trail-${trail.id}`}
             className="absolute"
             style={{
-              left: `${seededRandom(i * 1000 + 400) * 100}%`,
-              top: `${seededRandom(i * 1000 + 401) * 100}%`,
+              left: `${trail.x}%`,
+              top: `${trail.y}%`,
             }}
           >
             {[...Array(5)].map((_, j) => (
@@ -325,13 +419,13 @@ export function ConstellationBackground() {
                 animate={{
                   opacity: [0, 0.6, 0],
                   scale: [0.5, 1, 0.5],
-                  x: [0, Math.sin(i * 30) * 15, 0],
-                  y: [0, Math.cos(i * 30) * 10, 0],
+                  x: [0, Math.sin(trail.id * 30) * 15, 0],
+                  y: [0, Math.cos(trail.id * 30) * 10, 0],
                 }}
                 transition={{
-                  duration: 3 + seededRandom(i * 1000 + 402) * 2,
+                  duration: trail.duration,
                   repeat: Infinity,
-                  delay: j * 0.3 + i * 0.5,
+                  delay: j * 0.3 + trail.id * 0.5,
                   ease: "easeInOut"
                 }}
               />
@@ -342,29 +436,29 @@ export function ConstellationBackground() {
 
       {/* Layer 9: Interactive cosmic particles that respond to scroll */}
       <div className="absolute inset-0 opacity-15">
-        {[...Array(20)].map((_, i) => (
+        {interactiveData.map((particle) => (
           <motion.div
-            key={`interactive-${i}`}
+            key={`interactive-${particle.id}`}
             className="absolute rounded-full"
             style={{
-              left: `${seededRandom(i * 1000 + 500) * 100}%`,
-              top: `${seededRandom(i * 1000 + 501) * 100}%`,
-              width: `${1 + seededRandom(i * 1000 + 502)}px`,
-              height: `${1 + seededRandom(i * 1000 + 503)}px`,
-              background: seededRandom(i * 1000 + 504) > 0.5 ? '#FFD700' : '#FFFFFF',
-              boxShadow: `0 0 ${2 + seededRandom(i * 1000 + 505) * 3}px rgba(255, 215, 0, 0.4)`,
+              left: `${particle.x}%`,
+              top: `${particle.y}%`,
+              width: `${particle.size}px`,
+              height: `${particle.size}px`,
+              background: particle.color,
+              boxShadow: `0 0 ${particle.shadowSize}px rgba(255, 215, 0, 0.4)`,
             }}
             animate={{
               opacity: [0.2, 0.8, 0.2],
               scale: [0.8, 1.5, 0.8],
-              x: [0, Math.sin(i * 45) * 10, Math.sin(i * 90) * 15, 0],
-              y: [0, Math.cos(i * 45) * 8, Math.cos(i * 90) * 12, 0],
+              x: [0, Math.sin(particle.id * 45) * 10, Math.sin(particle.id * 90) * 15, 0],
+              y: [0, Math.cos(particle.id * 45) * 8, Math.cos(particle.id * 90) * 12, 0],
               rotate: [0, 180, 360],
             }}
             transition={{
-              duration: 8 + seededRandom(i * 1000 + 506) * 5,
+              duration: particle.duration,
               repeat: Infinity,
-              delay: i * 0.2,
+              delay: particle.id * 0.2,
               ease: "easeInOut"
             }}
             whileHover={{

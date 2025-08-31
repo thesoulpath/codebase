@@ -39,7 +39,7 @@ export interface BaseModalProps {
   onClose: () => void;
   title?: string;
   description?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
   variant?: 'default' | 'danger' | 'warning' | 'success' | 'info';
   children: React.ReactNode;
   className?: string;

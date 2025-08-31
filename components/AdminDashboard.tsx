@@ -86,9 +86,8 @@ export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps)
                 <BaseButton
                   size="sm"
                   variant="outline"
-                  className="dashboard-button-account"
+                  leftIcon={<User size={16} />}
                 >
-                  <User size={16} className="mr-2" />
                   My Account
                 </BaseButton>
               </Link>
@@ -99,9 +98,9 @@ export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps)
               <BaseButton
                 onClick={onClose}
                 size="sm"
-                className="dashboard-button-close"
+                variant="secondary"
+                leftIcon={<X size={16} />}
               >
-                <X size={16} className="mr-2" />
                 Close
               </BaseButton>
             )}
@@ -109,9 +108,9 @@ export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps)
             <BaseButton
               onClick={signOut}
               size="sm"
-              className="dashboard-button-signout"
+              variant="danger"
+              leftIcon={<LogOut size={16} />}
             >
-              <LogOut size={16} className="mr-2" />
               Sign Out
             </BaseButton>
           </div>

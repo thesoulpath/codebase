@@ -373,34 +373,33 @@ const PaymentMethodManagement: React.FC = () => {
 
                 {/* Stripe Configuration Section */}
                 {formData.type === 'stripe' && (
-                  <div className="space-y-4 p-4 border border-blue-200 rounded-lg bg-blue-50">
+                  <div className="space-y-4 p-4 border border-[var(--color-accent-200)] rounded-lg bg-[var(--color-accent-50)]">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Zap className="w-5 h-5 text-blue-600" />
-                        <h4 className="text-sm font-medium text-blue-900">Stripe Configuration</h4>
+                        <Zap className="w-5 h-5 text-[var(--color-accent-600)]" />
+                        <h4 className="text-sm font-medium text-[var(--color-accent-900)]">Stripe Configuration</h4>
                       </div>
                       <BaseButton
                         type="button"
                         onClick={() => setShowStripeConfig(true)}
-                        variant="outline"
-                        size="sm"
+                        className="bg-[var(--color-accent-800)] text-white hover:bg-[var(--color-primary-500)] hover:text-[var(--color-text-inverse)] border border-[var(--color-accent-600)] hover:border-[var(--color-primary-500)] rounded-md px-4 py-2 font-medium transition-all duration-200"
                       >
                         {stripeConfig ? 'Edit Configuration' : 'Configure Stripe'}
                       </BaseButton>
                     </div>
                     
                     {stripeConfig ? (
-                      <div className="text-sm text-blue-800">
+                      <div className="text-sm text-[var(--color-accent-800)]">
                         <p>✅ Stripe is configured</p>
-                        <p className="text-xs text-blue-600 mt-1">
+                        <p className="text-xs text-[var(--color-accent-700)] mt-1">
                           Currency: {stripeConfig.currency?.toUpperCase() || 'USD'} | 
                           Countries: {stripeConfig.supportedCountries?.length || 0} supported
                         </p>
                       </div>
                     ) : (
-                      <div className="text-sm text-blue-800">
-                        <p>⚠️ Stripe configuration required</p>
-                        <p className="text-xs text-blue-600 mt-1">
+                      <div className="text-sm text-[var(--color-accent-800)]">
+                        <p className="text-[var(--color-text-primary)] font-medium">⚠️ Stripe configuration required</p>
+                        <p className="text-xs text-[var(--color-accent-700)] mt-1">
                           Click "Configure Stripe" to set up your payment gateway
                         </p>
                       </div>
