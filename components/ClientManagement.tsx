@@ -11,6 +11,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { toast } from 'sonner';
 
 import { useAuth } from '../hooks/useAuth';
 
@@ -84,12 +85,12 @@ function ClientModal({ client, isOpen, mode, onClose, onSave }: ClientModalProps
         email: '',
         phone: '',
         status: 'active',
-        birthDate: '',
-        birthTime: '',
-        birthPlace: '',
-        question: '',
-        language: 'en',
-        adminNotes: ''
+              birthDate: '',
+      birthTime: '',
+      birthPlace: '',
+      question: '',
+      language: 'en',
+      adminNotes: ''
       });
     }
   }, [client, mode]);
@@ -504,6 +505,8 @@ function BookingHistoryModal({ client, isOpen, onClose }: BookingHistoryModalPro
 export function ClientManagement() {
   const { user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
+  
+  console.log('ClientManagement component rendered, user:', user?.email, 'clients count:', clients.length);
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -514,22 +517,103 @@ export function ClientManagement() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [lastLoaded, setLastLoaded] = useState<Date | null>(null);
   const [modalState, setModalState] = useState<{ 
     isOpen: boolean; 
     mode: 'create' | 'edit' | 'view' | 'history'; 
   }>({ isOpen: false, mode: 'view' });
 
   useEffect(() => {
-    loadClients();
-  }, []);
+    if (user?.access_token) {
+      console.log('User authenticated, loading clients...');
+      loadClients();
+    } else {
+      console.log('User not authenticated, clearing clients...');
+      setClients([]);
+      setIsLoading(false);
+    }
+  }, [user?.access_token]);
+
+  // Refresh clients when component becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user?.access_token && clients.length === 0) {
+        console.log('Component became visible, refreshing clients...');
+        loadClients();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user?.access_token, clients.length]);
+
+  // Refresh clients when component mounts or when user navigates to it
+  useEffect(() => {
+    if (user?.access_token && clients.length === 0) {
+      console.log('Component mounted or navigated to, loading clients...');
+      loadClients();
+    }
+  }, [user?.access_token, clients.length]);
+
+  // Add a manual refresh function that can be called from parent components
+  const refreshClients = () => {
+    if (user?.access_token) {
+      console.log('Manual refresh requested...');
+      loadClients();
+    }
+  };
+
+  // Expose refresh function to parent components if needed
+  useEffect(() => {
+    // @ts-ignore - Exposing refresh function globally for debugging
+    window.refreshClients = refreshClients;
+    
+    return () => {
+      // @ts-ignore - Clean up global function
+      delete window.refreshClients;
+    };
+  }, [user?.access_token]);
+
+  // Listen for navigation events and refresh clients when needed
+  useEffect(() => {
+    const handleNavigation = () => {
+      // Small delay to ensure the component is fully mounted
+      setTimeout(() => {
+        if (user?.access_token && clients.length === 0) {
+          console.log('Navigation detected, refreshing clients...');
+          loadClients();
+        }
+      }, 100);
+    };
+
+    // Listen for popstate (back/forward navigation)
+    window.addEventListener('popstate', handleNavigation);
+    
+    // Listen for pushstate (programmatic navigation)
+    const originalPushState = history.pushState;
+    history.pushState = function(...args) {
+      originalPushState.apply(history, args);
+      handleNavigation();
+    };
+
+    return () => {
+      window.removeEventListener('popstate', handleNavigation);
+      history.pushState = originalPushState;
+    };
+  }, [user?.access_token, clients.length]);
 
   useEffect(() => {
     filterAndSortClients();
   }, [clients, searchQuery, statusFilter, languageFilter, dateFilter, sortBy, sortOrder]);
 
+
+
   const loadClients = async () => {
     try {
       if (!user?.access_token) return;
+      
+      setIsLoading(true);
+      console.log('Loading clients...');
 
       const response = await fetch(
         `/api/admin/clients?enhanced=true`,
@@ -543,12 +627,25 @@ export function ClientManagement() {
 
       if (response.ok) {
         const data = await response.json();
-        setClients(data.clients || []);
+        console.log('API Response:', data);
+        const loadedClients = data.data || [];
+        console.log('Loaded clients:', loadedClients);
+        console.log('Client statuses:', loadedClients.map((c: any) => ({ name: c.name, status: c.status })));
+        setClients(loadedClients);
+        setLastLoaded(new Date());
+        
+        if (loadedClients.length > 0) {
+          toast.success(`Loaded ${loadedClients.length} clients successfully`);
+        } else {
+          toast.info('No clients found');
+        }
       } else {
         console.error('Failed to load clients:', response.statusText);
+        toast.error('Failed to load clients');
       }
     } catch (error) {
       console.error('Error loading clients:', error);
+      toast.error('Error loading clients');
     } finally {
       setIsLoading(false);
     }
@@ -678,12 +775,20 @@ export function ClientManagement() {
 
       if (response.ok) {
         setClients(prev => prev.filter(c => c.id !== client.id));
+        toast.success('Client deleted successfully', {
+          description: `${client.name} has been removed from your client list.`
+        });
       } else {
-        alert('Failed to delete client. Please try again.');
+        const errorData = await response.json();
+        toast.error('Failed to delete client', {
+          description: errorData.message || 'Please try again.'
+        });
       }
     } catch (error) {
       console.error('Error deleting client:', error);
-      alert('Failed to delete client. Please try again.');
+      toast.error('Network error', {
+        description: 'Failed to delete client. Please check your connection and try again.'
+      });
     }
   };
 
@@ -710,20 +815,31 @@ export function ClientManagement() {
         
         if (isCreate) {
           setClients(prev => [data.client, ...prev]);
+          toast.success('Client created successfully!', {
+            description: `${data.client.name} has been added to your client list.`
+          });
         } else {
           setClients(prev => prev.map(c => 
             c.id === selectedClient?.id ? { ...c, ...data.client } : c
           ));
+          toast.success('Client updated successfully!', {
+            description: `${data.client.name}'s information has been updated.`
+          });
         }
         
         setModalState({ isOpen: false, mode: 'view' });
         setSelectedClient(null);
       } else {
-        alert('Failed to save client. Please try again.');
+        const errorData = await response.json();
+        toast.error('Failed to save client', {
+          description: errorData.message || 'Please try again.'
+        });
       }
     } catch (error) {
       console.error('Error saving client:', error);
-      alert('Failed to save client. Please try again.');
+      toast.error('Network error', {
+        description: 'Failed to save client. Please check your connection and try again.'
+      });
     }
   };
 
@@ -747,6 +863,15 @@ export function ClientManagement() {
     completed: clients.filter(c => c.status === 'completed').length,
     recurrent: clients.filter(c => c.isRecurrent).length
   };
+  
+  console.log('Stats calculation:', {
+    total: clients.length,
+    pending: clients.filter(c => c.status === 'pending').length,
+    confirmed: clients.filter(c => c.status === 'confirmed').length,
+    completed: clients.filter(c => c.status === 'completed').length,
+    recurrent: clients.filter(c => c.isRecurrent).length
+  });
+  console.log('All client statuses:', clients.map(c => ({ name: c.name, status: c.status })));
 
   if (isLoading) {
     return (
@@ -960,9 +1085,16 @@ export function ClientManagement() {
 
       {/* Results */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-[#C0C0C0]">
-          Showing {filteredClients.length} of {clients.length} clients
-        </p>
+        <div className="flex flex-col space-y-1">
+          <p className="text-sm text-[#C0C0C0]">
+            Showing {filteredClients.length} of {clients.length} clients
+          </p>
+          {lastLoaded && (
+            <p className="text-xs text-[#C0C0C0]/60">
+              Last loaded: {lastLoaded.toLocaleTimeString()}
+            </p>
+          )}
+        </div>
         <Button
           variant="outline"
           size="sm"
@@ -974,8 +1106,23 @@ export function ClientManagement() {
         </Button>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <Card className="bg-[#191970]/30 border-[#C0C0C0]/20">
+          <CardContent className="p-12 text-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="w-12 h-12 border-4 border-[#FFD700] border-t-transparent rounded-full mx-auto mb-4"
+            />
+            <h3 className="text-lg font-heading text-[#EAEAEA] mb-2">Loading clients...</h3>
+            <p className="text-[#C0C0C0]">Please wait while we fetch your client data.</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Client List/Grid */}
-      {filteredClients.length === 0 ? (
+      {!isLoading && filteredClients.length === 0 ? (
         <Card className="bg-[#191970]/30 border-[#C0C0C0]/20">
           <CardContent className="p-12 text-center">
             <Users size={48} className="mx-auto text-[#C0C0C0]/50 mb-4" />

@@ -1,59 +1,64 @@
-const { Client } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config({ path: '.env.local' });
 
-const databaseUrl = process.env.DATABASE_URL;
-
-console.log('🔍 Testing direct database connection...');
-console.log('Database URL:', databaseUrl ? '✅ Present' : '❌ Missing');
-
-if (!databaseUrl) {
-  console.log('❌ DATABASE_URL not found in environment variables');
-  process.exit(1);
-}
-
-const client = new Client({
-  connectionString: databaseUrl,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
-
 async function testConnection() {
+  console.log('Testing database connection...');
+  
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  console.log('Supabase URL:', supabaseUrl ? '✅ Set' : '❌ Missing');
+  console.log('Service Role Key:', supabaseKey ? '✅ Set' : '❌ Missing');
+  
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ Missing environment variables');
+    return;
+  }
+  
   try {
-    console.log('📡 Attempting to connect to database...');
-    await client.connect();
-    console.log('✅ Database connection successful!');
+    const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Test a simple query
-    const result = await client.query('SELECT NOW() as current_time');
-    console.log('🕒 Database time:', result.rows[0].current_time);
+    // Test basic connection
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .limit(1);
     
-    // Test if our tables exist
-    const tablesResult = await client.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name IN ('email_config', 'content', 'logo_settings', 'seo')
-      ORDER BY table_name
-    `);
+    if (error) {
+      console.error('❌ Database connection failed:', error.message);
+      
+      // Check if table exists
+      if (error.message.includes('relation "clients" does not exist')) {
+        console.log('❌ Clients table does not exist. You need to run the database migration.');
+        console.log('💡 Try: npx supabase db push');
+      }
+    } else {
+      console.log('✅ Database connection successful');
+      
+      if (data && data.length > 0) {
+        console.log('✅ Table query successful');
+        console.log('Table columns:', Object.keys(data[0]));
+        console.log('Sample data:', data[0]);
+      } else {
+        console.log('✅ Table exists but is empty');
+        console.log('Table columns:', Object.keys(data[0] || {}));
+      }
+    }
     
-    console.log('📊 Found tables:', tablesResult.rows.map(row => row.table_name));
-    
-    await client.end();
-    
-    console.log('');
-    console.log('🎉 Direct database connection working!');
-    console.log('✅ Prisma should now work with: npx prisma db pull');
+    // Try to get table info
+    try {
+      const { data: tableInfo, error: tableError } = await supabase
+        .rpc('get_table_info', { table_name: 'clients' });
+      
+      if (!tableError) {
+        console.log('Table info:', tableInfo);
+      }
+    } catch (e) {
+      // RPC might not exist, that's okay
+    }
     
   } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
-    console.log('');
-    console.log('🔍 Common issues:');
-    console.log('- Check if the password is correct');
-    console.log('- Verify IP restrictions in Supabase dashboard');
-    console.log('- Ensure the database is accessible from external connections');
-    
-    await client.end().catch(() => {});
+    console.error('❌ Unexpected error:', error.message);
   }
 }
 

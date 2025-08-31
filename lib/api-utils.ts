@@ -241,3 +241,27 @@ export function deepClone<T>(obj: T): T {
   }
   return obj;
 }
+
+/**
+ * Utility function for making authenticated API calls to admin endpoints
+ */
+export async function authenticatedFetch(
+  url: string, 
+  options: RequestInit = {}, 
+  accessToken?: string
+): Promise<Response> {
+  if (!accessToken) {
+    throw new Error('Access token is required for admin API calls');
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${accessToken}`,
+    ...options.headers,
+  };
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+}

@@ -1,79 +1,175 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { requireAuth } from '@/lib/auth';
+import { z } from 'zod';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+// Zod schema for schedule creation
+const scheduleCreateSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
+  time: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
+  duration: z.number().min(30, 'Duration must be at least 30 minutes').max(180, 'Duration cannot exceed 3 hours'),
+  capacity: z.number().min(1, 'Capacity must be at least 1').max(10, 'Capacity cannot exceed 10'),
+  available: z.boolean().default(true),
+  notes: z.string().optional()
+});
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
-    const available = searchParams.get('available') === 'true';
+    const available = searchParams.get('available');
 
     let query = supabase
       .from('schedules')
-      .select('*');
+      .select('*')
+      .order('date', { ascending: true })
+      .order('time', { ascending: true });
 
     if (date) {
       query = query.eq('date', date);
     }
 
-    if (available) {
-      query = query.eq('is_available', true);
+    if (available !== null) {
+      query = query.eq('available', available === 'true');
     }
 
-    const { data, error } = await query;
+    const { data: schedules, error } = await query;
 
     if (error) {
       console.error('Error fetching schedules:', error);
-      return NextResponse.json({ error: 'Failed to fetch schedules' }, { status: 500 });
+      return NextResponse.json({
+        success: false,
+        error: 'Database error',
+        message: 'Failed to fetch schedules',
+        details: error.message,
+        toast: {
+          type: 'error',
+          title: 'Database Error',
+          description: 'Failed to fetch schedules. Please try again.'
+        }
+      }, { status: 500 });
     }
 
-    // Transform the data to match frontend expectations
-    const transformedData = (data || []).map(schedule => ({
-      ...schedule,
-      isAvailable: schedule.is_available,
-      // Add missing fields with defaults for frontend compatibility
-      date: schedule.date || schedule.day_of_week,
-      time: schedule.time || schedule.start_time,
-      capacity: schedule.capacity || 1,
-      bookedCount: schedule.bookedCount || 0,
-      clientId: schedule.clientId || null
-    }));
+    return NextResponse.json({
+      success: true,
+      data: schedules
+    });
 
-    return NextResponse.json({ schedules: transformedData });
   } catch (error) {
     console.error('Unexpected error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error',
+      message: 'An unexpected error occurred',
+      toast: {
+        type: 'error',
+        title: 'Unexpected Error',
+        description: 'An unexpected error occurred. Please try again.'
+      }
+    }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const body = await request.json();
+
+    // Validate schedule data
+    const validation = scheduleCreateSchema.safeParse(body);
+    if (!validation.success) {
+      console.error('Validation error:', (validation as any).error.errors);
+      return NextResponse.json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Schedule data validation failed',
+        details: (validation as any).error.errors,
+        toast: {
+          type: 'error',
+          title: 'Validation Error',
+          description: 'Schedule data validation failed. Please check the form fields.'
+        }
+      }, { status: 400 });
     }
 
-    const body = await request.json();
-    
+    const scheduleData = validation.data;
+
+    // Check if schedule already exists
+    const { data: existingSchedule } = await supabase
+      .from('schedules')
+      .select('id')
+      .eq('date', scheduleData.date)
+      .eq('time', scheduleData.time)
+      .single();
+
+    if (existingSchedule) {
+      return NextResponse.json({
+        success: false,
+        error: 'Schedule already exists',
+        message: 'A schedule already exists for this date and time',
+        toast: {
+          type: 'error',
+          title: 'Schedule Exists',
+          description: 'A schedule already exists for this date and time'
+        }
+      }, { status: 409 });
+    }
+
+    // Insert schedule into database
     const { data, error } = await supabase
       .from('schedules')
-      .insert(body)
+      .insert({
+        date: scheduleData.date,
+        time: scheduleData.time,
+        duration: scheduleData.duration,
+        capacity: scheduleData.capacity,
+        available: scheduleData.available,
+        notes: scheduleData.notes,
+        created_at: new Date().toISOString()
+      })
       .select()
       .single();
 
     if (error) {
       console.error('Error creating schedule:', error);
-      return NextResponse.json({ error: 'Failed to create schedule' }, { status: 500 });
+      return NextResponse.json({
+        success: false,
+        error: 'Database error',
+        message: 'Failed to create schedule',
+        details: error.message,
+        toast: {
+          type: 'error',
+          title: 'Schedule Creation Failed',
+          description: 'Failed to create schedule. Please try again.'
+        }
+      }, { status: 500 });
     }
 
-    return NextResponse.json({ schedule: data });
+    return NextResponse.json({
+      success: true,
+      message: 'Schedule created successfully',
+      data,
+      toast: {
+        type: 'success',
+        title: 'Success!',
+        description: `Schedule for ${data.date} at ${data.time} created successfully`
+      }
+    }, { status: 201 });
+
   } catch (error) {
     console.error('Unexpected error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error',
+      message: 'An unexpected error occurred',
+      toast: {
+        type: 'error',
+        title: 'Unexpected Error',
+        description: 'An unexpected error occurred. Please try again.'
+      }
+    }, { status: 500 });
   }
 }

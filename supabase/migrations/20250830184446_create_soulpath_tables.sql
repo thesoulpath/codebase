@@ -176,8 +176,8 @@ INSERT INTO schedules (day_of_week, start_time, end_time, is_available)
 VALUES ('Monday', '09:00', '17:00', true)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO clients (email, name, phone, status, notes)
-VALUES ('test@example.com', 'Test Client', '+1234567890', 'active', 'Test client for development')
+INSERT INTO clients (email, name, phone, status, birth_date, birth_place, question, language, created_at)
+VALUES ('test@example.com', 'Test Client', '+1234567890', 'active', '1990-01-01', 'Test City, Test Country', 'Test question for development purposes', 'en', NOW())
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO profiles (id, email, full_name, role)

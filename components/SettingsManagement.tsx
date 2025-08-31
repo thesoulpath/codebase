@@ -4,8 +4,10 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Database, Download, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from './ui/button';
+import { useAuth } from '../hooks/useAuth';
 
 export function SettingsManagement() {
+  const { user } = useAuth();
   const [isSeeding, setIsSeeding] = useState(false);
   const [seedStatus, setSeedStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [seedMessage, setSeedMessage] = useState('');
@@ -18,15 +20,22 @@ export function SettingsManagement() {
       return;
     }
 
+    if (!user?.access_token) {
+      setSeedStatus('error');
+      setSeedMessage('Authentication required. Please log in again.');
+      return;
+    }
+
     setIsSeeding(true);
     setSeedStatus('idle');
     setSeedMessage('');
 
     try {
-      const response = await fetch('/api/admin/content/seed', {
+      const response = await fetch('http://localhost:3001/api/admin/content/seed', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.access_token}`,
         },
       });
 
@@ -47,8 +56,18 @@ export function SettingsManagement() {
     }
   };
 
-  const handleSeedCustomers = async () => {
-    if (!confirm('Are you sure you want to seed 3 sample customers? This will create new customer records.')) {
+  const handleSeedCustomers = async (clearExisting = false) => {
+    const message = clearExisting 
+      ? 'Are you sure you want to clear existing sample customers and seed 3 new ones? This will overwrite any existing sample customers.'
+      : 'Are you sure you want to seed 3 sample customers? This will create new customer records (existing ones will be skipped).';
+      
+    if (!confirm(message)) {
+      return;
+    }
+
+    if (!user?.access_token) {
+      setSeedCustomersStatus('error');
+      setSeedCustomersMessage('Authentication required. Please log in again.');
       return;
     }
 
@@ -57,10 +76,15 @@ export function SettingsManagement() {
     setSeedCustomersMessage('');
 
     try {
-      const response = await fetch('/api/admin/seed/clients', {
+      const url = clearExisting 
+        ? 'http://localhost:3001/api/admin/seed/clients?clear=true'
+        : 'http://localhost:3001/api/admin/seed/clients';
+        
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.access_token}`,
         },
       });
 
@@ -168,7 +192,7 @@ export function SettingsManagement() {
             
             <div className="flex items-center space-x-4">
               <Button
-                onClick={handleSeedCustomers}
+                onClick={() => handleSeedCustomers(false)}
                 disabled={isSeedingCustomers}
                 className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90 disabled:opacity-50"
               >
@@ -183,6 +207,16 @@ export function SettingsManagement() {
                     Seed 3 Sample Customers
                   </>
                 )}
+              </Button>
+              
+              <Button
+                onClick={() => handleSeedCustomers(true)}
+                disabled={isSeedingCustomers}
+                variant="outline"
+                className="border-orange-500/30 text-orange-400 hover:bg-orange-500/10"
+              >
+                <Download size={16} className="mr-2" />
+                Clear & Seed (Overwrite)
               </Button>
               
               {seedCustomersStatus !== 'idle' && (
