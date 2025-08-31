@@ -4,20 +4,29 @@ import React from 'react';
 import { motion } from 'motion/react';
 
 export function ConstellationBackground() {
+  // Seeded random number generator for consistent star positions
+  const seededRandom = (seed: number) => {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  };
+
   // Generate star data with different properties
   const generateStars = (count: number, type: 'small' | 'medium' | 'large' | 'cosmic') => {
-    return [...Array(count)].map((_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: type === 'small' ? 1 : type === 'medium' ? 1.5 : type === 'large' ? 2 : 3,
-      brightness: Math.random() * 0.8 + 0.2,
-      speed: Math.random() * 0.5 + 0.1,
-      direction: Math.random() * 360,
-      pulseDuration: type === 'cosmic' ? 4 + Math.random() * 3 : 2 + Math.random() * 3,
-      delay: Math.random() * 4,
-      type
-    }));
+    return [...Array(count)].map((_, i) => {
+      const seed = i * 1000 + (type === 'small' ? 1 : type === 'medium' ? 2 : type === 'large' ? 3 : 4);
+      return {
+        id: i,
+        x: seededRandom(seed) * 100,
+        y: seededRandom(seed + 1) * 100,
+        size: type === 'small' ? 1 : type === 'medium' ? 1.5 : type === 'large' ? 2 : 3,
+        brightness: seededRandom(seed + 2) * 0.8 + 0.2,
+        speed: seededRandom(seed + 3) * 0.5 + 0.1,
+        direction: seededRandom(seed + 4) * 360,
+        pulseDuration: type === 'cosmic' ? 4 + seededRandom(seed + 5) * 3 : 2 + seededRandom(seed + 5) * 3,
+        delay: seededRandom(seed + 6) * 4,
+        type
+      };
+    });
   };
 
   const smallStars = generateStars(60, 'small');
@@ -27,33 +36,39 @@ export function ConstellationBackground() {
 
   // Floating particles with orbital motion
   const generateOrbitals = (count: number) => {
-    return [...Array(count)].map((_, i) => ({
-      id: i,
-      centerX: 20 + Math.random() * 60,
-      centerY: 20 + Math.random() * 60,
-      radius: 50 + Math.random() * 100,
-      speed: 0.3 + Math.random() * 0.7,
-      startAngle: Math.random() * 360,
-      size: 1 + Math.random() * 2,
-      opacity: 0.3 + Math.random() * 0.4,
-      color: Math.random() > 0.7 ? '#FFD700' : '#C0C0C0'
-    }));
+    return [...Array(count)].map((_, i) => {
+      const seed = i * 2000 + 1000;
+      return {
+        id: i,
+        centerX: 20 + seededRandom(seed) * 60,
+        centerY: 20 + seededRandom(seed + 1) * 60,
+        radius: 50 + seededRandom(seed + 2) * 100,
+        speed: 0.3 + seededRandom(seed + 3) * 0.7,
+        startAngle: seededRandom(seed + 4) * 360,
+        size: 1 + seededRandom(seed + 5) * 2,
+        opacity: 0.3 + seededRandom(seed + 6) * 0.4,
+        color: seededRandom(seed + 7) > 0.7 ? '#FFD700' : '#C0C0C0'
+      };
+    });
   };
 
   const orbitals = generateOrbitals(15);
 
   // Shooting stars
   const generateShootingStars = (count: number) => {
-    return [...Array(count)].map((_, i) => ({
-      id: i,
-      startX: Math.random() * 120 - 10,
-      startY: Math.random() * 120 - 10,
-      endX: Math.random() * 120 - 10,
-      endY: Math.random() * 120 - 10,
-      duration: 2 + Math.random() * 3,
-      delay: Math.random() * 15,
-      size: 1 + Math.random()
-    }));
+    return [...Array(count)].map((_, i) => {
+      const seed = i * 3000 + 2000;
+      return {
+        id: i,
+        startX: seededRandom(seed) * 120 - 10,
+        startY: seededRandom(seed + 1) * 120 - 10,
+        endX: seededRandom(seed + 2) * 120 - 10,
+        endY: seededRandom(seed + 3) * 120 - 10,
+        duration: 2 + seededRandom(seed + 4) * 3,
+        delay: seededRandom(seed + 5) * 15,
+        size: 1 + seededRandom(seed + 6)
+      };
+    });
   };
 
   const shootingStars = generateShootingStars(6);

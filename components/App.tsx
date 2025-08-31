@@ -145,7 +145,7 @@ export function App() {
   }, [user, isAdmin, showLoginModal, hasExplicitlyClosed]); // Removed showAdmin dependency
 
   // Show loading state while redirecting to admin dashboard
-  if (user && isAdmin && !showAdmin && !showLoginModal) {
+  if (user && isAdmin && !showAdmin && !showLoginModal && !hasExplicitlyClosed) {
     return (
       <div className="min-h-screen bg-[#0A0A23] flex items-center justify-center">
         <div className="text-center">
