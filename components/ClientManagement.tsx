@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 
 import { useAuth } from '../hooks/useAuth';
+import CreateBookingModal from './modals/CreateBookingModal';
 
 
 interface Client {
@@ -522,6 +523,8 @@ export function ClientManagement() {
     isOpen: boolean; 
     mode: 'create' | 'edit' | 'view' | 'history'; 
   }>({ isOpen: false, mode: 'view' });
+  const [showCreateBookingModal, setShowCreateBookingModal] = useState(false);
+  const [selectedClientForBooking, setSelectedClientForBooking] = useState<Client | null>(null);
 
   useEffect(() => {
     if (user?.access_token) {
@@ -752,6 +755,11 @@ export function ClientManagement() {
   const handleViewHistory = (client: Client) => {
     setSelectedClient(client);
     setModalState({ isOpen: true, mode: 'history' });
+  };
+
+  const handleCreateBooking = (client: Client) => {
+    setSelectedClientForBooking(client);
+    setShowCreateBookingModal(true);
   };
 
   const handleDeleteClient = async (client: Client) => {
@@ -1301,6 +1309,15 @@ export function ClientManagement() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => handleCreateBooking(client)}
+                    className="border-green-500/30 text-green-400 hover:bg-green-500/10"
+                  >
+                    <Calendar size={14} className="mr-2" />
+                    Book
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleEditClient(client)}
                     className="border-[#FFD700]/30 text-[#FFD700] hover:bg-[#FFD700]/10"
                   >
@@ -1355,6 +1372,22 @@ export function ClientManagement() {
           />
         )}
       </AnimatePresence>
+
+      {/* Create Booking Modal */}
+      {selectedClientForBooking && (
+        <CreateBookingModal
+          isOpen={showCreateBookingModal}
+          onClose={() => {
+            setShowCreateBookingModal(false);
+            setSelectedClientForBooking(null);
+          }}
+          client={selectedClientForBooking}
+          onSuccess={() => {
+            // Refresh clients to update booking counts
+            loadClients();
+          }}
+        />
+      )}
     </div>
   );
 }

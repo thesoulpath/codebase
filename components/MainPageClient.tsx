@@ -8,13 +8,19 @@ import { useTranslations, useLanguage } from '@/hooks/useTranslations';
 import { AdminDashboard } from '@/components/AdminDashboard';
 import { LoginModal } from '@/components/LoginModal';
 
+interface MainPageClientProps {
+  content: Record<string, string>;
+  initialContent: Record<string, any>;
+  initialLogoSettings: Record<string, any>;
+  initialProfileImage: string | undefined;
+}
+
 // useLogo Hook
 function useLogo(initialLogoSettings: any) {
   const [logoSettings] = useState(initialLogoSettings);
   
   const reloadLogo = () => {
     // This would re-fetch logo settings in a full implementation
-    console.log('Reloading logo...');
   };
   
   return { logoSettings, reloadLogo };
@@ -268,10 +274,10 @@ export default function MainPageClient({
   initialContent, 
   initialLogoSettings, 
   initialProfileImage
-}: any) {
+}: MainPageClientProps) {
   const { setLanguage } = useLanguage();
-  const { t, isLoading: isLoadingTranslations, reloadTranslations } = useTranslations(initialContent);
-  const { reloadProfileImage } = useProfileImage(initialProfileImage);
+  const { t, isLoading: isLoadingTranslations } = useTranslations(initialContent);
+  const { } = useProfileImage(initialProfileImage);
   const { logoSettings: _ } = useLogo(initialLogoSettings);
   
   const [currentSection, setCurrentSection] = useState(0);
@@ -354,13 +360,7 @@ export default function MainPageClient({
 
   if (showAdmin) {
     return (
-      <AdminDashboard 
-        onClose={() => {
-          setShowAdmin(false);
-          reloadTranslations();
-          reloadProfileImage();
-        }} 
-      />
+      <AdminDashboard onClose={() => setShowAdmin(false)} />
     );
   }
 

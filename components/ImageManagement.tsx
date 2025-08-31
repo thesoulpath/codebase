@@ -1,10 +1,21 @@
-import { useState, useEffect } from 'react';
-import { Upload, Trash2, Image as ImageIcon, Save, X, ExternalLink } from 'lucide-react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
+'use client';
 
-import { useAuth } from '../hooks/useAuth';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+import { 
+  Upload, Image, HardDrive, Globe, Clock, Edit, Trash2, 
+  CheckCircle, Filter
+} from 'lucide-react';
+import { Button } from './ui/button';
+import { useAuth } from '../hooks/useAuth';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Badge } from './ui/badge';
+
+
 
 interface ImageData {
   profileImage?: string;
@@ -14,18 +25,40 @@ export function ImageManagement() {
   const { user } = useAuth();
   const [images, setImages] = useState<ImageData>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: boolean }>({});
-  const [editingUrl, setEditingUrl] = useState<{ [key: string]: string }>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [editingImage, setEditingImage] = useState<any>(null);
+  const [deletingImage, setDeletingImage] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    alt: '',
+    category: 'general'
+  });
+  const [filters, setFilters] = useState({
+    type: 'all',
+    isPublic: 'all',
+    size: 'all'
+  });
+  const [totalSize, setTotalSize] = useState(0);
+  const [lastUpload, setLastUpload] = useState<string | null>(null);
 
-  const imageConfig = [
-    {
-      key: 'profileImage',
-      name: 'José Profile Image',
-      description: 'The main profile image shown in the About section of the homepage'
-    }
-  ];
+
+
+  // Simple formatting functions
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString();
+  };
 
   useEffect(() => {
     if (user?.access_token) {
@@ -69,53 +102,40 @@ export function ImageManagement() {
     }
   };
 
-  const handleFileUpload = async (imageKey: string, file: File) => {
-    try {
-      setUploadProgress({ ...uploadProgress, [imageKey]: true });
-      setError(null);
 
-      const formData = new FormData();
-      formData.append('image', file);
 
-      const response = await fetch(`/api/admin/images/${imageKey}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${user?.access_token}`
-        },
-        body: formData
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Upload failed: ${response.status}`);
-      }
 
-      const result = await response.json();
-      setImages({ ...images, [imageKey]: result.url });
-      setSuccess(`${imageConfig.find(c => c.key === imageKey)?.name} uploaded successfully!`);
-      setTimeout(() => setSuccess(null), 3000);
-      
-      // Trigger profile image reload on the homepage
-      window.dispatchEvent(new CustomEvent('profileImageUpdated'));
-    } catch (err: any) {
-      console.error('Error uploading image:', err);
-      setError(`Failed to upload image: ${err.message}`);
-    } finally {
-      setUploadProgress({ ...uploadProgress, [imageKey]: false });
-    }
+
+
+
+
+  const openEditModal = (image: any) => {
+    setEditingImage(image);
+    setEditFormData({
+      name: image.name,
+      alt: image.alt || '',
+      category: image.category || 'general'
+    });
+    setShowEditModal(true);
   };
 
-  const handleUrlUpdate = async (imageKey: string, url: string) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       setError(null);
 
-      const response = await fetch(`/api/admin/images/${imageKey}`, {
+      const response = await fetch(`/api/admin/images/${editingImage.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${user?.access_token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ url })
+        body: JSON.stringify({
+          name: editFormData.name,
+          alt: editFormData.alt,
+          category: editFormData.category
+        })
       });
 
       if (!response.ok) {
@@ -123,28 +143,32 @@ export function ImageManagement() {
         throw new Error(errorData.error || `Update failed: ${response.status}`);
       }
 
-      setImages({ ...images, [imageKey]: url });
-      setEditingUrl({ ...editingUrl, [imageKey]: '' });
-      setSuccess(`${imageConfig.find(c => c.key === imageKey)?.name} URL updated successfully!`);
+      const updatedImage = { ...editingImage, ...editFormData };
+      setImages(prev => ({ ...prev, [editingImage.key]: updatedImage }));
+      setShowEditModal(false);
+      setSuccess(`Image updated successfully!`);
       setTimeout(() => setSuccess(null), 3000);
       
       // Trigger profile image reload on the homepage
       window.dispatchEvent(new CustomEvent('profileImageUpdated'));
     } catch (err: any) {
-      console.error('Error updating image URL:', err);
-      setError(`Failed to update image URL: ${err.message}`);
+      console.error('Error updating image:', err);
+      setError(`Failed to update image: ${err.message}`);
     }
   };
 
-  const handleDelete = async (imageKey: string) => {
-    if (!confirm(`Are you sure you want to delete the ${imageConfig.find(c => c.key === imageKey)?.name}?`)) {
-      return;
-    }
+  const openDeleteModal = (image: any) => {
+    setDeletingImage(image);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteImage = async () => {
+    if (!deletingImage) return;
 
     try {
       setError(null);
 
-      const response = await fetch(`/api/admin/images/${imageKey}`, {
+      const response = await fetch(`/api/admin/images/${deletingImage.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${user?.access_token}`
@@ -157,9 +181,10 @@ export function ImageManagement() {
       }
 
       const updatedImages = { ...images };
-      delete updatedImages[imageKey as keyof ImageData];
+      delete updatedImages[deletingImage.key as keyof ImageData];
       setImages(updatedImages);
-      setSuccess(`${imageConfig.find(c => c.key === imageKey)?.name} deleted successfully!`);
+      setShowDeleteModal(false);
+      setSuccess(`Image deleted successfully!`);
       setTimeout(() => setSuccess(null), 3000);
       
       // Trigger profile image reload on the homepage
@@ -170,15 +195,49 @@ export function ImageManagement() {
     }
   };
 
-  const startUrlEdit = (imageKey: string) => {
-    setEditingUrl({ ...editingUrl, [imageKey]: images[imageKey as keyof ImageData] || '' });
+  const applyFilters = () => {
+            setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    const filtered = Object.values(images).filter(image => {
+      const matchesType = filters.type === 'all' || image.type === filters.type;
+      const matchesStatus = filters.isPublic === 'all' || (image.isPublic ? 'true' : 'false') === filters.isPublic;
+      const matchesSize = filters.size === 'all' || (image.size < 1024 * 1024 ? 'small' : image.size < 5 * 1024 * 1024 ? 'medium' : 'large') === filters.size;
+      return matchesType && matchesStatus && matchesSize;
+    });
+
+    setFilteredImages(filtered);
+    setIsLoading(false);
   };
 
-  const cancelUrlEdit = (imageKey: string) => {
-    const updated = { ...editingUrl };
-    delete updated[imageKey];
-    setEditingUrl(updated);
+  const clearFilters = () => {
+    setFilters({ type: 'all', isPublic: 'all', size: 'all' });
+    setFilteredImages(Object.values(images));
+    setIsLoading(false);
   };
+
+  const [filteredImages, setFilteredImages] = useState<any[]>(Object.values(images));
+
+  useEffect(() => {
+    setFilteredImages(Object.values(images));
+  }, [images]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [filters, images]);
+
+  // Calculate stats from images data
+  useEffect(() => {
+    if (images && Object.keys(images).length > 0) {
+      // Calculate total size (placeholder - would need actual file sizes from database)
+      const calculatedTotalSize = Object.keys(images).length * 1024 * 1024; // 1MB per image as placeholder
+      setTotalSize(calculatedTotalSize);
+      
+      // Set last upload to current time if we have images
+      setLastUpload(new Date().toISOString());
+    }
+  }, [images]);
 
   if (isLoading || !user?.access_token) {
     return (
@@ -197,214 +256,389 @@ export function ImageManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <ImageIcon className="w-6 h-6 text-[#FFD700]" />
-        <h2 className="text-2xl font-heading text-[#EAEAEA]">Profile Picture</h2>
-      </div>
-
-      <div className="bg-[#191970]/20 border border-[#FFD700]/20 rounded-lg p-4 mb-6">
-        <h3 className="text-lg font-heading text-[#FFD700] mb-3">Profile Picture Management</h3>
-        <div className="text-sm text-[#EAEAEA]/80">
-          <p className="mb-3">
-            Upload or set a URL for José's profile picture that appears in the About section of the homepage.
+    <div className="dashboard-container p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="dashboard-text-primary text-3xl font-bold tracking-tight">Image Management</h2>
+          <p className="dashboard-text-secondary">
+            Manage website images, logos, and visual assets
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 className="font-medium text-[#EAEAEA] mb-2">Upload Image:</h4>
-              <ul className="space-y-1 list-disc list-inside">
-                <li>Click "Choose Image" to upload from your computer</li>
-                <li>Supports JPEG, PNG, GIF, WebP (max 5MB)</li>
-                <li>Image will be automatically optimized</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium text-[#EAEAEA] mb-2">External URL:</h4>
-              <ul className="space-y-1 list-disc list-inside">
-                <li>Click "Edit URL" to link to an external image</li>
-                <li>Make sure the URL is publicly accessible</li>
-                <li>Recommended: 400x400px or larger, square aspect ratio</li>
-              </ul>
-            </div>
-          </div>
         </div>
+        <Button onClick={() => setShowUploadModal(true)} className="dashboard-button-primary">
+          <Upload className="mr-2 h-4 w-4" />
+          Upload Image
+        </Button>
       </div>
 
-      {/* Error and Success Messages */}
-      <AnimatePresence>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400"
-          >
-            {error}
-          </motion.div>
-        )}
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="dashboard-stats-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="dashboard-stats-label">Total Images</CardTitle>
+            <Image className="h-4 w-4 dashboard-text-muted" />
+          </CardHeader>
+          <CardContent>
+            <div className="dashboard-stats-value">{Object.keys(images).length}</div>
+            <p className="dashboard-stats-label">
+              Stored images
+            </p>
+          </CardContent>
+        </Card>
 
-        {success && (
+        <Card className="dashboard-stats-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="dashboard-stats-label">Total Size</CardTitle>
+            <HardDrive className="h-4 w-4 dashboard-text-muted" />
+          </CardHeader>
+          <CardContent>
+            <div className="dashboard-stats-value">{formatFileSize(totalSize)}</div>
+            <p className="dashboard-stats-label">
+              Storage used
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="dashboard-stats-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="dashboard-stats-label">Public Images</CardTitle>
+            <Globe className="h-4 w-4 dashboard-text-muted" />
+          </CardHeader>
+          <CardContent>
+            <div className="dashboard-stats-value">
+              {Object.values(images).filter(img => img.isPublic).length}
+            </div>
+            <p className="dashboard-stats-label">
+              Publicly accessible
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="dashboard-stats-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="dashboard-stats-label">Last Upload</CardTitle>
+            <Clock className="h-4 w-4 dashboard-text-muted" />
+          </CardHeader>
+          <CardContent>
+            <div className="dashboard-stats-value">
+              {lastUpload ? formatDate(lastUpload) : 'N/A'}
+            </div>
+            <p className="dashboard-stats-label">
+              Last backup
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Error and Success Display */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-4">
+          <p className="text-red-400">{error}</p>
+        </div>
+      )}
+      
+      {success && (
+        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 mb-4">
+          <p className="text-green-400">{success}</p>
+        </div>
+      )}
+
+      {/* Upload Modal Placeholder */}
+      <AnimatePresence>
+        {showUploadModal && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowUploadModal(false)}
           >
-            {success}
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="w-full max-w-md bg-[#0A0A23] rounded-lg border border-[#C0C0C0]/20 p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="dashboard-text-primary font-heading text-lg mb-4">Upload Image</h3>
+              <p className="dashboard-text-secondary mb-4">Upload modal functionality coming soon...</p>
+              <Button onClick={() => setShowUploadModal(false)} className="dashboard-button-primary">
+                Close
+              </Button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="grid gap-6">
-        {imageConfig.map((config) => {
-          const currentImage = images[config.key as keyof ImageData];
-          const isUploading = uploadProgress[config.key];
-          const isEditingUrl = editingUrl[config.key] !== undefined;
+      {/* Filters */}
+      <Card className="dashboard-card">
+        <CardHeader>
+          <CardTitle className="dashboard-card-title">Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="dashboard-filter-grid">
+            <div className="dashboard-filter-item">
+              <Label htmlFor="filter_type" className="dashboard-filter-label">Image Type</Label>
+              <Select value={filters.type} onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}>
+                <SelectTrigger className="dashboard-select">
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent className="dashboard-dropdown-content">
+                  <SelectItem value="all" className="dashboard-dropdown-item">All types</SelectItem>
+                  <SelectItem value="logo" className="dashboard-dropdown-item">Logo</SelectItem>
+                  <SelectItem value="hero" className="dashboard-dropdown-item">Hero</SelectItem>
+                  <SelectItem value="gallery" className="dashboard-dropdown-item">Gallery</SelectItem>
+                  <SelectItem value="icon" className="dashboard-dropdown-item">Icon</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          return (
-            <motion.div
-              key={config.key}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-6 bg-[#191970]/20 rounded-lg border border-[#C0C0C0]/10"
+            <div className="dashboard-filter-item">
+              <Label htmlFor="filter_status" className="dashboard-filter-label">Status</Label>
+              <Select value={filters.isPublic} onValueChange={(value) => setFilters(prev => ({ ...prev, isPublic: value }))}>
+                <SelectTrigger className="dashboard-select">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent className="dashboard-dropdown-content">
+                  <SelectItem value="all" className="dashboard-dropdown-item">All statuses</SelectItem>
+                  <SelectItem value="true" className="dashboard-dropdown-item">Public</SelectItem>
+                  <SelectItem value="false" className="dashboard-dropdown-item">Private</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="dashboard-filter-item">
+              <Label htmlFor="filter_size" className="dashboard-filter-label">File Size</Label>
+              <Select value={filters.size} onValueChange={(value) => setFilters(prev => ({ ...prev, size: value }))}>
+                <SelectTrigger className="dashboard-select">
+                  <SelectValue placeholder="All sizes" />
+                </SelectTrigger>
+                <SelectContent className="dashboard-dropdown-content">
+                  <SelectItem value="all" className="dashboard-dropdown-item">All sizes</SelectItem>
+                  <SelectItem value="small" className="dashboard-dropdown-item">Small (&lt; 1MB)</SelectItem>
+                  <SelectItem value="medium" className="dashboard-dropdown-item">Medium (1-5MB)</SelectItem>
+                  <SelectItem value="large" className="dashboard-dropdown-item">Large (&gt; 5MB)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex gap-2 mt-4">
+            <Button onClick={applyFilters} className="dashboard-button-primary">
+              <Filter className="mr-2 h-4 w-4" />
+              Apply Filters
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={clearFilters}
+              className="dashboard-button-outline"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-heading text-[#EAEAEA]">{config.name}</h3>
-                  <p className="text-sm text-[#EAEAEA]/60">{config.description}</p>
-                </div>
-                {currentImage && !isEditingUrl && (
-                  <div className="flex space-x-2">
-                    <Button
-                      onClick={() => startUrlEdit(config.key)}
-                      size="sm"
-                      variant="outline"
-                      className="border-[#FFD700]/30 text-[#FFD700] hover:bg-[#FFD700]/10"
-                    >
-                      <ExternalLink size={14} />
-                      Edit URL
-                    </Button>
-                    <Button
-                      onClick={() => handleDelete(config.key)}
-                      size="sm"
-                      variant="outline"
-                      className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-                    >
-                      <Trash2 size={14} />
-                      Delete
-                    </Button>
-                  </div>
-                )}
-              </div>
+              Clear Filters
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-              {/* Current Image Display */}
-              {currentImage && (
-                <div className="mb-4 p-4 bg-[#0A0A23]/30 rounded-lg">
-                  <div className="flex items-center space-x-4">
+      {/* Images Grid */}
+      <Card className="dashboard-card">
+        <CardHeader>
+          <CardTitle className="dashboard-card-title">All Images</CardTitle>
+          <CardDescription className="dashboard-card-description">
+            Manage website images, logos, and visual assets
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="dashboard-loading">
+              <div className="dashboard-loading-spinner">Loading images...</div>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredImages.map((image) => (
+                <div key={image.id} className="border border-[#C0C0C0]/20 rounded-lg p-4 space-y-3 bg-[#191970]/30">
+                  <div className="relative">
                     <img
-                      src={currentImage}
-                      alt={config.name}
-                      className="w-24 h-24 object-cover rounded-lg border border-[#FFD700]/20"
-                      onError={(e) => {
-                        const img = e.target as HTMLImageElement;
-                        img.style.display = 'none';
-                      }}
+                      src={image.url}
+                      alt={image.alt || image.name}
+                      className="w-full h-32 object-cover rounded-lg"
                     />
-                    <div className="flex-1">
-                      <p className="text-sm text-[#EAEAEA]/70 mb-2">Current Image:</p>
-                      <p className="text-xs text-[#FFD700] break-all">{currentImage}</p>
+                    <div className="absolute top-2 right-2 flex gap-1">
+                      {!image.isPublic && (
+                        <Badge variant="secondary" className="dashboard-badge-error">Private</Badge>
+                      )}
+                      <Badge variant="secondary" className="dashboard-badge">
+                        {image.type}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="dashboard-text-primary font-medium truncate">{image.name}</span>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditModal(image)}
+                          className="dashboard-button-outline"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openDeleteModal(image)}
+                          className="dashboard-button-danger"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="text-xs dashboard-text-muted">
+                      <div className="flex items-center gap-1">
+                        <HardDrive className="h-3 w-3" />
+                        {formatFileSize(image.size)}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatDate(image.uploadedAt)}
+                      </div>
                     </div>
                   </div>
                 </div>
-              )}
+              ))}
+            </div>
+          )}
 
-              {/* URL Editing */}
-              {isEditingUrl && (
-                <div className="mb-4 p-4 bg-[#0A0A23]/30 rounded-lg">
-                  <label className="block text-sm font-medium text-[#EAEAEA] mb-2">
-                    Image URL
-                  </label>
-                  <div className="flex space-x-2">
-                    <Input
-                      type="url"
-                      value={editingUrl[config.key]}
-                      onChange={(e) => setEditingUrl({ ...editingUrl, [config.key]: e.target.value })}
-                      placeholder="https://example.com/image.jpg"
-                      className="flex-1 bg-[#191970]/30 border-[#C0C0C0]/20 text-[#EAEAEA]"
-                    />
-                    <Button
-                      onClick={() => handleUrlUpdate(config.key, editingUrl[config.key])}
-                      size="sm"
-                      className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90"
-                      disabled={!editingUrl[config.key]?.trim()}
-                    >
-                      <Save size={14} />
-                      Save
-                    </Button>
-                    <Button
-                      onClick={() => cancelUrlEdit(config.key)}
-                      size="sm"
-                      variant="outline"
-                      className="border-[#C0C0C0]/30 text-[#C0C0C0]"
-                    >
-                      <X size={14} />
-                      Cancel
-                    </Button>
+          {filteredImages.length === 0 && (
+            <div className="dashboard-empty">
+              <div className="dashboard-empty-icon">No images found</div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Edit Modal */}
+      {showEditModal && editingImage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="dashboard-card w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle className="dashboard-card-title">Edit Image</CardTitle>
+              <CardDescription className="dashboard-card-description">
+                Update image details and settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_name" className="dashboard-filter-label">Name</Label>
+                  <Input
+                    id="edit_name"
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                    className="dashboard-input"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_alt" className="dashboard-filter-label">Alt Text</Label>
+                  <Input
+                    id="edit_alt"
+                    value={editFormData.alt || ''}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, alt: e.target.value }))}
+                    className="dashboard-input"
+                    placeholder="Image description for accessibility"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_category" className="dashboard-filter-label">Category</Label>
+                  <Select 
+                    value={editFormData.category} 
+                    onValueChange={(value) => setEditFormData(prev => ({ ...prev, category: value }))}
+                  >
+                    <SelectTrigger className="dashboard-select">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent className="dashboard-dropdown-content">
+                      <SelectItem value="general" className="dashboard-dropdown-item">General</SelectItem>
+                      <SelectItem value="hero" className="dashboard-dropdown-item">Hero</SelectItem>
+                      <SelectItem value="gallery" className="dashboard-dropdown-item">Gallery</SelectItem>
+                      <SelectItem value="logo" className="dashboard-dropdown-item">Logo</SelectItem>
+                      <SelectItem value="background" className="dashboard-dropdown-item">Background</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button type="submit" className="dashboard-button-primary flex-1">
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Update Image
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowEditModal(false)}
+                    className="dashboard-button-outline"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && deletingImage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="dashboard-card w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle className="dashboard-card-title">Delete Image</CardTitle>
+              <CardDescription className="dashboard-card-description">
+                Are you sure you want to delete this image? This action cannot be undone.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 border border-[#C0C0C0]/20 rounded-lg bg-[#191970]/20">
+                  <img
+                    src={deletingImage.url}
+                    alt={deletingImage.alt || deletingImage.name}
+                    className="w-16 h-16 object-cover rounded-lg"
+                  />
+                  <div>
+                    <p className="dashboard-text-primary font-medium">{deletingImage.name}</p>
+                    <p className="dashboard-text-muted text-sm">{deletingImage.type}</p>
                   </div>
                 </div>
-              )}
 
-              {/* File Upload */}
-              {!isEditingUrl && (
-                <div className="p-4 bg-[#0A0A23]/30 rounded-lg border-2 border-dashed border-[#C0C0C0]/20">
-                  <div className="text-center">
-                    <Upload className="w-8 h-8 text-[#C0C0C0]/50 mx-auto mb-2" />
-                    <p className="text-sm text-[#EAEAEA]/70 mb-2">
-                      {currentImage ? 'Upload a new image to replace the current one' : 'Upload an image'}
-                    </p>
-                    <p className="text-xs text-[#EAEAEA]/50 mb-4">
-                      Supports: JPEG, PNG, GIF, WebP (max 5MB)
-                    </p>
-                    
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          handleFileUpload(config.key, file);
-                        }
-                      }}
-                      className="hidden"
-                      id={`upload-${config.key}`}
-                      disabled={isUploading}
-                    />
-                    
-                    <label htmlFor={`upload-${config.key}`}>
-                      <Button
-                        disabled={isUploading}
-                        className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90 cursor-pointer"
-                      >
-                        {isUploading ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-[#0A0A23] border-t-transparent rounded-full animate-spin mr-2" />
-                            Uploading...
-                          </>
-                        ) : (
-                          <>
-                            <Upload size={16} className="mr-2" />
-                            Choose Image
-                          </>
-                        )}
-                      </Button>
-                    </label>
-                  </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleDeleteImage}
+                    className="dashboard-button-danger flex-1"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Image
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDeleteModal(false)}
+                    className="dashboard-button-outline"
+                  >
+                    Cancel
+                  </Button>
                 </div>
-              )}
-            </motion.div>
-          );
-        })}
-      </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default ImageManagement;

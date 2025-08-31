@@ -1,26 +1,31 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Settings, LogOut, Search, FileText, Type, Calendar, X, Mail, Image as ImageIcon, Database } from 'lucide-react';
-import { Button } from './ui/button';
+import { 
+  Users, Settings, LogOut, Search, FileText, Type, Calendar, X, Mail, 
+  Image as ImageIcon, Database, CreditCard, Receipt, Package, 
+  History, Clock
+} from 'lucide-react';
 
+import { Button } from './ui/button';
 
 import { useAuth } from '../hooks/useAuth';
 import { EmailManagement } from './EmailManagement';
 import { ImageManagement } from './ImageManagement';
 import { ContentManagement } from './ContentManagement';
 import { ClientManagement } from './ClientManagement';
-import { ScheduleManagement } from './ScheduleManagement';
+import ScheduleManagement from './ScheduleManagement';
 import { LogoManagement } from './LogoManagement';
 import { SeoManagement } from './SeoManagement';
 import { SettingsManagement } from './SettingsManagement';
-
-
+import BookingsManagement from './BookingsManagement';
+import PackagesAndPricing from './PackagesAndPricing';
+import PaymentMethodManagement from './PaymentMethodManagement';
+import PaymentRecordsManagement from './PaymentRecordsManagement';
+import PurchaseHistoryManagement from './PurchaseHistoryManagement';
 
 export function AdminDashboard({ onClose }: { onClose: () => void }) {
   const { user, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('clients');
-
-
 
   if (!user) {
     return (
@@ -74,29 +79,34 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
 
       <div className="flex h-[calc(100vh-80px)]">
         {/* Sidebar Navigation */}
-        <nav className="w-64 bg-[#0A0A23]/30 border-r border-[#C0C0C0]/20 p-4">
-          <div className="space-y-2">
+        <nav className="w-56 bg-[#0A0A23]/30 border-r border-[#C0C0C0]/20 p-3 overflow-y-auto">
+          <div className="space-y-1">
             {[
               { key: 'clients', icon: Users, label: 'Client Management' },
-              { key: 'schedules', icon: Calendar, label: 'Schedule Management' },
+              { key: 'bookings', icon: Calendar, label: 'Bookings Management' },
+              { key: 'schedules', icon: Clock, label: 'Schedule Management' },
+              { key: 'packages', icon: Package, label: 'Packages & Pricing' },
               { key: 'content', icon: FileText, label: 'Content Management' },
               { key: 'emails', icon: Mail, label: 'Email Management' },
               { key: 'images', icon: ImageIcon, label: 'Image Management' },
               { key: 'logo', icon: Type, label: 'Logo Management' },
               { key: 'seo', icon: Search, label: 'SEO Management' },
+              { key: 'payment-methods', icon: CreditCard, label: 'Payment Methods' },
+              { key: 'payment-records', icon: Receipt, label: 'Payment Records' },
+              { key: 'purchase-history', icon: History, label: 'Purchase History' },
               { key: 'settings', icon: Database, label: 'Settings' },
             ].map(({ key, icon: Icon, label }) => (
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                className={`w-full flex items-center space-x-2 px-3 py-2 rounded-md transition-all duration-200 text-sm ${
                   activeTab === key
                     ? 'bg-[#FFD700]/10 text-[#FFD700] border border-[#FFD700]/30'
                     : 'text-[#C0C0C0] hover:text-[#EAEAEA] hover:bg-[#C0C0C0]/5'
                 }`}
               >
-                <Icon size={20} />
-                <span>{label}</span>
+                <Icon size={16} />
+                <span className="text-xs font-medium">{label}</span>
               </button>
             ))}
           </div>
@@ -114,7 +124,11 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
             >
               {activeTab === 'clients' && <ClientManagement />}
 
+              {activeTab === 'bookings' && <BookingsManagement />}
+
               {activeTab === 'schedules' && <ScheduleManagement />}
+
+              {activeTab === 'packages' && <PackagesAndPricing />}
 
               {activeTab === 'content' && (
                 <ContentManagement />
@@ -136,6 +150,18 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
                 <SeoManagement />
               )}
 
+              {activeTab === 'payment-methods' && (
+                <PaymentMethodManagement />
+              )}
+
+              {activeTab === 'payment-records' && (
+                <PaymentRecordsManagement />
+              )}
+
+              {activeTab === 'purchase-history' && (
+                <PurchaseHistoryManagement />
+              )}
+
               {activeTab === 'settings' && (
                 <SettingsManagement />
               )}
@@ -143,8 +169,6 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
           </AnimatePresence>
         </main>
       </div>
-
-
     </div>
   );
 }

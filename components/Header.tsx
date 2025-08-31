@@ -1,19 +1,21 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { Menu, X, LogIn } from 'lucide-react';
-import { motion } from 'motion/react';
-import { useAuth } from '@/hooks/useAuth';
-import { useLogo } from '@/hooks/useLogo';
+import { Menu, X, LogIn, Settings } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+import { useLogo } from '../hooks/useLogo';
 
 interface HeaderProps {
-  language: string;
-  setLanguage: (lang: 'en' | 'es') => void;
+  language: "en" | "es";
+  setLanguage: (language: "en" | "es") => void;
   scrollToSection: (section: string) => void;
   t: any;
   isMenuOpen: boolean;
-  setIsMenuOpen: (open: boolean) => void;
+  setIsMenuOpen: (isOpen: boolean) => void;
   onLoginClick: () => void;
+  user: { email: string } | null;
+  isAdmin: boolean;
 }
 
 export function Header({ 
@@ -23,9 +25,10 @@ export function Header({
   t, 
   isMenuOpen, 
   setIsMenuOpen, 
-  onLoginClick 
+  onLoginClick,
+  user,
+  isAdmin
 }: HeaderProps) {
-  const { user } = useAuth();
   const { logoSettings } = useLogo();
   
   // Handle touch gestures for closing menu
@@ -99,7 +102,6 @@ export function Header({
           ) : (
             <span className="font-heading text-lg sm:text-xl md:text-2xl text-[#FFD700]">SOULPATH</span>
           )}
-          <div className="w-6 sm:w-8 h-px bg-[#FFD700] rounded-full"></div>
         </motion.div>
         
         <div className="flex items-center space-x-4 sm:space-x-6">
@@ -124,7 +126,17 @@ export function Header({
           </div>
           
           {/* Admin Login Button */}
-          {!user && (
+          {user && isAdmin ? (
+            <motion.button
+              onClick={onLoginClick}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="hidden sm:flex items-center space-x-1 text-[#FFD700] bg-[#FFD700]/10 px-2 py-1 rounded transition-colors"
+            >
+              <Settings size={14} />
+              <span>Dashboard</span>
+            </motion.button>
+          ) : (
             <motion.button
               onClick={onLoginClick}
               whileHover={{ scale: 1.05 }}
@@ -132,7 +144,7 @@ export function Header({
               className="hidden sm:flex items-center space-x-1 text-[#C0C0C0] hover:text-[#FFD700] transition-colors text-sm px-2 py-1 rounded hover:bg-[#FFD700]/10"
             >
               <LogIn size={14} />
-              <span>{t.nav.login}</span>
+              <span>{t.nav.login || 'Login'}</span>
             </motion.button>
           )}
           
