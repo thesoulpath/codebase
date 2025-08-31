@@ -74,6 +74,33 @@ export const sidebarButtonStyles = {
   label: 'font-medium',
 };
 
+// Header Button Styles for Admin Dashboard
+export const headerButtonStyles = {
+  base: 'inline-flex items-center justify-center font-[var(--font-weight-medium)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-500)] focus:ring-offset-2 focus:ring-offset-[var(--color-background-primary)] disabled:opacity-50 disabled:cursor-not-allowed',
+  variants: {
+    primary: 'bg-[var(--color-accent-500)] text-black hover:bg-[var(--color-accent-500)]/90 active:bg-[var(--color-accent-500)]/80 border-2 border-[var(--color-accent-500)] rounded-[var(--border-radius-md)] shadow-lg shadow-[var(--color-accent-500)]/30 font-[var(--font-weight-semibold)] hover:shadow-xl hover:shadow-[var(--color-accent-500)]/40 focus:ring-4 focus:ring-[var(--color-accent-500)]/30 focus:border-[var(--color-accent-500)]',
+    secondary: 'bg-[var(--color-surface-secondary)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-tertiary)] border border-[var(--color-border-500)] rounded-[var(--border-radius-md)]',
+    outline: 'bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-secondary)] border border-[var(--color-border-500)] rounded-[var(--border-radius-md)]',
+    danger: 'bg-[var(--color-status-error)] text-white hover:bg-red-600 border-none rounded-[var(--border-radius-md)]',
+    success: 'bg-[var(--color-status-success)] text-white hover:bg-green-600 border-none rounded-[var(--border-radius-md)]',
+    warning: 'bg-[var(--color-status-warning)] text-white hover:bg-yellow-600 border-none rounded-[var(--border-radius-md)]',
+    info: 'bg-[var(--color-status-info)] text-white hover:bg-blue-600 border-none rounded-[var(--border-radius-md)]',
+    ghost: 'bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-secondary)] border-none rounded-[var(--border-radius-md)]',
+  },
+  sizes: {
+    xs: 'px-[var(--spacing-1)] py-[var(--spacing-0.5)] text-[var(--font-size-xs)]',
+    sm: 'px-[var(--spacing-2)] py-[var(--spacing-1)] text-[var(--font-size-sm)]',
+    md: 'px-[var(--spacing-4)] py-[var(--spacing-2)] text-[var(--font-size-base)]',
+    lg: 'px-[var(--spacing-6)] py-[var(--spacing-3)] text-[var(--font-size-lg)]',
+    xl: 'px-[var(--spacing-8)] py-[var(--spacing-4)] text-[var(--font-size-xl)]',
+    login: 'px-[var(--spacing-6)] py-[var(--spacing-4)] text-[var(--font-size-lg)]',
+  },
+  states: {
+    loading: 'opacity-75 cursor-wait',
+    disabled: 'opacity-50 cursor-not-allowed',
+  },
+};
+
 // Input Styles
 export const inputStyles = {
   base: 'bg-[var(--color-surface-secondary)] border border-[var(--color-border-500)] text-[var(--color-text-primary)] rounded-[var(--border-radius-md)] px-[var(--spacing-3)] py-[var(--spacing-2)] transition-all duration-200',

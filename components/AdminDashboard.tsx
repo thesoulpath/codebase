@@ -20,7 +20,7 @@ import {
   Bug,
   User
 } from 'lucide-react';
-import { BaseButton } from '@/components/ui/BaseButton';
+
 import { useAuth } from '../hooks/useAuth';
 import { sidebarButtonStyles, combineStyles } from '@/lib/styles/common';
 import { ClientManagement } from './ClientManagement';
@@ -81,39 +81,36 @@ export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps)
           </div>
           
           <div className="flex items-center space-x-3">
+            {/* Close button - only show in modal mode */}
+            {isModal && onClose && (
+              <button
+                onClick={onClose}
+                className="inline-flex items-center justify-center font-[var(--font-weight-medium)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-secondary-600)] focus:ring-offset-2 focus:ring-offset-[var(--color-background-primary)] disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 bg-[var(--color-secondary-800)] text-white hover:bg-[var(--color-secondary-700)] border border-[var(--color-secondary-600)] rounded-[var(--border-radius-md)] px-[var(--spacing-2)] py-[var(--spacing-1)] text-[var(--font-size-sm)]"
+              >
+                <X size={16} className="mr-2" />
+                Close
+              </button>
+            )}
+            
             {/* Admin Account Button - Only show for admin users */}
             {isAdmin && (
               <Link href="/account">
-                <BaseButton
-                  size="sm"
-                  variant="outline"
-                  leftIcon={<User size={16} />}
+                <button
+                  className="inline-flex items-center justify-center font-[var(--font-weight-medium)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)] focus:ring-offset-2 focus:ring-offset-[var(--color-background-primary)] disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 bg-[var(--color-primary-500)] text-[var(--color-text-inverse)] hover:bg-[var(--color-primary-500)]/90 active:bg-[var(--color-primary-500)]/80 border-2 border-[var(--color-primary-500)] rounded-[var(--border-radius-md)] shadow-lg shadow-[var(--color-primary-500)]/30 font-[var(--font-weight-semibold)] hover:shadow-xl hover:shadow-[var(--color-primary-500)]/40 focus:ring-4 focus:ring-[var(--color-primary-500)]/30 focus:border-[var(--color-primary-500)] px-[var(--spacing-2)] py-[var(--spacing-1)] text-[var(--font-size-sm)]"
                 >
+                  <User size={16} className="mr-2" />
                   My Account
-                </BaseButton>
+                </button>
               </Link>
             )}
             
-            {/* Close button - only show in modal mode */}
-            {isModal && onClose && (
-              <BaseButton
-                onClick={onClose}
-                size="sm"
-                variant="secondary"
-                leftIcon={<X size={16} />}
-              >
-                Close
-              </BaseButton>
-            )}
-            
-            <BaseButton
+            <button
               onClick={signOut}
-              size="sm"
-              variant="danger"
-              leftIcon={<LogOut size={16} />}
+              className="inline-flex items-center justify-center font-[var(--font-weight-medium)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-status-error)] focus:ring-offset-2 focus:ring-offset-[var(--color-background-primary)] disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 bg-[var(--color-status-error)] text-white hover:bg-red-600 border-none rounded-[var(--border-radius-md)] px-[var(--spacing-2)] py-[var(--spacing-1)] text-[var(--font-size-sm)]"
             >
+              <LogOut size={16} className="mr-2" />
               Sign Out
-            </BaseButton>
+            </button>
           </div>
         </div>
       </header>
