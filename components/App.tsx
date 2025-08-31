@@ -119,17 +119,20 @@ export function App() {
         setShowLoginModal(false);
       }
       
-      // Small delay to ensure smooth transition and show loading state
-      const timer = setTimeout(() => {
-        setShowAdmin(true);
-      }, 300);
-      
-      return () => clearTimeout(timer);
+      // Only auto-redirect if not already on admin dashboard and not explicitly closed
+      if (!showAdmin) {
+        // Small delay to ensure smooth transition and show loading state
+        const timer = setTimeout(() => {
+          setShowAdmin(true);
+        }, 300);
+        
+        return () => clearTimeout(timer);
+      }
     } else if (!user) {
       // If user logs out, return to main page
       setShowAdmin(false);
     }
-  }, [user, isAdmin, showLoginModal]);
+  }, [user, isAdmin, showLoginModal, showAdmin]);
 
   // Show loading state while redirecting to admin dashboard
   if (user && isAdmin && !showAdmin && !showLoginModal) {
