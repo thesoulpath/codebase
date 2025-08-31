@@ -115,27 +115,34 @@ export function App() {
 
   // Handle successful authentication - automatically redirect to admin dashboard
   useEffect(() => {
+    console.log('🔄 useEffect triggered:', { user: !!user, isAdmin, showAdmin, hasExplicitlyClosed, showLoginModal });
+    
     if (user && isAdmin) {
       // If user is authenticated and is admin, automatically show admin dashboard
       if (showLoginModal) {
         setShowLoginModal(false);
       }
       
-      // Only auto-redirect if not already on admin dashboard and not explicitly closed
-      if (!showAdmin && !hasExplicitlyClosed) {
+      // Only auto-redirect if not explicitly closed
+      if (!hasExplicitlyClosed) {
+        console.log('🚀 Auto-redirecting to dashboard...');
         // Small delay to ensure smooth transition and show loading state
         const timer = setTimeout(() => {
+          console.log('⏰ Timer fired, setting showAdmin to true');
           setShowAdmin(true);
         }, 300);
         
         return () => clearTimeout(timer);
+      } else {
+        console.log('⛔ Auto-redirect blocked: hasExplicitlyClosed = true');
       }
     } else if (!user) {
       // If user logs out, return to main page
+      console.log('🚪 User logged out, hiding dashboard');
       setShowAdmin(false);
       setHasExplicitlyClosed(false); // Reset the flag when user logs out
     }
-  }, [user, isAdmin, showLoginModal, showAdmin, hasExplicitlyClosed]);
+  }, [user, isAdmin, showLoginModal, hasExplicitlyClosed]); // Removed showAdmin dependency
 
   // Show loading state while redirecting to admin dashboard
   if (user && isAdmin && !showAdmin && !showLoginModal) {
@@ -165,6 +172,7 @@ export function App() {
 
   if (showAdmin) {
     return <AdminDashboard onClose={() => {
+      console.log('🔴 Close button clicked, setting hasExplicitlyClosed to true');
       setShowAdmin(false);
       setHasExplicitlyClosed(true); // Mark that user explicitly closed the dashboard
       // Reload translations when closing admin to pick up any content changes
