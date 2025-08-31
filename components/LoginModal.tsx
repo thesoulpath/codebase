@@ -6,6 +6,7 @@ import { Label } from './ui/label';
 import { motion } from 'framer-motion';
 import { Lock, User, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { toast } from 'sonner';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -41,9 +42,17 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
           return;
         }
         
+        // Successfully logged in as admin - close modal and clear form
         onClose();
         setEmail('');
         setPassword('');
+        
+        // Show success message before redirect
+        console.log('Login successful! Redirecting to admin dashboard...');
+        toast.success('Login successful! Redirecting to admin dashboard...');
+        
+        // The App component will automatically detect the user authentication
+        // and redirect to the admin dashboard via the useEffect hook
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred during login');

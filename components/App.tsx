@@ -111,13 +111,42 @@ export function App() {
     }
   };
 
-  // Handle successful authentication
+  // Handle successful authentication - automatically redirect to admin dashboard
   useEffect(() => {
-    if (user && isAdmin && showLoginModal) {
-      setShowLoginModal(false);
-      setShowAdmin(true);
+    if (user && isAdmin) {
+      // If user is authenticated and is admin, automatically show admin dashboard
+      if (showLoginModal) {
+        setShowLoginModal(false);
+      }
+      
+      // Small delay to ensure smooth transition and show loading state
+      const timer = setTimeout(() => {
+        setShowAdmin(true);
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    } else if (!user) {
+      // If user logs out, return to main page
+      setShowAdmin(false);
     }
   }, [user, isAdmin, showLoginModal]);
+
+  // Show loading state while redirecting to admin dashboard
+  if (user && isAdmin && !showAdmin && !showLoginModal) {
+    return (
+      <div className="min-h-screen bg-[#0A0A23] flex items-center justify-center">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full mx-auto mb-4"
+          />
+          <div className="text-[#FFD700] text-xl mb-2">Redirecting to Admin Dashboard...</div>
+          <div className="text-[#C0C0C0] text-sm">Please wait while we set up your workspace</div>
+        </div>
+      </div>
+    );
+  }
 
   // Don't render navigation elements until translations are loaded
   if (isLoadingTranslations || !t || !t.nav || !t.cta) {
