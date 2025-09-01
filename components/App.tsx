@@ -305,13 +305,13 @@ export function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="fixed bottom-3 sm:bottom-4 lg:bottom-6 left-1/2 -translate-x-1/2 z-[9996] cta-button-container"
+            className="fixed bottom-3 sm:bottom-4 lg:bottom-6 left-0 right-0 z-[9996] cta-button-container flex justify-center"
           >
             <motion.button
               onClick={() => scrollToSection('apply')}
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
-              className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90 px-6 sm:px-8 lg:px-10 py-3 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg font-medium rounded-lg shadow-lg shadow-[#FFD700]/20 cosmic-glow touch-manipulation transition-all duration-300 whitespace-nowrap mx-auto"
+              className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90 px-6 sm:px-8 lg:px-10 py-3 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg font-medium rounded-lg shadow-lg shadow-[#FFD700]/20 cosmic-glow touch-manipulation transition-all duration-300 whitespace-nowrap"
             >
               <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                 <span>{t.cta.bookReading}</span>
