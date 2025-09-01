@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { prisma } from '@/lib/prisma';
 
 
 // Zod schema for admin user creation
