@@ -258,33 +258,33 @@ const PaymentMethodManagement: React.FC = () => {
 
       {/* Payment Methods Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {paymentMethods.map((method) => (
+        {paymentMethods.filter(method => method).map((method) => (
           <Card key={method.id} className="dashboard-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="flex items-center gap-2">
-                {getMethodIcon(method.type)}
-                <CardTitle className="dashboard-card-title">{method.name}</CardTitle>
+                {getMethodIcon(method?.type || 'custom')}
+                <CardTitle className="dashboard-card-title">{method?.name || 'Unnamed Method'}</CardTitle>
               </div>
               <Badge 
-                variant={method.isActive ? 'default' : 'secondary'}
+                variant={method?.isActive ? 'default' : 'secondary'}
                 className="dashboard-badge"
               >
-                {method.isActive ? 'Active' : 'Inactive'}
+                {method?.isActive ? 'Active' : 'Inactive'}
               </Badge>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="dashboard-text-secondary text-sm">Type:</span>
                 <Badge variant="outline" className="dashboard-badge">
-                  {getMethodTypeLabel(method.type)}
+                  {getMethodTypeLabel(method?.type || 'custom')}
                 </Badge>
               </div>
               
-              {method.description && (
+              {method?.description && (
                 <p className="dashboard-text-secondary text-sm">{method.description}</p>
               )}
               
-              {method.type === 'stripe' && method.stripeConfig && (
+              {method?.type === 'stripe' && method?.stripeConfig && (
                 <div className="flex items-center gap-2 text-sm text-blue-600">
                   <Zap className="w-4 h-4" />
                   <span>Stripe configured</span>
@@ -293,12 +293,12 @@ const PaymentMethodManagement: React.FC = () => {
               
               <div className="flex items-center justify-between">
                 <span className="dashboard-text-secondary text-sm">Requires Confirmation:</span>
-                <Switch checked={method.requiresConfirmation} disabled />
+                <Switch checked={method?.requiresConfirmation || false} disabled />
               </div>
               
               <div className="flex items-center justify-between">
                 <span className="dashboard-text-secondary text-sm">Auto-assign Package:</span>
-                <Switch checked={method.autoAssignPackage} disabled />
+                <Switch checked={method?.autoAssignPackage || false} disabled />
               </div>
               
               <div className="flex gap-2 pt-2">
@@ -312,7 +312,7 @@ const PaymentMethodManagement: React.FC = () => {
                 </BaseButton>
                 <BaseButton
                   size="sm"
-                  onClick={() => handleDelete(method.id)}
+                  onClick={() => handleDelete(method?.id || 0)}
                   className="dashboard-button-danger"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />

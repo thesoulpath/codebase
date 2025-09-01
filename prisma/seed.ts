@@ -543,6 +543,62 @@ async function main() {
   ]);
   console.log('✅ Payment methods created:', paymentMethods.length);
 
+  // 13.5. Create payment methods (actual payment_methods table)
+  console.log('💳 Creating payment methods...');
+  const paymentMethodsData = await Promise.all([
+    prisma.payment_methods.upsert({
+      where: { id: 1 },
+      update: {},
+      create: {
+        name: 'Stripe Credit Card',
+        description: 'Secure online credit card payments via Stripe',
+        currency_id: 1, // USD
+        is_active: true
+      }
+    }),
+    prisma.payment_methods.upsert({
+      where: { id: 2 },
+      update: {},
+      create: {
+        name: 'Cash Payment',
+        description: 'In-person cash payments',
+        currency_id: 1, // USD
+        is_active: true
+      }
+    }),
+    prisma.payment_methods.upsert({
+      where: { id: 3 },
+      update: {},
+      create: {
+        name: 'Bank Transfer',
+        description: 'Direct bank transfer payments',
+        currency_id: 1, // USD
+        is_active: true
+      }
+    }),
+    prisma.payment_methods.upsert({
+      where: { id: 4 },
+      update: {},
+      create: {
+        name: 'PayPal',
+        description: 'PayPal online payments',
+        currency_id: 1, // USD
+        is_active: true
+      }
+    }),
+    prisma.payment_methods.upsert({
+      where: { id: 5 },
+      update: {},
+      create: {
+        name: 'Mexican Peso Cash',
+        description: 'Cash payments in Mexican Peso',
+        currency_id: 3, // MXN
+        is_active: true
+      }
+    })
+  ]);
+  console.log('✅ Payment methods created:', paymentMethodsData.length);
+
   // 14. Create group booking tiers
   console.log('👥 Creating group booking tiers...');
   const groupBookingTiers = await Promise.all([
@@ -680,6 +736,27 @@ async function main() {
   ]);
   console.log('✅ Test clients created:', clients.length);
 
+  // 16.5. Create admin client profile
+  console.log('👤 Creating admin client profile...');
+  const adminClient = await prisma.client.upsert({
+    where: { email: 'coco@soulpath.lat' },
+    update: {},
+    create: {
+      email: 'coco@soulpath.lat',
+      name: 'Coco Admin',
+      phone: '+1234567890',
+      status: 'active',
+      notes: 'Primary system administrator for SOULPATH',
+      birthDate: new Date('1990-01-15'),
+      birthTime: new Date('1990-01-15T10:30:00'),
+      birthPlace: 'New York, USA',
+      question: 'How can I help manage the SOULPATH wellness system?',
+      language: 'en',
+      adminNotes: 'Primary system administrator for SOULPATH'
+    }
+  });
+  console.log('✅ Admin client profile created:', adminClient.id);
+
   // 17. Create test user packages (FIXED: using correct field names)
   console.log('📦 Creating test user packages...');
   const userPackages = await Promise.all([
@@ -768,9 +845,10 @@ async function main() {
   ]);
   console.log('✅ Test bookings created:', bookings.length);
 
-  // 19. Create test payment records
-  console.log('💳 Creating test payment records...');
+  // 19. Create comprehensive payment records and purchase history
+  console.log('💳 Creating comprehensive payment records...');
   const paymentRecords = await Promise.all([
+    // John Doe's payment history
     prisma.paymentRecord.upsert({
       where: { id: 1 },
       update: {},
@@ -782,7 +860,7 @@ async function main() {
         paymentMethod: 'stripe',
         paymentStatus: 'confirmed',
         transactionId: 'txn_123456789',
-        notes: 'Starter package payment',
+        notes: 'Starter package payment - Credit card',
         paymentDate: new Date(),
         confirmedAt: new Date(),
         clientId: 1
@@ -792,6 +870,26 @@ async function main() {
       where: { id: 2 },
       update: {},
       create: {
+        clientEmail: 'john.doe@example.com',
+        userPackageId: null,
+        groupBookingId: null,
+        sessionUsageId: null,
+        amount: 80.00,
+        currencyCode: 'USD',
+        paymentMethod: 'cash',
+        paymentStatus: 'confirmed',
+        transactionId: null,
+        notes: 'Individual session payment - Cash',
+        paymentDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        confirmedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        clientId: 1
+      }
+    }),
+    // Maria Garcia's payment history
+    prisma.paymentRecord.upsert({
+      where: { id: 3 },
+      update: {},
+      create: {
         clientEmail: 'maria.garcia@example.com',
         userPackageId: 2,
         amount: 360.00,
@@ -799,29 +897,119 @@ async function main() {
         paymentMethod: 'cash',
         paymentStatus: 'confirmed',
         transactionId: null,
-        notes: 'Wellness package payment - cash',
+        notes: 'Wellness package payment - Cash',
         paymentDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         confirmedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         clientId: 2
       }
+    }),
+    prisma.paymentRecord.upsert({
+      where: { id: 4 },
+      update: {},
+      create: {
+        clientEmail: 'maria.garcia@example.com',
+        userPackageId: null,
+        groupBookingId: null,
+        sessionUsageId: null,
+        amount: 120.00,
+        currencyCode: 'USD',
+        paymentMethod: 'paypal',
+        paymentStatus: 'confirmed',
+        transactionId: 'paypal_txn_987654321',
+        notes: 'Extended session payment - PayPal',
+        paymentDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+        confirmedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+        clientId: 2
+      }
+    }),
+    // Test client's payment history
+    prisma.paymentRecord.upsert({
+      where: { id: 5 },
+      update: {},
+      create: {
+        clientEmail: 'test@example.com',
+        userPackageId: null,
+        groupBookingId: null,
+        sessionUsageId: null,
+        amount: 50.00,
+        currencyCode: 'USD',
+        paymentMethod: 'stripe',
+        paymentStatus: 'pending',
+        transactionId: 'txn_pending_555666777',
+        notes: 'Consultation session - Pending confirmation',
+        paymentDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        confirmedAt: null,
+        clientId: 3
+      }
+    }),
+    prisma.paymentRecord.upsert({
+      where: { id: 6 },
+      update: {},
+      create: {
+        clientEmail: 'test@example.com',
+        userPackageId: null,
+        groupBookingId: null,
+        sessionUsageId: null,
+        amount: 180.00,
+        currencyCode: 'MXN',
+        paymentMethod: 'cash',
+        paymentStatus: 'confirmed',
+        transactionId: null,
+        notes: 'Group session payment - Mexican Peso',
+        paymentDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        confirmedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        clientId: 3
+      }
+    }),
+    // Admin user's payment history (for testing)
+    prisma.paymentRecord.upsert({
+      where: { id: 7 },
+      update: {},
+      create: {
+        clientEmail: 'coco@soulpath.lat',
+        userPackageId: null,
+        groupBookingId: null,
+        sessionUsageId: null,
+        amount: 400.00,
+        currencyCode: 'USD',
+        paymentMethod: 'bank_transfer',
+        paymentStatus: 'confirmed',
+        transactionId: 'bank_txn_admin_001',
+        notes: 'Premium package payment - Bank transfer',
+        paymentDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
+        confirmedAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
+        clientId: 6 // Admin client ID
+      }
     })
   ]);
-  console.log('✅ Test payment records created:', paymentRecords.length);
+  console.log('✅ Comprehensive payment records created:', paymentRecords.length);
 
-  // 20. Create profile
-  console.log('👤 Creating admin profile...');
-  const profile = await prisma.profile.upsert({
-    where: { id: 'admin-profile' },
-    update: {},
-    create: {
-      id: 'admin-profile',
-      email: 'admin@soulpath.lat',
-      fullName: 'Admin User',
-      avatarUrl: null,
-      role: 'admin'
-    }
-  });
-  console.log('✅ Admin profile created:', profile.id);
+  // 20. Create admin profiles
+  console.log('👤 Creating admin profiles...');
+  const profiles = await Promise.all([
+    prisma.profile.upsert({
+      where: { id: 'admin-profile' },
+      update: {},
+      create: {
+        id: 'admin-profile',
+        email: 'admin@soulpath.lat',
+        fullName: 'Admin User',
+        avatarUrl: null,
+        role: 'admin'
+      }
+    }),
+    prisma.profile.upsert({
+      where: { email: 'coco@soulpath.lat' },
+      update: {},
+      create: {
+        email: 'coco@soulpath.lat',
+        fullName: 'Coco Admin',
+        avatarUrl: null,
+        role: 'admin'
+      }
+    })
+  ]);
+  console.log('✅ Admin profiles created:', profiles.length);
 
   // 21. Create profile image
   console.log('🖼️ Creating profile image...');
@@ -951,13 +1139,15 @@ async function main() {
   console.log(`   📅 Schedule templates: ${scheduleTemplates.length}`);
   console.log(`   📅 Legacy schedules: ${schedules.length}`);
   console.log(`   💳 Payment methods: ${paymentMethods.length}`);
+  console.log(`   💳 Payment methods data: ${paymentMethodsData.length}`);
   console.log(`   👥 Group booking tiers: ${groupBookingTiers.length}`);
   console.log(`   📦 Legacy soul packages: ${soulPackages.length}`);
   console.log(`   👥 Test clients: ${clients.length}`);
   console.log(`   📦 Test user packages: ${userPackages.length}`);
   console.log(`   📋 Test bookings: ${bookings.length}`);
   console.log(`   💳 Test payment records: ${paymentRecords.length}`);
-  console.log(`   👤 Admin profile: ${profile.id}`);
+  console.log(`   👤 Admin profiles: ${profiles.length}`);
+  console.log(`   👤 Admin client profile: ${adminClient.id}`);
   console.log(`   🖼️ Profile image: ${profileImage.id}`);
   console.log(`   🖼️ Test images: ${images.length}`);
   console.log(`   🐛 Test bug reports: ${bugReports.length}`);
@@ -967,6 +1157,7 @@ async function main() {
   console.log('');
   console.log('🔑 Test Credentials:');
   console.log('   Admin: admin@soulpath.lat');
+  console.log('   Admin: coco@soulpath.lat (password: soulpath2025!)');
   console.log('   Client 1: john.doe@example.com');
   console.log('   Client 2: maria.garcia@example.com');
   console.log('   Client 3: test@example.com');

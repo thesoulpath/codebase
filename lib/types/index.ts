@@ -225,7 +225,7 @@ export interface PaymentRecord {
   confirmedAt?: string;
   createdAt: string;
   updatedAt: string;
-  client: Client;
+  client?: Client;
   userPackage?: UserPackage;
   groupBooking?: GroupBooking;
   sessionUsage?: SessionUsage;

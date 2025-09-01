@@ -62,14 +62,15 @@ interface UserPackage {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  client: Client;
-  package_definition: PackageDefinition;
-  package_price: PackagePrice;
+  clients?: Client;
+  package_definitions?: PackageDefinition;
+  package_prices?: PackagePrice;
 }
 
 interface Booking {
   id: number;
   client_id: number;
+  clientEmail: string;
   schedule_slot_id: number;
   user_package_id: number;
   booking_type: 'individual' | 'group';
@@ -81,9 +82,9 @@ interface Booking {
   final_amount?: number;
   created_at: string;
   updated_at: string;
-  client: Client;
-  user_package: UserPackage;
-  schedule_slot: {
+  clients?: Client;
+  user_packages?: UserPackage;
+  schedule_slots?: {
     id: number;
     start_time: string;
     end_time: string;
@@ -534,30 +535,30 @@ const PurchaseHistoryManagement: React.FC = () => {
                         <tr key={userPackage.id} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-3 px-4">
                             <div>
-                              <p className="font-medium text-dashboard-text-primary">{userPackage.client.name}</p>
-                              <p className="text-sm text-dashboard-text-secondary">{userPackage.client.email}</p>
+                                                          <p className="font-medium text-dashboard-text-primary">{userPackage.clients?.name || 'Unknown Client'}</p>
+                            <p className="text-sm text-dashboard-text-secondary">{userPackage.clients?.email || 'No email'}</p>
                             </div>
                           </td>
                           <td className="py-3 px-4">
                             <div>
                               <p className="font-medium text-dashboard-text-primary">
-                                {userPackage.package_definition.name}
+                                {userPackage.package_definitions?.name || 'No package'}
                               </p>
                               <p className="text-sm text-dashboard-text-secondary">
-                                {userPackage.package_definition.description}
+                                {userPackage.package_definitions?.description || 'No description'}
                               </p>
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            {getPackageTypeBadge(userPackage.package_definition.package_type)}
+                                                          {getPackageTypeBadge(userPackage.package_definitions?.package_type || 'individual')}
                           </td>
                           <td className="py-3 px-4">
                             <div>
                               <p className="font-medium text-dashboard-text-primary">
-                                {formatCurrency(userPackage.package_price.price, userPackage.package_price.currencies.symbol)}
+                                {formatCurrency(userPackage.package_prices?.price || 0, userPackage.package_prices?.currencies?.symbol || '$')}
                               </p>
                               <p className="text-sm text-dashboard-text-secondary">
-                                {userPackage.package_price.pricing_mode}
+                                {userPackage.package_prices?.pricing_mode || 'custom'}
                               </p>
                             </div>
                           </td>
@@ -567,7 +568,7 @@ const PurchaseHistoryManagement: React.FC = () => {
                                 {userPackage.sessions_remaining} remaining
                               </p>
                               <p className="text-sm text-dashboard-text-secondary">
-                                {userPackage.sessions_used} used of {userPackage.package_definition.sessions_count}
+                                {userPackage.sessions_used} used of {userPackage.package_definitions?.sessions_count || 0}
                               </p>
                             </div>
                           </td>
@@ -624,17 +625,21 @@ const PurchaseHistoryManagement: React.FC = () => {
                         <tr key={booking.id} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-3 px-4">
                             <div>
-                              <p className="font-medium text-dashboard-text-primary">{booking.client.name}</p>
-                              <p className="text-sm text-dashboard-text-secondary">{booking.client.email}</p>
+                              <p className="font-medium text-dashboard-text-primary">
+                                {booking.clients?.name || booking.clientEmail || 'Unknown Client'}
+                              </p>
+                              <p className="text-sm text-dashboard-text-secondary">
+                                {booking.clients?.email || booking.clientEmail || 'No email'}
+                              </p>
                             </div>
                           </td>
                           <td className="py-3 px-4">
                             <div>
                               <p className="font-medium text-dashboard-text-primary">
-                                {booking.user_package.package_definition.name}
+                                {booking.user_packages?.package_definitions?.name || 'No package'}
                               </p>
                               <p className="text-sm text-dashboard-text-secondary">
-                                {booking.user_package.package_definition.session_durations.duration_minutes} min
+                                {booking.user_packages?.package_definitions?.session_durations?.duration_minutes || '0'} min
                               </p>
                             </div>
                           </td>
@@ -651,10 +656,10 @@ const PurchaseHistoryManagement: React.FC = () => {
                           <td className="py-3 px-4">
                             <div>
                               <p className="font-medium text-dashboard-text-primary">
-                                {formatDate(booking.schedule_slot.start_time)}
+                                {booking.schedule_slots ? formatDate(booking.schedule_slots.start_time) : 'No slot'}
                               </p>
                               <p className="text-sm text-dashboard-text-secondary">
-                                {formatDateTime(booking.schedule_slot.start_time)}
+                                {booking.schedule_slots ? formatDateTime(booking.schedule_slots.start_time) : 'No time'}
                               </p>
                             </div>
                           </td>

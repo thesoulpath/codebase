@@ -494,7 +494,9 @@ const PaymentRecordsManagement: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 dashboard-text-muted" />
-                      <span className="dashboard-text-primary font-medium">{record.client.email}</span>
+                      <span className="dashboard-text-primary font-medium">
+                        {record.client?.email || record.clientEmail || 'Unknown Client'}
+                      </span>
                     </div>
                     <Badge 
                       variant="outline" 

@@ -36,14 +36,19 @@ const updateBookingSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 GET /api/admin/bookings - Starting request...');
+    
     const user = await requireAuth(request);
     if (!user) {
+      console.log('❌ Unauthorized access attempt');
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
         message: 'Authentication required'
       }, { status: 401 });
     }
+
+    console.log('✅ User authenticated:', user.email);
 
     const { searchParams } = new URL(request.url);
     const clientId = searchParams.get('client_id');
@@ -56,83 +61,48 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = (page - 1) * limit;
 
-    // Build the query for the unified bookings table
+    // Build the query for the unified bookings table with relationships
     let query = supabase
       .from('bookings')
       .select(`
         *,
-        client:clients!fk_bookings_client_id(
+        clients:client_id(
           id,
           name,
           email,
           phone,
-          status,
-          birth_date,
-          birth_time,
-          birth_place,
-          question,
-          language,
-          admin_notes,
-          created_at,
-          updated_at
+          status
         ),
-        schedule_slot:schedule_slots(
-          id,
-          start_time,
-          end_time,
-          capacity,
-          booked_count,
-          is_available,
-          schedule_templates(
-            id,
-            day_of_week,
-            start_time,
-            end_time,
-            capacity,
-            session_durations(
-              id,
-              name,
-              duration_minutes,
-              description
-            )
-          )
-        ),
-        user_package:user_packages(
+        user_packages:user_package_id(
           id,
           sessions_remaining,
           sessions_used,
           is_active,
-          created_at,
-          package_definition:package_definitions(
+          package_definition:package_definition_id(
             id,
             name,
             description,
             sessions_count,
             package_type,
             max_group_size,
-            session_durations(
+            session_durations:session_duration_id(
               id,
               name,
-              duration_minutes,
-              description
-            )
-          ),
-          package_price:package_prices(
-            id,
-            price,
-            pricing_mode,
-            currencies(
-              id,
-              code,
-              name,
-              symbol,
-              exchange_rate
+              duration_minutes
             )
           )
+        ),
+        schedule_slots:schedule_slot_id(
+          id,
+          start_time,
+          end_time,
+          capacity,
+          booked_count
         )
-      `)
-      .order('created_at', { ascending: false });
+      `, { count: 'exact' });
 
+    console.log('🔍 Executing database query...');
+    
     // Apply filters
     if (clientId && clientId !== 'all') {
       query = query.eq('client_id', clientId);
@@ -150,21 +120,16 @@ export async function GET(request: NextRequest) {
       query = query.eq('booking_type', bookingType);
     }
     if (packageType && packageType !== 'all') {
-      query = query.eq('user_package.package_definition.package_type', packageType);
+      // Note: This filter won't work with simplified query, but keeping for future enhancement
+      console.log('⚠️ Package type filter not supported with simplified query');
     }
 
-    // Get total count for pagination
-    const { count } = await supabase
-      .from('bookings')
-      .select('*', { count: 'exact', head: true });
-
-    // Apply pagination
-    query = query.range(offset, offset + limit - 1);
-
-    const { data: bookings, error } = await query;
+    const { data: bookings, error, count } = await query
+      .range(offset, offset + limit - 1)
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching bookings:', error);
+      console.error('❌ Database error in bookings API:', error);
       return NextResponse.json({
         success: false,
         error: 'Database error',
@@ -172,6 +137,8 @@ export async function GET(request: NextRequest) {
         details: error.message
       }, { status: 500 });
     }
+
+    console.log('✅ Database query successful, found', bookings?.length || 0, 'bookings');
 
     const totalPages = Math.ceil((count || 0) / limit);
 

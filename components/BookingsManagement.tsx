@@ -77,6 +77,7 @@ interface UserPackage {
 interface Booking {
   id: number;
   client_id: number;
+  clientEmail: string;
   schedule_slot_id: number;
   user_package_id: number;
   booking_type: 'individual' | 'group';
@@ -92,9 +93,9 @@ interface Booking {
   reminder_sent_at?: string;
   created_at: string;
   updated_at: string;
-  client: Client;
-  schedule_slot: ScheduleSlot;
-  user_package: UserPackage;
+  client?: Client;
+  schedule_slot?: ScheduleSlot;
+  user_package?: UserPackage;
 }
 
 interface BookingFilters {
@@ -523,27 +524,31 @@ const BookingsManagement: React.FC = () => {
                     <tr key={booking.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <div>
-                          <p className="font-medium text-dashboard-text-primary">{booking.client.name}</p>
-                          <p className="text-sm text-dashboard-text-secondary">{booking.client.email}</p>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div>
                           <p className="font-medium text-dashboard-text-primary">
-                            {formatDate(booking.schedule_slot.start_time)}
+                            {booking.client?.name || 'Client'}
                           </p>
                           <p className="text-sm text-dashboard-text-secondary">
-                            {formatDateTime(booking.schedule_slot.start_time)}
+                            {booking.client?.email || booking.clientEmail || 'No email'}
                           </p>
                         </div>
                       </td>
                       <td className="py-3 px-4">
                         <div>
                           <p className="font-medium text-dashboard-text-primary">
-                            {booking.user_package.package_definition.name}
+                            {booking.schedule_slot ? formatDate(booking.schedule_slot.start_time) : 'No slot'}
                           </p>
                           <p className="text-sm text-dashboard-text-secondary">
-                            {booking.user_package.package_definition.session_durations.duration_minutes} min
+                            {booking.schedule_slot ? formatDateTime(booking.schedule_slot.start_time) : 'No time'}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div>
+                          <p className="font-medium text-dashboard-text-primary">
+                            {booking.user_package?.package_definition?.name || 'No package'}
+                          </p>
+                          <p className="text-sm text-dashboard-text-secondary">
+                            {booking.user_package?.package_definition?.session_durations?.duration_minutes || '0'} min
                           </p>
                         </div>
                       </td>
@@ -649,7 +654,7 @@ const BookingsManagement: React.FC = () => {
         onConfirm={handleDelete}
         title="Delete Booking"
         description="Are you sure you want to delete this booking? This action cannot be undone."
-        itemName={selectedItem ? `${selectedItem.client.name} - ${formatDate(selectedItem.schedule_slot.start_time)}` : undefined}
+                        itemName={selectedItem ? `${selectedItem.client?.name || selectedItem.clientEmail || 'Unknown Client'} - ${selectedItem.schedule_slot ? formatDate(selectedItem.schedule_slot.start_time) : 'unknown date'}` : undefined}
         itemType="booking"
       />
     </div>

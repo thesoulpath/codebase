@@ -42,7 +42,15 @@ export async function GET(request: NextRequest) {
     // Build the query
     let query = supabase
       .from('payment_records')
-      .select('*')
+      .select(`
+        *,
+        clients:clientId(
+          id,
+          name,
+          email,
+          phone
+        )
+      `)
       .order('created_at', { ascending: false });
 
     // Apply filters

@@ -12,17 +12,31 @@ const adminUserSchema = z.object({
   email: z.string().email('Invalid email format'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   full_name: z.string().min(1, 'Full name is required'),
-  role: z.enum(['admin', 'user']).default('admin')
+  role: z.enum(['admin', 'user']).default('admin'),
+  phone: z.string().optional(),
+  birthDate: z.string().optional(),
+  birthTime: z.string().optional(),
+  birthPlace: z.string().optional(),
+  question: z.string().optional(),
+  language: z.string().optional(),
+  adminNotes: z.string().optional()
 });
 
 export async function POST() {
   try {
     // Validate admin user data
     const adminData = {
-      email: 'beto@soulpath.com',
-      password: 'beto2025!',
-      full_name: 'Beto Admin',
-      role: 'admin' as const
+      email: 'coco@soulpath.lat',
+      password: 'soulpath2025!',
+      full_name: 'Coco Admin',
+      role: 'admin' as const,
+      phone: '+1234567890',
+      birthDate: '1990-01-15',
+      birthTime: '10:30:00',
+      birthPlace: 'New York, USA',
+      question: 'How can I help manage the SOULPATH wellness system?',
+      language: 'en',
+      adminNotes: 'Primary system administrator for SOULPATH'
     };
 
     const validationResult = adminUserSchema.safeParse(adminData);
@@ -76,6 +90,27 @@ export async function POST() {
         full_name: adminData.full_name,
         role: adminData.role
       });
+
+    // Create a client record for the admin (for comprehensive profile management)
+    const { error: clientError } = await supabase
+      .from('clients')
+      .insert({
+        email: adminData.email,
+        name: adminData.full_name,
+        phone: adminData.phone,
+        status: 'active',
+        birthDate: adminData.birthDate,
+        birthTime: adminData.birthTime,
+        birthPlace: adminData.birthPlace,
+        question: adminData.question,
+        language: adminData.language,
+        adminNotes: adminData.adminNotes
+      });
+
+    if (clientError) {
+      console.error('Error creating client record:', clientError);
+      // Don't fail the request if client creation fails
+    }
 
     if (profileError) {
       console.error('Error creating profile:', profileError);
