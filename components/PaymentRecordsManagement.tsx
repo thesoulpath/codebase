@@ -10,45 +10,90 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Edit, Trash2, DollarSign, Calendar, User, Package, Save } from 'lucide-react';
 import { toast } from 'sonner';
-import { PaymentRecord, PaymentMethod, PaymentStatus, PaymentFilters } from '@/lib/types';
 import { useAuth } from '../hooks/useAuth';
 
-
-interface PaymentRecordFormData {
-  clientEmail: string;
-  userPackageId?: number;
-  groupBookingId?: number;
-  sessionUsageId?: number;
-  amount: number;
+// New interfaces for Purchase model
+interface Purchase {
+  id: number;
+  userId: string;
+  totalAmount: number;
   currencyCode: string;
-  paymentMethod: PaymentMethod;
-  paymentStatus: PaymentStatus;
+  paymentMethod: string;
+  paymentStatus: string;
+  transactionId?: string;
+  notes?: string;
+  purchasedAt?: string;
+  confirmedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  user?: {
+    id: string;
+    email: string;
+    fullName?: string;
+  };
+  userPackages?: UserPackage[];
+}
+
+interface UserPackage {
+  id: number;
+  userId: string;
+  purchaseId: number;
+  packagePriceId: number;
+  quantity?: number;
+  sessionsUsed?: number;
+  isActive?: boolean;
+  expiresAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  packagePrice?: {
+    id: number;
+    price: number;
+    packageDefinition?: {
+      id: number;
+      name: string;
+      sessionsCount: number;
+    };
+  };
+}
+
+interface PurchaseFormData {
+  userId: string;
+  totalAmount: number;
+  currencyCode: string;
+  paymentMethod: string;
+  paymentStatus: string;
   transactionId: string;
   notes: string;
-  paymentDate: string;
+}
+
+interface PurchaseFilters {
+  userId: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  dateFrom: string;
+  dateTo: string;
+  amountMin?: number;
+  amountMax?: number;
 }
 
 const PaymentRecordsManagement: React.FC = () => {
   const { user } = useAuth();
-  const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [users, setUsers] = useState<Array<{ id: string; email: string; fullName?: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<PaymentRecord | null>(null);
-  const [formData, setFormData] = useState<PaymentRecordFormData>({
-    clientEmail: '',
-    userPackageId: undefined,
-    groupBookingId: undefined,
-    sessionUsageId: undefined,
-    amount: 0,
+  const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
+  const [formData, setFormData] = useState<PurchaseFormData>({
+    userId: '',
+    totalAmount: 0,
     currencyCode: 'USD',
     paymentMethod: 'cash',
     paymentStatus: 'pending',
     transactionId: '',
-    notes: '',
-    paymentDate: ''
+    notes: ''
   });
-  const [filters, setFilters] = useState<PaymentFilters>({
-    clientEmail: '',
+  const [filters, setFilters] = useState<PurchaseFilters>({
+    userId: '',
     paymentMethod: 'all',
     paymentStatus: 'all',
     dateFrom: '',
@@ -71,31 +116,32 @@ const PaymentRecordsManagement: React.FC = () => {
     });
     
     if (user?.access_token) {
-      fetchPaymentRecords();
+      fetchPurchases();
+      fetchUsers();
     }
   }, [user?.access_token]);
 
   useEffect(() => {
     if (user?.access_token) {
-      fetchPaymentRecords();
+      fetchPurchases();
     }
-  }, [filters.clientEmail, filters.paymentMethod, filters.paymentStatus, filters.dateFrom, filters.dateTo, filters.amountMin, filters.amountMax, pagination.page, user?.access_token]);
+  }, [filters.userId, filters.paymentMethod, filters.paymentStatus, filters.dateFrom, filters.dateTo, filters.amountMin, filters.amountMax, pagination.page, user?.access_token]);
 
-  const fetchPaymentRecords = async () => {
+  const fetchPurchases = async () => {
     try {
       setLoading(true);
       const authToken = user?.access_token;
       if (!authToken) {
-        console.error('No auth token available for fetching payment records');
+        console.error('No auth token available for fetching purchases');
         return;
       }
 
-      console.log('🔐 Fetching payment records with auth token:', authToken.substring(0, 10) + '...');
+      console.log('🔐 Fetching purchases with auth token:', authToken.substring(0, 10) + '...');
 
       const params = new URLSearchParams();
       
       // Add filters
-      if (filters.clientEmail) params.append('clientEmail', filters.clientEmail);
+      if (filters.userId) params.append('userId', filters.userId);
       if (filters.paymentMethod && filters.paymentMethod !== 'all') params.append('paymentMethod', filters.paymentMethod);
       if (filters.paymentStatus && filters.paymentStatus !== 'all') params.append('paymentStatus', filters.paymentStatus);
       if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
@@ -107,7 +153,7 @@ const PaymentRecordsManagement: React.FC = () => {
       params.append('page', pagination.page.toString());
       params.append('limit', pagination.limit.toString());
 
-      const url = `/api/admin/payment-records?${params}`;
+      const url = `/api/admin/purchases?${params}`;
       console.log('🌐 Making request to:', url);
 
       const response = await fetch(url, {
@@ -116,29 +162,50 @@ const PaymentRecordsManagement: React.FC = () => {
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log('📡 Response status:', response.status, response.statusText);
       
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Response error:', errorText);
-        throw new Error(`Failed to fetch payment records: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch purchases: ${response.status} ${response.statusText}`);
       }
       
       const result = await response.json();
-      console.log('✅ Payment records fetched successfully:', result);
+      console.log('✅ Purchases fetched successfully:', result);
       
-      setPaymentRecords(result.data || []);
+      setPurchases(result.data || []);
       setPagination(prev => ({
         ...prev,
         total: result.pagination?.total || 0,
         totalPages: result.pagination?.totalPages || 0
       }));
     } catch (error) {
-      console.error('❌ Error fetching payment records:', error);
-      toast.error('Failed to fetch payment records');
+      console.error('❌ Error fetching purchases:', error);
+      toast.error('Failed to fetch purchases');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const authToken = user?.access_token;
+      if (!authToken) return;
+
+      const response = await fetch('/api/admin/users', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setUsers(result.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
     }
   };
 
@@ -152,13 +219,13 @@ const PaymentRecordsManagement: React.FC = () => {
         return;
       }
 
-      const url = editingRecord 
-        ? '/api/admin/payment-records' 
-        : '/api/admin/payment-records';
+      const url = editingPurchase 
+        ? `/api/admin/purchases/${editingPurchase.id}` 
+        : '/api/admin/purchases';
       
-      const method = editingRecord ? 'PUT' : 'POST';
-      const body = editingRecord 
-        ? { id: editingRecord.id, ...formData }
+      const method = editingPurchase ? 'PUT' : 'POST';
+      const body = editingPurchase 
+        ? { ...formData }
         : formData;
 
       const response = await fetch(url, {
@@ -170,39 +237,35 @@ const PaymentRecordsManagement: React.FC = () => {
         body: JSON.stringify(body)
       });
 
-      if (!response.ok) throw new Error('Failed to save payment record');
+      if (!response.ok) throw new Error('Failed to save purchase');
 
-      toast.success(editingRecord ? 'Payment record updated' : 'Payment record created');
+      toast.success(editingPurchase ? 'Purchase updated' : 'Purchase created');
       setShowCreateModal(false);
-      setEditingRecord(null);
+      setEditingPurchase(null);
       resetForm();
-      fetchPaymentRecords();
+      fetchPurchases();
     } catch (error) {
-      console.error('Error saving payment record:', error);
-      toast.error('Failed to save payment record');
+      console.error('Error saving purchase:', error);
+      toast.error('Failed to save purchase');
     }
   };
 
-  const handleEdit = (record: PaymentRecord) => {
-    setEditingRecord(record);
+  const handleEdit = (purchase: Purchase) => {
+    setEditingPurchase(purchase);
     setFormData({
-      clientEmail: record.clientEmail,
-      userPackageId: record.userPackageId,
-      groupBookingId: record.groupBookingId,
-      sessionUsageId: record.sessionUsageId,
-      amount: record.amount,
-      currencyCode: record.currencyCode,
-      paymentMethod: record.paymentMethod,
-      paymentStatus: record.paymentStatus,
-      transactionId: record.transactionId || '',
-      notes: record.notes || '',
-      paymentDate: record.paymentDate || ''
+      userId: purchase.userId,
+      totalAmount: purchase.totalAmount,
+      currencyCode: purchase.currencyCode,
+      paymentMethod: purchase.paymentMethod,
+      paymentStatus: purchase.paymentStatus,
+      transactionId: purchase.transactionId || '',
+      notes: purchase.notes || ''
     });
     setShowCreateModal(true);
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this payment record?')) return;
+    if (!confirm('Are you sure you want to delete this purchase?')) return;
 
     try {
       const authToken = user?.access_token;
@@ -211,7 +274,7 @@ const PaymentRecordsManagement: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`/api/admin/payment-records?id=${id}`, {
+      const response = await fetch(`/api/admin/purchases/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -219,35 +282,31 @@ const PaymentRecordsManagement: React.FC = () => {
         }
       });
 
-      if (!response.ok) throw new Error('Failed to delete payment record');
+      if (!response.ok) throw new Error('Failed to delete purchase');
 
-      toast.success('Payment record deleted');
-      fetchPaymentRecords();
+      toast.success('Purchase deleted');
+      fetchPurchases();
     } catch (error) {
-      console.error('Error deleting payment record:', error);
-      toast.error('Failed to delete payment record');
+      console.error('Error deleting purchase:', error);
+      toast.error('Failed to delete purchase');
     }
   };
 
   const resetForm = () => {
     setFormData({
-      clientEmail: '',
-      userPackageId: undefined,
-      groupBookingId: undefined,
-      sessionUsageId: undefined,
-      amount: 0,
+      userId: '',
+      totalAmount: 0,
       currencyCode: 'USD',
       paymentMethod: 'cash',
       paymentStatus: 'pending',
       transactionId: '',
-      notes: '',
-      paymentDate: ''
+      notes: ''
     });
   };
 
   const clearFilters = () => {
     setFilters({
-      clientEmail: '',
+      userId: '',
       paymentMethod: 'all',
       paymentStatus: 'all',
       dateFrom: '',
@@ -255,64 +314,49 @@ const PaymentRecordsManagement: React.FC = () => {
       amountMin: undefined,
       amountMax: undefined
     });
-    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const getPaymentStatusColor = (status: PaymentStatus) => {
+  const getPaymentStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'failed': return 'bg-red-100 text-red-800';
-      case 'refunded': return 'bg-blue-100 text-blue-800';
-      case 'cancelled': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'completed': return 'dashboard-badge-success';
+      case 'pending': return 'dashboard-badge-warning';
+      case 'failed': return 'dashboard-badge-error';
+      case 'refunded': return 'dashboard-badge-info';
+      case 'cancelled': return 'dashboard-badge-error';
+      default: return 'dashboard-badge';
     }
   };
 
-  const getPaymentMethodIcon = (method: PaymentMethod) => {
+  const getPaymentMethodIcon = (method: string) => {
     switch (method) {
-      case 'cash': return <DollarSign className="h-4 w-4" />;
-      case 'bank_transfer': return <Package className="h-4 w-4" />;
-      case 'qr_payment': return <Package className="h-4 w-4" />;
-      case 'credit_card': return <Package className="h-4 w-4" />;
-      case 'crypto': return <Package className="h-4 w-4" />;
-      case 'pay_later': return <Calendar className="h-4 w-4" />;
-      default: return <Package className="h-4 w-4" />;
+      case 'cash': return <DollarSign className="h-4 w-4 dashboard-text-muted" />;
+      case 'bank_transfer': return <DollarSign className="h-4 w-4 dashboard-text-muted" />;
+      case 'credit_card': return <DollarSign className="h-4 w-4 dashboard-text-muted" />;
+      case 'qr_payment': return <DollarSign className="h-4 w-4 dashboard-text-muted" />;
+      case 'crypto': return <DollarSign className="h-4 w-4 dashboard-text-muted" />;
+      case 'pay_later': return <DollarSign className="h-4 w-4 dashboard-text-muted" />;
+      default: return <DollarSign className="h-4 w-4 dashboard-text-muted" />;
     }
   };
 
-  const formatCurrency = (amount: number, currencyCode: string) => {
+  const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currencyCode
+      currency: currency
     }).format(amount);
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
   };
 
-  if (loading) {
+  if (!user) {
     return (
       <div className="dashboard-container p-6">
-        <div className="dashboard-loading">
-          <div className="dashboard-loading-spinner">Loading payment records...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user?.access_token) {
-    return (
-      <div className="dashboard-container p-6">
-        <div className="dashboard-loading">
-          <div className="dashboard-loading-spinner">Authentication required...</div>
-        </div>
-        <div className="mt-4 p-4 bg-gray-100 rounded">
-          <h3 className="font-semibold">Debug Info:</h3>
-          <p>User: {user ? 'Yes' : 'No'}</p>
-          <p>Access Token: {user?.access_token ? 'Yes' : 'No'}</p>
-          <p>User Email: {user?.email || 'None'}</p>
+        <div className="text-center">
+          <h2 className="dashboard-text-primary text-2xl font-bold mb-4">Authentication Required</h2>
+          <p className="dashboard-text-secondary">Please log in to access this feature.</p>
         </div>
       </div>
     );
@@ -324,33 +368,19 @@ const PaymentRecordsManagement: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="dashboard-text-primary text-3xl font-bold tracking-tight">
-            Payment Records
+            Purchase Management
           </h2>
           <p className="dashboard-text-secondary">
-            Track and manage all payment transactions for packages and bookings
+            Track and manage all purchase transactions for packages
           </p>
         </div>
         <div className="flex gap-2">
-          <BaseButton 
-            onClick={() => {
-              console.log('🧪 Manual test button clicked');
-              if (user?.access_token) {
-                console.log('🔐 Testing with token:', user.access_token.substring(0, 10) + '...');
-                fetchPaymentRecords();
-              } else {
-                console.log('❌ No auth token available');
-              }
-            }} 
-            className="dashboard-button-outline"
-          >
-            🧪 Test Fetch
-          </BaseButton>
           <BaseButton 
             onClick={() => setShowCreateModal(true)} 
             className="dashboard-button-primary"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Add Payment Record
+            Add Purchase
           </BaseButton>
         </div>
       </div>
@@ -363,21 +393,30 @@ const PaymentRecordsManagement: React.FC = () => {
         <CardContent>
           <div className="dashboard-filter-grid">
             <div className="dashboard-filter-item">
-              <Label htmlFor="client_email" className="dashboard-filter-label">Client Email</Label>
-              <BaseInput
-                id="client_email"
-                placeholder="Filter by email"
-                value={filters.clientEmail || ''}
-                onChange={(e) => setFilters(prev => ({ ...prev, clientEmail: e.target.value }))}
-                className="dashboard-input"
-              />
+              <Label htmlFor="user_id" className="dashboard-filter-label">User</Label>
+              <Select 
+                value={filters.userId} 
+                onValueChange={(value) => setFilters(prev => ({ ...prev, userId: value }))}
+              >
+                <SelectTrigger className="dashboard-select">
+                  <SelectValue placeholder="All users" />
+                </SelectTrigger>
+                <SelectContent className="dashboard-dropdown-content">
+                  <SelectItem value="" className="dashboard-dropdown-item">All users</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id} className="dashboard-dropdown-item">
+                      {user.fullName || user.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="dashboard-filter-item">
               <Label htmlFor="payment_method" className="dashboard-filter-label">Payment Method</Label>
               <Select 
                 value={filters.paymentMethod} 
-                onValueChange={(value: PaymentMethod | 'all') => setFilters(prev => ({ ...prev, paymentMethod: value }))}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, paymentMethod: value }))}
               >
                 <SelectTrigger className="dashboard-select">
                   <SelectValue placeholder="All payment methods" />
@@ -398,7 +437,7 @@ const PaymentRecordsManagement: React.FC = () => {
               <Label htmlFor="payment_status" className="dashboard-filter-label">Payment Status</Label>
               <Select 
                 value={filters.paymentStatus} 
-                onValueChange={(value: PaymentStatus | 'all') => setFilters(prev => ({ ...prev, paymentStatus: value }))}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, paymentStatus: value }))}
               >
                 <SelectTrigger className="dashboard-select">
                   <SelectValue placeholder="All statuses" />
@@ -464,7 +503,7 @@ const PaymentRecordsManagement: React.FC = () => {
           </div>
 
           <div className="flex gap-2 mt-4">
-            <BaseButton onClick={fetchPaymentRecords} className="dashboard-button-primary">
+            <BaseButton onClick={fetchPurchases} className="dashboard-button-primary">
               <Search className="mr-2 h-4 w-4" />
               Apply Filters
             </BaseButton>
@@ -478,132 +517,104 @@ const PaymentRecordsManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Payment Records Table */}
+      {/* Purchases Table */}
       <Card className="dashboard-card">
         <CardHeader>
-          <CardTitle className="dashboard-card-title">Payment Records</CardTitle>
+          <CardTitle className="dashboard-card-title">Purchases</CardTitle>
           <CardDescription className="dashboard-card-description">
-            All payment transactions and their current status
+            All purchase transactions and their current status
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {paymentRecords.map((record) => (
-              <div key={record.id} className="border border-[#C0C0C0]/20 rounded-lg p-4 space-y-3 bg-[#191970]/30">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFD700] mx-auto"></div>
+              <p className="dashboard-text-secondary mt-2">Loading purchases...</p>
+            </div>
+          ) : purchases.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="dashboard-text-secondary">No purchases found</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {purchases.map((purchase) => (
+                <div key={purchase.id} className="border border-[#C0C0C0]/20 rounded-lg p-4 space-y-3 bg-[#191970]/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 dashboard-text-muted" />
+                        <span className="dashboard-text-primary font-medium">
+                          {purchase.user?.fullName || purchase.user?.email || 'Unknown User'}
+                        </span>
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={`dashboard-badge ${getPaymentStatusColor(purchase.paymentStatus)}`}
+                      >
+                        {purchase.paymentStatus}
+                      </Badge>
+                    </div>
+                    <div className="flex gap-2">
+                      <BaseButton
+                        size="sm"
+                        onClick={() => handleEdit(purchase)}
+                        className="dashboard-button-outline"
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </BaseButton>
+                      <BaseButton
+                        size="sm"
+                        onClick={() => handleDelete(purchase.id)}
+                        className="dashboard-button-danger"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </BaseButton>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2 md:grid-cols-4">
                     <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 dashboard-text-muted" />
-                      <span className="dashboard-text-primary font-medium">
-                        {record.client?.email || record.clientEmail || 'Unknown Client'}
+                      <DollarSign className="h-4 w-4 dashboard-text-muted" />
+                      <span className="dashboard-text-primary">
+                        {formatCurrency(purchase.totalAmount, purchase.currencyCode)}
                       </span>
                     </div>
-                    <Badge 
-                      variant="outline" 
-                      className={`dashboard-badge ${getPaymentStatusColor(record.paymentStatus)}`}
-                    >
-                      {record.paymentStatus}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {getPaymentMethodIcon(purchase.paymentMethod)}
+                      <span className="dashboard-text-primary capitalize">
+                        {purchase.paymentMethod.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 dashboard-text-muted" />
+                      <span className="dashboard-text-primary">
+                        {formatDate(purchase.purchasedAt)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 dashboard-text-muted" />
+                      <span className="dashboard-text-primary">
+                        {purchase.userPackages?.length || 0} packages
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <BaseButton
-                      size="sm"
-                      onClick={() => handleEdit(record)}
-                      className="dashboard-button-outline"
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
-                    </BaseButton>
-                    <BaseButton
-                      size="sm"
-                      onClick={() => handleDelete(record.id)}
-                      className="dashboard-button-danger"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </BaseButton>
-                  </div>
+
+                  {purchase.transactionId && (
+                    <div className="flex items-center gap-2">
+                      <span className="dashboard-text-secondary text-sm">Transaction ID:</span>
+                      <span className="dashboard-text-primary font-mono text-sm">{purchase.transactionId}</span>
+                    </div>
+                  )}
+
+                  {purchase.notes && (
+                    <div className="dashboard-text-muted text-sm">
+                      <strong>Notes:</strong> {purchase.notes}
+                    </div>
+                  )}
                 </div>
-
-                <div className="grid gap-2 md:grid-cols-4">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 dashboard-text-muted" />
-                    <span className="dashboard-text-primary">
-                      {formatCurrency(record.amount, record.currencyCode)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {getPaymentMethodIcon(record.paymentMethod)}
-                    <span className="dashboard-text-primary capitalize">
-                      {record.paymentMethod.replace('_', ' ')}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 dashboard-text-muted" />
-                    <span className="dashboard-text-primary">
-                      {formatDate(record.createdAt)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 dashboard-text-muted" />
-                    <span className="dashboard-text-primary">
-                      {record.userPackage ? 'Package Purchase' : 
-                       record.groupBooking ? 'Group Booking' : 
-                       record.sessionUsage ? 'Session Usage' : 'Other'}
-                    </span>
-                  </div>
-                </div>
-
-                {record.transactionId && (
-                  <div className="flex items-center gap-2">
-                    <span className="dashboard-text-secondary text-sm">Transaction ID:</span>
-                    <span className="dashboard-text-primary font-mono text-sm">{record.transactionId}</span>
-                  </div>
-                )}
-
-                {record.notes && (
-                  <div className="dashboard-text-muted text-sm">
-                    <strong>Notes:</strong> {record.notes}
-                  </div>
-                )}
-
-                {record.paymentDate && (
-                  <div className="dashboard-text-muted text-xs">
-                    Payment Date: {formatDate(record.paymentDate)}
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {paymentRecords.length === 0 && (
-              <div className="dashboard-empty">
-                <div className="dashboard-empty-icon">No payment records found</div>
-              </div>
-            )}
-          </div>
-
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
-              <div className="dashboard-text-secondary text-sm">
-                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
-              </div>
-              <div className="flex gap-2">
-                <BaseButton
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                  disabled={pagination.page <= 1}
-                  className="dashboard-button-outline"
-                >
-                  Previous
-                </BaseButton>
-                <BaseButton
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                  disabled={pagination.page >= pagination.totalPages}
-                  className="dashboard-button-outline"
-                >
-                  Next
-                </BaseButton>
-              </div>
+              ))}
             </div>
           )}
         </CardContent>
@@ -612,157 +623,142 @@ const PaymentRecordsManagement: React.FC = () => {
       {/* Create/Edit Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="dashboard-card w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <CardHeader>
-              <CardTitle className="dashboard-card-title">
-                {editingRecord ? 'Edit Payment Record' : 'Add Payment Record'}
-              </CardTitle>
-              <CardDescription className="dashboard-card-description">
-                Create or update payment transaction details
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="clientEmail" className="dashboard-filter-label">Client Email *</Label>
-                    <BaseInput
-                      id="clientEmail"
-                      type="email"
-                      value={formData.clientEmail}
-                      onChange={(e) => setFormData(prev => ({ ...prev, clientEmail: e.target.value }))}
-                      placeholder="client@example.com"
-                      className="dashboard-input"
-                      required
-                    />
-                  </div>
+          <div className="bg-[#191970] border border-[#C0C0C0]/20 rounded-lg p-6 w-full max-w-md">
+            <h3 className="dashboard-text-primary text-xl font-bold mb-4">
+              {editingPurchase ? 'Edit Purchase' : 'Create Purchase'}
+            </h3>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="user_id" className="dashboard-label">User</Label>
+                <Select 
+                  value={formData.userId} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, userId: value }))}
+                >
+                  <SelectTrigger className="dashboard-select">
+                    <SelectValue placeholder="Select user" />
+                  </SelectTrigger>
+                  <SelectContent className="dashboard-dropdown-content">
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id} className="dashboard-dropdown-item">
+                        {user.fullName || user.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="amount" className="dashboard-filter-label">Amount *</Label>
-                    <BaseInput
-                      id="amount"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.amount}
-                      onChange={(e) => setFormData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
-                      placeholder="0.00"
-                      className="dashboard-input"
-                      required
-                    />
-                  </div>
+              <div>
+                <Label htmlFor="total_amount" className="dashboard-label">Total Amount</Label>
+                <BaseInput
+                  id="total_amount"
+                  type="number"
+                  step="0.01"
+                  value={formData.totalAmount}
+                  onChange={(e) => setFormData(prev => ({ ...prev, totalAmount: parseFloat(e.target.value) || 0 }))}
+                  className="dashboard-input"
+                  required
+                />
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="currencyCode" className="dashboard-filter-label">Currency *</Label>
-                    <Select 
-                      value={formData.currencyCode} 
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, currencyCode: value }))}
-                    >
-                      <SelectTrigger className="dashboard-select">
-                        <SelectValue placeholder="Select currency" />
-                      </SelectTrigger>
-                      <SelectContent className="dashboard-dropdown-content">
-                        <SelectItem value="USD" className="dashboard-dropdown-item">USD</SelectItem>
-                        <SelectItem value="EUR" className="dashboard-dropdown-item">EUR</SelectItem>
-                        <SelectItem value="PEN" className="dashboard-dropdown-item">PEN</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div>
+                <Label htmlFor="currency_code" className="dashboard-label">Currency</Label>
+                <Select 
+                  value={formData.currencyCode} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, currencyCode: value }))}
+                >
+                  <SelectTrigger className="dashboard-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="dashboard-dropdown-content">
+                    <SelectItem value="USD" className="dashboard-dropdown-item">USD</SelectItem>
+                    <SelectItem value="EUR" className="dashboard-dropdown-item">EUR</SelectItem>
+                    <SelectItem value="GBP" className="dashboard-dropdown-item">GBP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="paymentMethod" className="dashboard-filter-label">Payment Method *</Label>
-                    <Select 
-                      value={formData.paymentMethod} 
-                      onValueChange={(value: PaymentMethod) => setFormData(prev => ({ ...prev, paymentMethod: value }))}
-                    >
-                      <SelectTrigger className="dashboard-select">
-                        <SelectValue placeholder="Select payment method" />
-                      </SelectTrigger>
-                      <SelectContent className="dashboard-dropdown-content">
-                        <SelectItem value="cash" className="dashboard-dropdown-item">Cash</SelectItem>
-                        <SelectItem value="bank_transfer" className="dashboard-dropdown-item">Bank Transfer</SelectItem>
-                        <SelectItem value="qr_payment" className="dashboard-dropdown-item">QR Payment</SelectItem>
-                        <SelectItem value="credit_card" className="dashboard-dropdown-item">Credit Card</SelectItem>
-                        <SelectItem value="crypto" className="dashboard-dropdown-item">Cryptocurrency</SelectItem>
-                        <SelectItem value="pay_later" className="dashboard-dropdown-item">Pay Later</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div>
+                <Label htmlFor="payment_method" className="dashboard-label">Payment Method</Label>
+                <Select 
+                  value={formData.paymentMethod} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}
+                >
+                  <SelectTrigger className="dashboard-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="dashboard-dropdown-content">
+                    <SelectItem value="cash" className="dashboard-dropdown-item">Cash</SelectItem>
+                    <SelectItem value="bank_transfer" className="dashboard-dropdown-item">Bank Transfer</SelectItem>
+                    <SelectItem value="qr_payment" className="dashboard-dropdown-item">QR Payment</SelectItem>
+                    <SelectItem value="credit_card" className="dashboard-dropdown-item">Credit Card</SelectItem>
+                    <SelectItem value="crypto" className="dashboard-dropdown-item">Cryptocurrency</SelectItem>
+                    <SelectItem value="pay_later" className="dashboard-dropdown-item">Pay Later</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="paymentStatus" className="dashboard-filter-label">Payment Status *</Label>
-                    <Select 
-                      value={formData.paymentStatus} 
-                      onValueChange={(value: PaymentStatus) => setFormData(prev => ({ ...prev, paymentStatus: value }))}
-                    >
-                      <SelectTrigger className="dashboard-select">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent className="dashboard-dropdown-content">
-                        <SelectItem value="pending" className="dashboard-dropdown-item">Pending</SelectItem>
-                        <SelectItem value="completed" className="dashboard-dropdown-item">Completed</SelectItem>
-                        <SelectItem value="failed" className="dashboard-dropdown-item">Failed</SelectItem>
-                        <SelectItem value="refunded" className="dashboard-dropdown-item">Refunded</SelectItem>
-                        <SelectItem value="cancelled" className="dashboard-dropdown-item">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div>
+                <Label htmlFor="payment_status" className="dashboard-label">Payment Status</Label>
+                <Select 
+                  value={formData.paymentStatus} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, paymentStatus: value }))}
+                >
+                  <SelectTrigger className="dashboard-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="dashboard-dropdown-content">
+                    <SelectItem value="pending" className="dashboard-dropdown-item">Pending</SelectItem>
+                    <SelectItem value="completed" className="dashboard-dropdown-item">Completed</SelectItem>
+                    <SelectItem value="failed" className="dashboard-dropdown-item">Failed</SelectItem>
+                    <SelectItem value="refunded" className="dashboard-dropdown-item">Refunded</SelectItem>
+                    <SelectItem value="cancelled" className="dashboard-dropdown-item">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="paymentDate" className="dashboard-filter-label">Payment Date</Label>
-                    <BaseInput
-                      id="paymentDate"
-                      type="date"
-                      value={formData.paymentDate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, paymentDate: e.target.value }))}
-                      className="dashboard-input"
-                    />
-                  </div>
-                </div>
+              <div>
+                <Label htmlFor="transaction_id" className="dashboard-label">Transaction ID</Label>
+                <BaseInput
+                  id="transaction_id"
+                  value={formData.transactionId}
+                  onChange={(e) => setFormData(prev => ({ ...prev, transactionId: e.target.value }))}
+                  className="dashboard-input"
+                  placeholder="Optional"
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="transactionId" className="dashboard-filter-label">Transaction ID</Label>
-                  <BaseInput
-                    id="transactionId"
-                    value={formData.transactionId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, transactionId: e.target.value }))}
-                    placeholder="Transaction reference number"
-                    className="dashboard-input"
-                  />
-                </div>
+              <div>
+                <Label htmlFor="notes" className="dashboard-label">Notes</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  className="dashboard-input"
+                  placeholder="Optional notes"
+                  rows={3}
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="notes" className="dashboard-filter-label">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Additional notes about this payment"
-                    className="dashboard-input"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="flex gap-2 pt-4">
-                  <BaseButton type="submit" className="dashboard-button-primary flex-1">
-                    <Save className="mr-2 h-4 w-4" />
-                    {editingRecord ? 'Update' : 'Create'}
-                  </BaseButton>
-                  <BaseButton
-                    type="button"
-                    onClick={() => {
-                      setShowCreateModal(false);
-                      setEditingRecord(null);
-                      resetForm();
-                    }}
-                    className="dashboard-button-outline"
-                  >
-                    Cancel
-                  </BaseButton>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+              <div className="flex gap-2 pt-4">
+                <BaseButton type="submit" className="dashboard-button-primary flex-1">
+                  <Save className="mr-2 h-4 w-4" />
+                  {editingPurchase ? 'Update' : 'Create'}
+                </BaseButton>
+                <BaseButton 
+                  type="button"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setEditingPurchase(null);
+                    resetForm();
+                  }}
+                  className="dashboard-button-outline"
+                >
+                  Cancel
+                </BaseButton>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

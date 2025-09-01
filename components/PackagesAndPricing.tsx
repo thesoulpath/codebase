@@ -557,7 +557,7 @@ const PackagesAndPricing: React.FC = () => {
                         <td className="font-medium">{pkg.name}</td>
                         <td>{getPackageTypeBadge(pkg.package_type)}</td>
                         <td>{pkg.sessions_count}</td>
-                        <td>{pkg.session_durations.name}</td>
+                        <td>{pkg.session_durations?.name || 'N/A'}</td>
                         <td>{pkg.max_group_size || '-'}</td>
                         <td>
                           <Badge className="dashboard-badge">
