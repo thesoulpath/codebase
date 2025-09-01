@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 
 import { 
   Bug, 
@@ -67,7 +67,11 @@ interface BugReportFilters {
   search: string;
 }
 
-export function BugReportManagement() {
+export interface BugReportManagementRef {
+  refreshBugReports: () => void;
+}
+
+export const BugReportManagement = forwardRef<BugReportManagementRef, {}>((_, ref) => {
   const { user } = useAuth();
   const [bugReports, setBugReports] = useState<BugReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,12 +85,6 @@ export function BugReportManagement() {
     category: '',
     search: ''
   });
-
-  useEffect(() => {
-    if (user?.access_token) {
-      fetchBugReports();
-    }
-  }, [user, filters]);
 
   const fetchBugReports = async () => {
     try {
@@ -115,6 +113,18 @@ export function BugReportManagement() {
       setLoading(false);
     }
   };
+
+  // useEffect hook to fetch data when component mounts or filters change
+  useEffect(() => {
+    if (user?.access_token) {
+      fetchBugReports();
+    }
+  }, [user, filters]);
+
+  // Expose the refresh function through the ref
+  useImperativeHandle(ref, () => ({
+    refreshBugReports: fetchBugReports
+  }), []);
 
   const updateBugStatus = async (bugId: string, status: string) => {
     try {
@@ -722,4 +732,6 @@ export function BugReportManagement() {
       </BaseModal>
     </div>
   );
-}
+});
+
+BugReportManagement.displayName = 'BugReportManagement';

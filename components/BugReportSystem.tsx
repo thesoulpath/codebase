@@ -44,9 +44,10 @@ interface BugReportData {
 
 interface BugReportSystemProps {
   children?: (props: { openReport: () => void }) => React.ReactNode;
+  onSubmitSuccess?: () => void;
 }
 
-export function BugReportSystem({ children }: BugReportSystemProps) {
+export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemProps) {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -408,6 +409,11 @@ export function BugReportSystem({ children }: BugReportSystemProps) {
         setCurrentColor('#ff0000');
         setStrokeWidth(3);
         setFontSize(16);
+        
+        // Call the success callback to refresh the bug reports list
+        if (onSubmitSuccess) {
+          onSubmitSuccess();
+        }
         
         // Close modal after a short delay to show the success toast
         setTimeout(() => {

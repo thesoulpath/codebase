@@ -1,17 +1,15 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const prisma = new PrismaClient();
 
 // Zod schema for admin user creation
 const adminUserSchema = z.object({
   email: z.string().email('Invalid email format'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  full_name: z.string().min(1, 'Full name is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  fullName: z.string().min(1, 'Full name is required'),
   role: z.enum(['admin', 'user']).default('admin'),
   phone: z.string().optional(),
   birthDate: z.string().optional(),
@@ -26,9 +24,9 @@ export async function POST() {
   try {
     // Validate admin user data
     const adminData = {
-      email: 'coco@soulpath.lat',
-      password: 'soulpath2025!',
-      full_name: 'Coco Admin',
+      email: 'admin@soulpath.lat',
+      password: 'soulpath',
+      fullName: 'SoulPath Admin',
       role: 'admin' as const,
       phone: '+1234567890',
       birthDate: '1990-01-15',
@@ -41,12 +39,12 @@ export async function POST() {
 
     const validationResult = adminUserSchema.safeParse(adminData);
     if (!validationResult.success) {
-      console.error('Validation error:', (validationResult as any).error.errors);
+      console.error('Validation error:', validationResult.error.format());
       return NextResponse.json({
         success: false,
         error: 'Validation failed',
         message: 'Admin user data validation failed',
-        details: (validationResult as any).error.errors,
+        details: validationResult.error.format(),
         toast: {
           type: 'error',
           title: 'Validation Error',
@@ -55,80 +53,60 @@ export async function POST() {
       }, { status: 400 });
     }
 
-    // Create admin user with email "coco@soulpath.lat" and password "soulpath2025!"
-    const { data: user, error } = await supabase.auth.admin.createUser({
-      email: adminData.email,
-      password: adminData.password,
-      email_confirm: true,
-      user_metadata: {
-        role: adminData.role,
-        full_name: adminData.full_name
-      }
+    // Check if admin user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: adminData.email }
     });
 
-    if (error) {
-      console.error('Error creating admin user:', error);
+    if (existingUser) {
       return NextResponse.json({
         success: false,
-        error: 'User creation failed',
-        message: 'Failed to create admin user',
-        details: error.message,
+        error: 'User already exists',
+        message: 'Admin user already exists',
         toast: {
-          type: 'error',
-          title: 'User Creation Failed',
-          description: 'Failed to create admin user. Please try again.'
+          type: 'warning',
+          title: 'User Already Exists',
+          description: `Admin user ${adminData.email} already exists in the system.`
         }
-      }, { status: 500 });
+      }, { status: 409 });
     }
 
-    // Also create a profile record
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: user.user.id,
-        email: user.user.email,
-        full_name: adminData.full_name,
-        role: adminData.role
-      });
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(adminData.password, 12);
 
-    // Create a client record for the admin (for comprehensive profile management)
-    const { error: clientError } = await supabase
-      .from('clients')
-      .insert({
+    // Create admin user using Prisma
+    const user = await prisma.user.create({
+      data: {
         email: adminData.email,
-        name: adminData.full_name,
+        password: hashedPassword,
+        fullName: adminData.fullName,
+        role: adminData.role,
         phone: adminData.phone,
-        status: 'active',
-        birthDate: adminData.birthDate,
+        birthDate: adminData.birthDate ? new Date(adminData.birthDate) : null,
         birthTime: adminData.birthTime,
         birthPlace: adminData.birthPlace,
         question: adminData.question,
         language: adminData.language,
-        adminNotes: adminData.adminNotes
-      });
+        adminNotes: adminData.adminNotes,
+        status: 'active'
+      }
+    });
 
-    if (clientError) {
-      console.error('Error creating client record:', clientError);
-      // Don't fail the request if client creation fails
-    }
-
-    if (profileError) {
-      console.error('Error creating profile:', profileError);
-      // Don't fail the request if profile creation fails
-    }
+    console.log('✅ Admin user created successfully:', user.email);
 
     return NextResponse.json({
       success: true,
       message: 'Admin user created successfully',
       user: {
-        id: user.user.id,
-        email: user.user.email,
-        role: adminData.role
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role
       },
       toast: {
         type: 'success',
         title: 'Success!',
-        description: `Admin user ${adminData.email} created successfully`
+        description: `Admin user ${adminData.email} created successfully with password: ${adminData.password}`
       }
     });
 
@@ -138,6 +116,7 @@ export async function POST() {
       success: false,
       error: 'Internal server error',
       message: 'An unexpected error occurred',
+      details: error instanceof Error ? error.message : 'Unknown error',
       toast: {
         type: 'error',
         title: 'Unexpected Error',

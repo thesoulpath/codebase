@@ -15,6 +15,7 @@ datasource db {
 model User {
   id           String       @id @default(cuid())
   email        String       @unique
+  password     String?      // Hashed password for authentication
   fullName     String?      @map("full_name")
   avatarUrl    String?      @map("avatar_url")
   role         String?      @default("user")

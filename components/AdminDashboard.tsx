@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, 
@@ -37,7 +37,7 @@ import PaymentMethodManagement from './PaymentMethodManagement';
 import PaymentRecordsManagement from './PaymentRecordsManagement';
 import PurchaseHistoryManagement from './PurchaseHistoryManagement';
 import { SettingsManagement } from './SettingsManagement';
-import { BugReportManagement } from './BugReportManagement';
+import { BugReportManagement, BugReportManagementRef } from './BugReportManagement';
 import { BugReportSystem } from './BugReportSystem';
 
 import { AstrologyManagement } from './AstrologyManagement';
@@ -51,6 +51,14 @@ interface AdminDashboardProps {
 export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps) {
   const { user, signOut, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('clients');
+  const bugReportManagementRef = useRef<BugReportManagementRef>(null);
+
+  // Callback function to refresh bug reports when a new one is submitted
+  const handleBugReportSubmitSuccess = () => {
+    if (activeTab === 'bug-reports' && bugReportManagementRef.current) {
+      bugReportManagementRef.current.refreshBugReports();
+    }
+  };
 
   if (!user) {
     return (
@@ -86,7 +94,7 @@ export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps)
           
           <div className="flex items-center space-x-3">
             {/* Report Bug Button */}
-            <BugReportSystem>
+            <BugReportSystem onSubmitSuccess={handleBugReportSubmitSuccess}>
               {({ openReport }) => (
                 <button
                   onClick={openReport}
@@ -207,7 +215,7 @@ export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps)
                 {activeTab === 'payment-records' && <PaymentRecordsManagement />}
                 {activeTab === 'purchase-history' && <PurchaseHistoryManagement />}
                 {activeTab === 'settings' && <SettingsManagement />}
-                {activeTab === 'bug-reports' && <BugReportManagement />}
+                {activeTab === 'bug-reports' && <BugReportManagement ref={bugReportManagementRef} />}
 
                 {activeTab === 'astrology' && <AstrologyManagement />}
               </motion.div>
