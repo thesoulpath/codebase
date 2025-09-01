@@ -7,8 +7,8 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   datasources: {
     db: {
-      // Use DIRECT_URL for production to bypass IP restrictions
-      url: process.env.NODE_ENV === 'production' ? process.env.DIRECT_URL : process.env.DATABASE_URL,
+      // Use DATABASE_URL for all environments - the pooler should work with proper configuration
+      url: process.env.DATABASE_URL,
     },
   },
   // Connection pooling optimization
