@@ -17,10 +17,10 @@ async function main() {
       smtpPass: '',
       fromEmail: 'noreply@soulpath.lat',
       fromName: 'SOULPATH',
-      brevoApiKey: '',
-      senderEmail: 'noreply@soulpath.lat',
-      senderName: 'SOULPATH',
-      adminEmail: 'admin@soulpath.lat'
+      brevo_api_key: '',
+      sender_email: 'noreply@soulpath.lat',
+      sender_name: 'SOULPATH',
+      admin_email: 'admin@soulpath.lat'
     }
   });
   console.log('✅ Email config created:', emailConfig.id);
@@ -482,10 +482,7 @@ async function main() {
         day_of_week: 'Monday',
         start_time: '09:00',
         end_time: '17:00',
-        capacity: 3,
-        is_available: true,
-        auto_available: true,
-        session_duration_id: 2
+        is_available: true
       }
     }),
     prisma.schedule.upsert({
@@ -495,10 +492,7 @@ async function main() {
         day_of_week: 'Tuesday',
         start_time: '09:00',
         end_time: '17:00',
-        capacity: 3,
-        is_available: true,
-        auto_available: true,
-        session_duration_id: 2
+        is_available: true
       }
     })
   ]);
@@ -686,7 +680,7 @@ async function main() {
   ]);
   console.log('✅ Test clients created:', clients.length);
 
-  // 17. Create test user packages
+  // 17. Create test user packages (FIXED: using correct field names)
   console.log('📦 Creating test user packages...');
   const userPackages = await Promise.all([
     prisma.userPackage.upsert({
@@ -694,21 +688,22 @@ async function main() {
       update: {},
       create: {
         user_email: 'john.doe@example.com',
-        packageId: 1, // Starter Package
-        sessionsRemaining: 3,
+        package_id: 1, // Legacy SoulPackage reference
+        sessions_remaining: 3,
         sessionsUsed: 0,
         purchasedAt: new Date(),
         expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days from now
         isActive: true,
-        groupSessionsRemaining: 0,
-        groupSessionsUsed: 0,
-        purchasePrice: 200.00,
-        originalPrice: 200.00,
-        discountApplied: 0.00,
-        paymentMethod: 'stripe',
+        group_sessions_remaining: 0,
+        group_sessions_used: 0,
+        purchase_price: 200.00,
+        original_price: 200.00,
+        discount_applied: 0.00,
+        payment_method: 'stripe',
         paymentStatus: 'confirmed',
-        paymentConfirmedAt: new Date(),
-        clientId: 1
+        payment_confirmed_at: new Date(),
+        clientId: 1,
+        packagePriceId: 1 // NEW: Reference to PackagePrice
       }
     }),
     prisma.userPackage.upsert({
@@ -716,59 +711,43 @@ async function main() {
       update: {},
       create: {
         user_email: 'maria.garcia@example.com',
-        packageId: 2, // Wellness Package
-        sessionsRemaining: 6,
+        package_id: 2, // Legacy SoulPackage reference
+        sessions_remaining: 6,
         sessionsUsed: 1,
         purchasedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
         expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
         isActive: true,
-        groupSessionsRemaining: 0,
-        groupSessionsUsed: 0,
-        purchasePrice: 360.00,
-        originalPrice: 400.00,
-        discountApplied: 40.00,
-        paymentMethod: 'cash',
+        group_sessions_remaining: 0,
+        group_sessions_used: 0,
+        purchase_price: 360.00,
+        original_price: 400.00,
+        discount_applied: 40.00,
+        payment_method: 'cash',
         paymentStatus: 'confirmed',
-        paymentConfirmedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        clientId: 2
+        payment_confirmed_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        clientId: 2,
+        packagePriceId: 2 // NEW: Reference to PackagePrice
       }
     })
   ]);
   console.log('✅ Test user packages created:', userPackages.length);
 
-  // 18. Create test bookings with proper constraints
+  // 18. Create test bookings (simplified to avoid schema conflicts)
   console.log('📋 Creating test bookings...');
-  
-  // First, update schedule capacity to accommodate bookings
-  await prisma.schedule.updateMany({
-    where: { id: { in: [1, 2] } },
-    data: { capacity: 5 } // Increase capacity to allow bookings
-  });
-  
   const bookings = await Promise.all([
     prisma.booking.upsert({
       where: { id: 1 },
       update: {},
       create: {
         clientEmail: 'john.doe@example.com',
-        booking_date: new Date('2024-12-25'),
+        session_date: new Date('2024-12-25'),
         sessionTime: new Date('2024-12-25T10:00:00'),
         sessionType: 'Wellness Session',
         status: 'confirmed',
         notes: 'Test booking for development',
-        schedule_id: 1, // Proper schedule constraint
-        start_time: '10:00',
-        end_time: '11:00',
-        package_id: 1,
-        is_group_booking: false,
-        group_size: 1,
-        total_amount: 80.00,
-        currency_id: 1,
-        discount_amount: 0.00,
-        final_amount: 80.00,
-        clientId: 1,
-        userPackageId: 1,
-        bookingType: 'individual'
+        client_id: 1,
+        user_package_id: 1,
+        booking_type: 'individual'
       }
     }),
     prisma.booking.upsert({
@@ -776,24 +755,14 @@ async function main() {
       update: {},
       create: {
         clientEmail: 'maria.garcia@example.com',
-        booking_date: new Date('2024-12-26'),
+        session_date: new Date('2024-12-26'),
         sessionTime: new Date('2024-12-26T14:00:00'),
         sessionType: 'Wellness Session',
         status: 'confirmed',
         notes: 'Sesión en español',
-        schedule_id: 2, // Proper schedule constraint
-        start_time: '14:00',
-        end_time: '15:00',
-        package_id: 2,
-        is_group_booking: false,
-        group_size: 1,
-        total_amount: 80.00,
-        currency_id: 1,
-        discount_amount: 0.00,
-        final_amount: 80.00,
-        clientId: 2,
-        userPackageId: 2,
-        bookingType: 'individual'
+        client_id: 2,
+        user_package_id: 2,
+        booking_type: 'individual'
       }
     })
   ]);

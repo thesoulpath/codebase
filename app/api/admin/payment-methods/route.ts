@@ -14,16 +14,8 @@ export async function GET(request: NextRequest) {
 
     // Fetch all payment methods with currency information
     const { data: paymentMethods, error } = await supabase
-      .from('payment_methods')
-      .select(`
-        *,
-        currencies:currency_id(
-          id,
-          code,
-          symbol,
-          name
-        )
-      `)
+      .from('payment_method_configs')
+      .select('*')
       .order('name');
 
     if (error) {
@@ -41,7 +33,7 @@ export async function GET(request: NextRequest) {
       requiresConfirmation: method.requires_confirmation || false,
       autoAssignPackage: method.auto_assign_package !== undefined ? method.auto_assign_package : true,
       isActive: method.is_active,
-      currency: method.currencies,
+      stripeConfig: null, // TODO: Implement stripe config storage
       createdAt: method.created_at,
       updatedAt: method.updated_at
     })) || [];
@@ -77,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Create new payment method
     const { data: newPaymentMethod, error } = await supabase
-      .from('payment_methods')
+      .from('payment_method_configs')
       .insert({
         name: body.name,
         type: body.type || 'custom',
@@ -85,18 +77,9 @@ export async function POST(request: NextRequest) {
         icon: body.icon || null,
         requires_confirmation: body.requiresConfirmation !== undefined ? body.requiresConfirmation : false,
         auto_assign_package: body.autoAssignPackage !== undefined ? body.autoAssignPackage : true,
-        is_active: body.isActive !== undefined ? body.isActive : true,
-        currency_id: body.currency_id || null
+        is_active: body.isActive !== undefined ? body.isActive : true
       })
-      .select(`
-        *,
-        currencies:currency_id(
-          id,
-          code,
-          symbol,
-          name
-        )
-      `)
+      .select('*')
       .single();
 
     if (error) {
@@ -114,7 +97,7 @@ export async function POST(request: NextRequest) {
       requiresConfirmation: newPaymentMethod.requires_confirmation || false,
       autoAssignPackage: newPaymentMethod.auto_assign_package !== undefined ? newPaymentMethod.auto_assign_package : true,
       isActive: newPaymentMethod.is_active,
-      currency: newPaymentMethod.currencies,
+      stripeConfig: null, // TODO: Implement stripe config storage
       createdAt: newPaymentMethod.created_at,
       updatedAt: newPaymentMethod.updated_at
     };
@@ -163,18 +146,10 @@ export async function PUT(request: NextRequest) {
     if (isActive !== undefined) updateData.is_active = isActive;
 
     const { data, error } = await supabase
-      .from('payment_methods')
+      .from('payment_method_configs')
       .update(updateData)
       .eq('id', id)
-      .select(`
-        *,
-        currencies:currency_id(
-          id,
-          code,
-          symbol,
-          name
-        )
-      `)
+      .select('*')
       .single();
 
     if (error) {
@@ -195,7 +170,7 @@ export async function PUT(request: NextRequest) {
       requiresConfirmation: data.requires_confirmation || false,
       autoAssignPackage: data.auto_assign_package !== undefined ? data.auto_assign_package : true,
       isActive: data.is_active,
-      currency: data.currencies,
+      stripeConfig: null, // TODO: Implement stripe config storage
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -255,7 +230,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { error } = await supabase
-      .from('payment_methods')
+      .from('payment_method_configs')
       .delete()
       .eq('id', id);
 

@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       .from('user_packages')
       .select(`
         *,
-        client:clients(
+        client:clients!fk_user_packages_client_id(
           id,
           name,
           email,
@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
       .insert(packageData)
       .select(`
         *,
-        client:clients(*),
+        client:clients!fk_user_packages_client_id(*),
         package_definition:package_definitions(
           *,
           session_durations(*)
@@ -297,7 +297,7 @@ export async function PUT(request: NextRequest) {
       .eq('id', id)
       .select(`
         *,
-        client:clients(*),
+        client:clients!fk_user_packages_client_id(*),
         package_definition:package_definitions(
           *,
           session_durations(*)

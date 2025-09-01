@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       .from('bookings')
       .select(`
         *,
-        client:clients(
+        client:clients!fk_bookings_client_id(
           id,
           name,
           email,
@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
       })
       .select(`
         *,
-        client:clients(*),
+        client:clients!fk_bookings_client_id(*),
         schedule_slot:schedule_slots(
           *,
           schedule_templates(
@@ -452,7 +452,7 @@ export async function PUT(request: NextRequest) {
       .eq('id', id)
       .select(`
         *,
-        client:clients(*),
+        client:clients!fk_bookings_client_id(*),
         schedule_slot:schedule_slots(
           *,
           schedule_templates(

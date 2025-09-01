@@ -9,18 +9,16 @@ datasource db {
 }
 
 model Profile {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  fullName  String?   @map("full_name")
-  avatarUrl String?   @map("avatar_url")
-  role      String?   @default("user")
-  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  
-  // Bug Report relationships
-  reportedBugs BugReport[] @relation("BugReportReporter")
-  assignedBugs BugReport[] @relation("BugReportAssignee")
+  id           String       @id @default(cuid())
+  email        String       @unique
+  fullName     String?      @map("full_name")
+  avatarUrl    String?      @map("avatar_url")
+  role         String?      @default("user")
+  createdAt    DateTime?    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime?    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   bugComments  BugComment[] @relation("BugCommentAuthor")
+  assignedBugs BugReport[]  @relation("BugReportAssignee")
+  reportedBugs BugReport[]  @relation("BugReportReporter")
 
   @@map("profiles")
 }
@@ -31,9 +29,6 @@ model Client {
   name             String
   phone            String?
   status           String?         @default("active")
-  notes            String?
-  createdAt        DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   birthDate        DateTime        @map("birth_date") @db.Date
   birthTime        DateTime?       @map("birth_time") @db.Time(6)
   birthPlace       String          @map("birth_place")
@@ -45,24 +40,19 @@ model Client {
   sessionType      String?         @map("session_type")
   lastReminderSent DateTime?       @map("last_reminder_sent") @db.Timestamptz(6)
   lastBooking      DateTime?       @map("last_booking") @db.Timestamptz(6)
-  
-  // New unified relationships
-  bookings         Booking[]       @relation("ClientBookings")
-  userPackages     UserPackage[]   @relation("UserPackageClientId")
-  paymentRecords   PaymentRecord[] @relation("PaymentRecordClient")
-  
-  // Legacy relationships (for backward compatibility)
-  clientBookings   Booking[]       @relation("ClientBookingsLegacy")
+  createdAt        DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  notes            String?
+  bookings         Booking[]
   groupBookings    GroupBooking[]  @relation("ClientGroupBookings")
+  payment_records  PaymentRecord[]
   sessionUsage     SessionUsage[]  @relation("ClientSessionUsage")
-  userPackagesLegacy UserPackage[] @relation("UserPackageClientEmail")
-  paymentRecordsLegacy PaymentRecord[] @relation("PaymentRecordClientEmail")
+  userPackages     UserPackage[]   @relation("UserPackageClientId")
 
   @@index([email], map: "idx_clients_email")
   @@map("clients")
 }
 
-// NEW: Package Definitions table
 model PackageDefinition {
   id                Int             @id @default(autoincrement())
   name              String          @db.VarChar(255)
@@ -71,87 +61,66 @@ model PackageDefinition {
   sessionDurationId Int             @map("session_duration_id")
   packageType       String          @map("package_type") @db.VarChar(20)
   maxGroupSize      Int?            @map("max_group_size")
-  isActive          Boolean         @default(true) @map("is_active")
-  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime        @default(now()) @map("updated_at") @db.Timestamptz(6)
-  
-  // Relationships
+  isActive          Boolean?        @default(true) @map("is_active")
+  createdAt         DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime?       @default(now()) @map("updated_at") @db.Timestamptz(6)
   sessionDuration   SessionDuration @relation("PackageDefinitionSessionDuration", fields: [sessionDurationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   packagePrices     PackagePrice[]
-  userPackages      UserPackage[] @relation("UserPackagePackageDefinition")
-  
-  // Legacy relationship - removed many-to-many relation
 
-  @@index([packageType], map: "idx_package_definitions_type")
   @@index([isActive], map: "idx_package_definitions_active")
   @@map("package_definitions")
 }
 
-// NEW: Package Prices table
 model PackagePrice {
-  id                    Int             @id @default(autoincrement())
-  packageDefinitionId   Int             @map("package_definition_id")
-  currencyId            Int             @map("currency_id")
-  price                 Decimal         @db.Decimal(10, 2)
-  pricingMode           String          @map("pricing_mode") @db.VarChar(20)
-  isActive              Boolean         @default(true) @map("is_active")
-  createdAt             DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime        @default(now()) @map("updated_at") @db.Timestamptz(6)
-  
-  // Relationships
-  packageDefinition     PackageDefinition @relation(fields: [packageDefinitionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  currency              Currency          @relation("PackagePriceCurrency", fields: [currencyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  userPackages          UserPackage[]
+  id                  Int               @id @default(autoincrement())
+  packageDefinitionId Int               @map("package_definition_id")
+  currencyId          Int               @map("currency_id")
+  price               Decimal           @db.Decimal(10, 2)
+  pricingMode         String            @map("pricing_mode") @db.VarChar(20)
+  isActive            Boolean?          @default(true) @map("is_active")
+  createdAt           DateTime?         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime?         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  currency            Currency          @relation("PackagePriceCurrency", fields: [currencyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  packageDefinition   PackageDefinition @relation(fields: [packageDefinitionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  userPackages        UserPackage[]     @relation("UserPackagePackageDefinition")
 
   @@unique([packageDefinitionId, currencyId])
   @@index([currencyId], map: "idx_package_prices_currency")
-  @@index([pricingMode], map: "idx_package_prices_mode")
   @@map("package_prices")
 }
 
-// NEW: Schedule Templates table
 model ScheduleTemplate {
-  id                  Int              @id @default(autoincrement())
-  dayOfWeek           String           @map("day_of_week")
-  startTime           String           @map("start_time")
-  endTime             String           @map("end_time")
-  capacity            Int              @default(3)
-  isAvailable         Boolean          @default(true) @map("is_available")
-  sessionDurationId   Int?             @map("session_duration_id")
-  autoAvailable       Boolean          @default(true) @map("auto_available")
-  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
-  
-  // Relationships
-  sessionDuration     SessionDuration? @relation("ScheduleTemplateSessionDuration", fields: [sessionDurationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  scheduleSlots       ScheduleSlot[]
-  
-  // Legacy relationship - removed many-to-many relation
+  id                Int              @id @default(autoincrement())
+  dayOfWeek         String           @map("day_of_week") @db.VarChar(20)
+  startTime         String           @map("start_time") @db.VarChar(10)
+  endTime           String           @map("end_time") @db.VarChar(10)
+  capacity          Int?             @default(3)
+  isAvailable       Boolean?         @default(true) @map("is_available")
+  sessionDurationId Int?             @map("session_duration_id")
+  autoAvailable     Boolean?         @default(true) @map("auto_available")
+  createdAt         DateTime?        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime?        @default(now()) @map("updated_at") @db.Timestamptz(6)
+  scheduleSlots     ScheduleSlot[]
+  sessionDuration   SessionDuration? @relation("ScheduleTemplateSessionDuration", fields: [sessionDurationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([dayOfWeek], map: "idx_schedule_templates_day")
-  @@index([isAvailable], map: "idx_schedule_templates_available")
   @@map("schedule_templates")
 }
 
-// NEW: Schedule Slots table
 model ScheduleSlot {
-  id                    Int              @id @default(autoincrement())
-  scheduleTemplateId    Int              @map("schedule_template_id")
-  startTime             DateTime         @map("start_time") @db.Timestamptz(6)
-  endTime               DateTime         @map("end_time") @db.Timestamptz(6)
-  capacity              Int              @default(3)
-  bookedCount           Int              @default(0) @map("booked_count")
-  isAvailable           Boolean          @default(true) @map("is_available")
-  createdAt             DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
-  
-  // Relationships
-  scheduleTemplate      ScheduleTemplate @relation(fields: [scheduleTemplateId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  bookings              Booking[]
+  id                 Int              @id @default(autoincrement())
+  scheduleTemplateId Int              @map("schedule_template_id")
+  startTime          DateTime         @map("start_time") @db.Timestamptz(6)
+  endTime            DateTime         @map("end_time") @db.Timestamptz(6)
+  capacity           Int?             @default(3)
+  bookedCount        Int?             @default(0) @map("booked_count")
+  isAvailable        Boolean?         @default(true) @map("is_available")
+  createdAt          DateTime?        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime?        @default(now()) @map("updated_at") @db.Timestamptz(6)
+  bookings           Booking[]
+  scheduleTemplate   ScheduleTemplate @relation(fields: [scheduleTemplateId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([startTime], map: "idx_schedule_slots_start_time")
-  @@index([isAvailable], map: "idx_schedule_slots_available")
-  @@index([capacity, bookedCount], map: "idx_schedule_slots_capacity")
   @@map("schedule_slots")
 }
 
@@ -160,36 +129,33 @@ model Schedule {
   day_of_week         String
   start_time          String
   end_time            String
-  capacity            Int              @default(3)
   is_available        Boolean?         @default(true)
   createdAt           DateTime?        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime?        @updatedAt @map("updated_at") @db.Timestamptz(6)
-  booked_count        Int              @default(0)
-  auto_available      Boolean          @default(true)
+  updatedAt           DateTime?        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  capacity            Int?             @default(3)
+  booked_count        Int?             @default(0)
+  auto_available      Boolean?         @default(true)
   session_duration_id Int?
   bookings            Booking[]
   groupBookings       GroupBooking[]   @relation("ScheduleGroupBookings")
-  session_durations   SessionDuration? @relation(fields: [session_duration_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  // Legacy relationship - removed many-to-many relation
+  session_durations   SessionDuration? @relation(fields: [session_duration_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_schedules_session_duration")
 
+  @@index([day_of_week], map: "idx_schedules_day")
   @@index([capacity, auto_available, booked_count], map: "idx_schedules_capacity_availability")
-  @@index([day_of_week], map: "idx_schedules_day_of_week")
-  @@index([session_duration_id], map: "idx_schedules_duration")
-  @@index([is_available], map: "idx_schedules_is_available")
-  @@index([start_time], map: "idx_schedules_start_time")
+  @@index([session_duration_id], map: "idx_schedules_session_duration")
   @@map("schedules")
 }
 
 model Booking {
   id                    Int                  @id @default(autoincrement())
   clientEmail           String               @map("client_email")
-  booking_date          DateTime             @db.Date
+  session_date          DateTime             @db.Date
   sessionTime           DateTime             @map("session_time") @db.Time(6)
   sessionType           String               @map("session_type")
   status                String?              @default("pending")
   notes                 String?
   createdAt             DateTime?            @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime?            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt             DateTime?            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   schedule_id           Int?
   start_time            String?
   end_time              String?
@@ -205,54 +171,28 @@ model Booking {
   currency_id           Int?
   discount_amount       Decimal?             @default(0) @db.Decimal(10, 2)
   final_amount          Decimal?             @db.Decimal(10, 2)
-  
-  // NEW: Unified booking fields
-  clientId              Int?                 @map("client_id")
-  scheduleSlotId        Int?                 @map("schedule_slot_id")
-  userPackageId         Int?                 @map("user_package_id")
-  bookingType           String?              @default("individual") @map("booking_type") @db.VarChar(20)
-  
-  // Database constraints (enforced by triggers and check constraints)
-  // - schedule_id must reference valid schedule if provided
-  // - client_id must reference valid client if provided  
-  // - user_package_id must reference valid user_package if provided
-  // - package_id must reference valid soul_package if provided
-  // - currency_id must reference valid currency if provided
-  // - group_booking_tier_id must reference valid group_booking_tier if provided
-  // - status must be one of: 'pending', 'confirmed', 'cancelled', 'completed', 'no_show'
-  // - booking_type must be one of: 'individual', 'group'
-  // - group_size must be >= 1
-  // - amounts must be >= 0
-  // - schedule capacity is enforced by database trigger
-  
-  // Legacy relationships
-  client                Client               @relation("ClientBookingsLegacy", fields: [clientEmail], references: [email], onDelete: NoAction, onUpdate: NoAction)
-  currencies            Currency?            @relation(fields: [currency_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  group_booking_tiers   group_booking_tiers? @relation(fields: [group_booking_tier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  soul_packages         SoulPackage?         @relation(fields: [package_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  client_id             Int?
+  schedule_slot_id      Int?
+  user_package_id       Int?
+  booking_type          String?              @default("individual")
+  clients               Client?              @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_bookings_client_id")
+  currencies            Currency?            @relation(fields: [currency_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bookings_currency_id")
+  group_booking_tiers   group_booking_tiers? @relation(fields: [group_booking_tier_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bookings_group_booking_tier_id")
+  soul_packages         SoulPackage?         @relation(fields: [package_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bookings_package_id")
   schedules             Schedule?            @relation(fields: [schedule_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_bookings_schedule_id")
-  
-  // NEW: Unified relationships
-  unifiedClient         Client?              @relation("ClientBookings", fields: [clientId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  scheduleSlot          ScheduleSlot?        @relation(fields: [scheduleSlotId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  unifiedUserPackage    UserPackage?         @relation("BookingUserPackage", fields: [userPackageId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  schedule_slots        ScheduleSlot?        @relation(fields: [schedule_slot_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_bookings_schedule_slot_id")
+  user_packages         UserPackage?         @relation(fields: [user_package_id], references: [id], onUpdate: NoAction, map: "fk_bookings_user_package_id")
 
   @@index([clientEmail], map: "idx_bookings_client_email")
-  @@index([booking_date], map: "idx_bookings_date")
-  @@index([clientEmail, booking_date], map: "idx_bookings_client_date")
-  @@index([booking_date, status], map: "idx_bookings_date_status")
-  @@index([is_group_booking], map: "idx_bookings_group")
-  @@index([package_id], map: "idx_bookings_package")
+  @@index([session_date], map: "idx_bookings_date")
+  @@index([booking_type], map: "idx_bookings_booking_type")
+  @@index([client_id], map: "idx_bookings_client_id")
+  @@index([currency_id], map: "idx_bookings_currency_id")
+  @@index([group_booking_tier_id], map: "idx_bookings_group_booking_tier_id")
+  @@index([package_id], map: "idx_bookings_package_id")
   @@index([schedule_id], map: "idx_bookings_schedule_id")
-  @@index([status], map: "idx_bookings_status")
-  
-  // NEW: Indexes for unified fields
-  @@index([clientId], map: "idx_bookings_client_id")
-  @@index([scheduleSlotId], map: "idx_bookings_schedule_slot_id")
-  @@index([userPackageId], map: "idx_bookings_user_package_id")
-  @@index([bookingType], map: "idx_bookings_booking_type")
-  @@index([createdAt], map: "idx_bookings_created_at")
-  
+  @@index([schedule_slot_id], map: "idx_bookings_schedule_slot_id")
+  @@index([user_package_id], map: "idx_bookings_user_package_id")
   @@map("bookings")
 }
 
@@ -340,19 +280,19 @@ model Content {
 }
 
 model EmailConfig {
-  id        Int       @id @default(autoincrement())
-  smtpHost  String?   @default("smtp.gmail.com") @map("smtp_host")
-  smtpPort  Int?      @default(587) @map("smtp_port")
-  smtpUser  String?   @default("") @map("smtp_user")
-  smtpPass  String?   @default("") @map("smtp_pass")
-  fromEmail String?   @default("noreply@soulpath.lat") @map("from_email")
-  fromName  String?   @default("SOULPATH") @map("from_name")
-  brevoApiKey String? @map("brevo_api_key")
-  senderEmail String? @map("sender_email")
-  senderName String? @map("sender_name")
-  adminEmail String? @map("admin_email")
-  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            Int       @id @default(autoincrement())
+  smtpHost      String?   @default("smtp.gmail.com") @map("smtp_host")
+  smtpPort      Int?      @default(587) @map("smtp_port")
+  smtpUser      String?   @default("") @map("smtp_user")
+  smtpPass      String?   @default("") @map("smtp_pass")
+  fromEmail     String?   @default("noreply@soulpath.lat") @map("from_email")
+  fromName      String?   @default("SOULPATH") @map("from_name")
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  brevo_api_key String?   @default("")
+  sender_email  String?   @default("noreply@soulpath.lat")
+  sender_name   String?   @default("SOULPATH")
+  admin_email   String?   @default("admin@soulpath.lat")
 
   @@map("email_config")
 }
@@ -368,17 +308,14 @@ model SoulPackage {
   description       String?
   isActive          Boolean?        @default(true) @map("is_active")
   createdAt         DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime?       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt         DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   packageType       String?         @default("individual") @map("package_type") @db.VarChar(20)
   maxGroupSize      Int?            @map("max_group_size")
-  
-  // Legacy relationships
   bookings          Booking[]
   currency          Currency        @relation(fields: [currencyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   sessionDuration   SessionDuration @relation(fields: [sessionDurationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   userPackages      UserPackage[]
-  
-  // NEW: Link to package definitions - removed many-to-many relation
+
 
   @@index([currencyId], map: "idx_soul_packages_currency")
   @@index([packageType], map: "idx_soul_packages_type")
@@ -386,75 +323,60 @@ model SoulPackage {
 }
 
 model UserPackage {
-  id                     Int             @id @default(autoincrement())
-  user_email             String
-  packageId              Int             @map("package_id")
-  sessionsRemaining      Int             @map("sessions_remaining")
-  sessionsUsed           Int?            @default(0) @map("sessions_used")
-  purchasedAt            DateTime?       @default(now()) @map("purchased_at") @db.Timestamptz(6)
-  expiresAt              DateTime?       @map("expires_at") @db.Timestamptz(6)
-  isActive               Boolean?        @default(true) @map("is_active")
-  createdAt              DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt              DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  groupSessionsRemaining Int?            @default(0) @map("group_sessions_remaining")
-  groupSessionsUsed      Int?            @default(0) @map("group_sessions_used")
-  purchasePrice          Decimal?        @default(0) @map("purchase_price") @db.Decimal(10, 2)
-  originalPrice          Decimal?        @default(0) @map("original_price") @db.Decimal(10, 2)
-  discountApplied        Decimal?        @map("discount_applied") @db.Decimal(10, 2)
-  paymentMethod          String?         @map("payment_method") @db.VarChar(50)
-  paymentStatus          String?         @default("pending") @map("payment_status") @db.VarChar(20)
-  paymentConfirmedAt     DateTime?       @map("payment_confirmed_at") @db.Timestamptz(6)
-  
-  // NEW: Unified fields
-  clientId               Int?            @map("client_id")
-  packagePriceId         Int?            @map("package_price_id")
-  
-  // Legacy relationships
-  groupBookings          GroupBooking[]
-  paymentRecords         PaymentRecord[]
-  sessionUsage           SessionUsage[]
-  clients                Client          @relation("UserPackageClientEmail", fields: [user_email], references: [email], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_packages_user_email")
-  package                SoulPackage     @relation(fields: [packageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  
-  // NEW: Unified relationships
-  unifiedClient          Client?         @relation("UserPackageClientId", fields: [clientId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_packages_client_id")
-  packagePrice           PackagePrice?   @relation(fields: [packagePriceId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_packages_package_price_id")
-  unifiedBookings        Booking[]       @relation("BookingUserPackage")
-  packageDefinition      PackageDefinition? @relation("UserPackagePackageDefinition", fields: [packagePriceId], references: [id], map: "fk_user_packages_package_definition_id")
+  id                       Int            @id @default(autoincrement())
+  clientId                 Int            @map("client_id")
+  packagePriceId           Int            @map("package_price_id")
+  quantity                 Int?           @default(1)
+  sessionsUsed             Int?           @default(0) @map("sessions_used")
+  isActive                 Boolean?       @default(true) @map("is_active")
+  purchasedAt              DateTime?      @default(now()) @map("purchased_at") @db.Timestamptz(6)
+  expiresAt                DateTime?      @map("expires_at") @db.Timestamptz(6)
+  paymentStatus            String?        @default("pending") @map("payment_status") @db.VarChar(20)
+  createdAt                DateTime?      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime?      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user_email               String?
+  package_id               Int?
+  sessions_remaining       Int?
+  group_sessions_remaining Int?           @default(0)
+  group_sessions_used      Int?           @default(0)
+  purchase_price           Decimal?       @default(0) @db.Decimal(10, 2)
+  original_price           Decimal?       @default(0) @db.Decimal(10, 2)
+  discount_applied         Decimal?       @db.Decimal(10, 2)
+  payment_method           String?
+  payment_confirmed_at     DateTime?      @db.Timestamptz(6)
+  bookings                 Booking[]
+  groupBookings            GroupBooking[]
+  sessionUsage             SessionUsage[]
+  soul_packages            SoulPackage?   @relation(fields: [package_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_packages_package_id")
+  packageDefinition        PackagePrice   @relation("UserPackagePackageDefinition", fields: [packagePriceId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_packages_package_definition_id")
+  unifiedClient            Client         @relation("UserPackageClientId", fields: [clientId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_packages_client_id")
 
-  @@index([isActive], map: "idx_user_packages_active")
-  @@index([purchasedAt], map: "idx_user_packages_purchased_at")
-  @@index([user_email], map: "idx_user_packages_user")
-  @@index([paymentStatus], map: "idx_user_packages_payment_status")
-  
-  // NEW: Indexes for unified fields
   @@index([clientId], map: "idx_user_packages_client_id")
-  @@index([packagePriceId], map: "idx_user_packages_package_price_id")
-  
+  @@index([package_id], map: "idx_user_packages_package_id")
+  @@index([paymentStatus], map: "idx_user_packages_payment_status")
+  @@index([purchasedAt], map: "idx_user_packages_purchased_at")
+  @@index([user_email], map: "idx_user_packages_user_email")
   @@map("user_packages")
 }
 
 model GroupBooking {
-  id             Int             @id @default(autoincrement())
-  clientEmail    String          @map("client_email")
-  userPackageId  Int             @map("user_package_id")
-  scheduleId     Int             @map("schedule_id")
-  groupSize      Int             @map("group_size")
-  status         String?         @default("confirmed") @db.VarChar(20)
-  notes          String?
-  sessionDate    DateTime        @map("session_date") @db.Date
-  sessionTime    DateTime        @map("session_time") @db.Time(6)
-  totalCost      Decimal?        @map("total_cost") @db.Decimal(10, 2)
-  createdAt      DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime?       @updatedAt @map("updated_at") @db.Timestamptz(6)
-  paymentStatus  String?         @default("pending") @map("payment_status") @db.VarChar(20)
-  paymentMethod  String?         @map("payment_method") @db.VarChar(50)
-  
-  // Legacy relationships
-  client         Client          @relation("ClientGroupBookings", fields: [clientEmail], references: [email], onDelete: Cascade, onUpdate: NoAction, map: "fk_group_bookings_client")
-  schedule       Schedule        @relation("ScheduleGroupBookings", fields: [scheduleId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_group_bookings_schedule")
-  userPackage    UserPackage     @relation(fields: [userPackageId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_group_bookings_user_package")
-  paymentRecords PaymentRecord[]
+  id            Int         @id @default(autoincrement())
+  clientEmail   String      @map("client_email")
+  userPackageId Int         @map("user_package_id")
+  scheduleId    Int         @map("schedule_id")
+  groupSize     Int         @map("group_size")
+  status        String?     @default("confirmed") @db.VarChar(20)
+  notes         String?
+  sessionDate   DateTime    @map("session_date") @db.Date
+  sessionTime   DateTime    @map("session_time") @db.Time(6)
+  totalCost     Decimal?    @map("total_cost") @db.Decimal(10, 2)
+  createdAt     DateTime?   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime?   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  paymentStatus String?     @default("pending") @map("payment_status") @db.VarChar(20)
+  paymentMethod String?     @map("payment_method") @db.VarChar(50)
+  client        Client      @relation("ClientGroupBookings", fields: [clientEmail], references: [email], onDelete: Cascade, onUpdate: NoAction, map: "fk_group_bookings_client")
+  schedule      Schedule    @relation("ScheduleGroupBookings", fields: [scheduleId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_group_bookings_schedule")
+  userPackage   UserPackage @relation(fields: [userPackageId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_group_bookings_user_package")
 
   @@index([clientEmail], map: "idx_group_bookings_client_email")
   @@index([userPackageId], map: "idx_group_bookings_package_id")
@@ -465,24 +387,21 @@ model GroupBooking {
 }
 
 model SessionUsage {
-  id             Int             @id @default(autoincrement())
-  clientEmail    String          @map("client_email")
-  userPackageId  Int             @map("user_package_id")
-  sessionDate    DateTime        @map("session_date") @db.Date
-  sessionTime    DateTime        @map("session_time") @db.Time(6)
-  sessionType    String          @map("session_type") @db.VarChar(20)
-  status         String?         @default("completed") @db.VarChar(20)
-  notes          String?
-  cost           Decimal?        @map("cost") @db.Decimal(10, 2)
-  createdAt      DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  paymentStatus  String?         @default("pending") @map("payment_status") @db.VarChar(20)
-  paymentMethod  String?         @map("payment_method") @db.VarChar(50)
-  
-  // Legacy relationships
-  paymentRecords PaymentRecord[]
-  client         Client          @relation("ClientSessionUsage", fields: [clientEmail], references: [email], onDelete: Cascade, onUpdate: NoAction, map: "fk_session_usage_client")
-  userPackage    UserPackage     @relation(fields: [userPackageId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_group_bookings_user_package")
+  id            Int         @id @default(autoincrement())
+  clientEmail   String      @map("client_email")
+  userPackageId Int         @map("user_package_id")
+  sessionDate   DateTime    @map("session_date") @db.Date
+  sessionTime   DateTime    @map("session_time") @db.Time(6)
+  sessionType   String      @map("session_type") @db.VarChar(20)
+  status        String?     @default("completed") @db.VarChar(20)
+  notes         String?
+  cost          Decimal?    @map("cost") @db.Decimal(10, 2)
+  createdAt     DateTime?   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime?   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  paymentStatus String?     @default("pending") @map("payment_status") @db.VarChar(20)
+  paymentMethod String?     @map("payment_method") @db.VarChar(50)
+  client        Client      @relation("ClientSessionUsage", fields: [clientEmail], references: [email], onDelete: Cascade, onUpdate: NoAction, map: "fk_session_usage_client")
+  userPackage   UserPackage @relation(fields: [userPackageId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_group_bookings_user_package")
 
   @@index([clientEmail], map: "idx_session_usage_client_email")
   @@index([userPackageId], map: "idx_session_usage_package_id")
@@ -494,46 +413,39 @@ model SessionUsage {
 model PaymentMethodConfig {
   id                   Int       @id @default(autoincrement())
   name                 String    @db.VarChar(100)
-  type                 String    @db.VarChar(50)
-  isActive             Boolean?  @default(true) @map("is_active")
+  type                 String?   @default("custom") @db.VarChar(50)
   description          String?
   icon                 String?   @db.VarChar(100)
   requiresConfirmation Boolean?  @default(false) @map("requires_confirmation")
   autoAssignPackage    Boolean?  @default(true) @map("auto_assign_package")
+  isActive             Boolean?  @default(true) @map("is_active")
   createdAt            DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  @@index([isActive], map: "idx_payment_method_configs_active")
+  @@index([name], map: "idx_payment_method_configs_name")
+  @@index([type], map: "idx_payment_method_configs_type")
   @@map("payment_method_configs")
 }
 
 model PaymentRecord {
-  id             Int           @id @default(autoincrement())
-  clientEmail    String        @map("client_email") @db.VarChar(255)
-  userPackageId  Int?          @map("user_package_id")
-  groupBookingId Int?          @map("group_booking_id")
-  sessionUsageId Int?          @map("session_usage_id")
-  amount         Decimal       @db.Decimal(10, 2)
-  currencyCode   String        @map("currency_code") @db.VarChar(3)
-  paymentMethod  String        @map("payment_method") @db.VarChar(50)
-  paymentStatus  String        @default("pending") @map("payment_status") @db.VarChar(20)
-  transactionId  String?       @map("transaction_id") @db.VarChar(255)
+  id             Int       @id @default(autoincrement())
+  clientEmail    String    @map("client_email") @db.VarChar(255)
+  userPackageId  Int?      @map("user_package_id")
+  groupBookingId Int?      @map("group_booking_id")
+  sessionUsageId Int?      @map("session_usage_id")
+  amount         Decimal   @db.Decimal(10, 2)
+  currencyCode   String    @map("currency_code") @db.VarChar(3)
+  paymentMethod  String    @map("payment_method") @db.VarChar(50)
+  paymentStatus  String?   @default("pending") @map("payment_status") @db.VarChar(20)
+  transactionId  String?   @map("transaction_id") @db.VarChar(255)
   notes          String?
-  paymentDate    DateTime?     @map("payment_date") @db.Date
-  confirmedAt    DateTime?     @map("confirmed_at") @db.Timestamptz(6)
-  createdAt      DateTime?     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime?     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  
-  // NEW: Unified field
-  clientId       Int?          @map("client_id")
-  
-  // Legacy relationships
-  client         Client        @relation("PaymentRecordClientEmail", fields: [clientEmail], references: [email], onDelete: Cascade, map: "fk_payment_records_client")
-  groupBooking   GroupBooking? @relation(fields: [groupBookingId], references: [id], map: "fk_payment_records_group_booking")
-  sessionUsage   SessionUsage? @relation(fields: [sessionUsageId], references: [id], map: "fk_payment_records_session_usage")
-  userPackage    UserPackage?  @relation(fields: [userPackageId], references: [id], map: "fk_payment_records_user_package")
-  
-  // NEW: Unified relationship
-  unifiedClient  Client?       @relation("PaymentRecordClient", fields: [clientId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  paymentDate    DateTime? @map("payment_date") @db.Date
+  confirmedAt    DateTime? @map("confirmed_at") @db.Timestamptz(6)
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  clientId       Int?      @map("client_id")
+  clients        Client?   @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_payment_records_client_id")
 
   @@index([clientEmail], map: "idx_payment_records_client_email")
   @@index([paymentStatus], map: "idx_payment_records_payment_status")
@@ -542,51 +454,41 @@ model PaymentRecord {
   @@index([userPackageId], map: "idx_payment_records_user_package_id")
   @@index([groupBookingId], map: "idx_payment_records_group_booking_id")
   @@index([sessionUsageId], map: "idx_payment_records_session_usage_id")
-  
-  // NEW: Index for unified field
   @@index([clientId], map: "idx_payment_records_client_id")
-  
   @@map("payment_records")
 }
 
 model Currency {
-  id            Int           @id @default(autoincrement())
-  code          String        @unique @db.VarChar(3)
-  name          String        @db.VarChar(50)
-  symbol        String        @db.VarChar(5)
-  is_default    Boolean?      @default(false)
-  exchange_rate Decimal?      @default(1.000000) @db.Decimal(10, 6)
-  createdAt     DateTime?     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime?     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  
-  // Legacy relationships
-  bookings      Booking[]
-  rates         Rate[]
-  soulPackages  SoulPackage[]
-  
-  // NEW: Unified relationships
-  packagePrices PackagePrice[] @relation("PackagePriceCurrency")
+  id              Int               @id @default(autoincrement())
+  code            String            @unique @db.VarChar(3)
+  name            String            @db.VarChar(50)
+  symbol          String            @db.VarChar(5)
+  is_default      Boolean?          @default(false)
+  exchange_rate   Decimal?          @default(1.000000) @db.Decimal(10, 6)
+  createdAt       DateTime?         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime?         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  bookings        Booking[]
+  packagePrices   PackagePrice[]    @relation("PackagePriceCurrency")
+  payment_methods payment_methods[]
+  rates           Rate[]
+  soulPackages    SoulPackage[]
 
   @@map("currencies")
 }
 
 model SessionDuration {
-  id               Int           @id @default(autoincrement())
-  name             String        @db.VarChar(100)
-  duration_minutes Int
-  description      String?
-  isActive         Boolean?      @default(true) @map("is_active")
-  createdAt        DateTime?     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime?     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  
-  // Legacy relationships
-  rates            Rate[]
-  schedules        Schedule[]
-  soulPackages     SoulPackage[]
-  
-  // NEW: Unified relationships
+  id                 Int                 @id @default(autoincrement())
+  name               String              @db.VarChar(100)
+  duration_minutes   Int
+  description        String?
+  isActive           Boolean?            @default(true) @map("is_active")
+  createdAt          DateTime?           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime?           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   packageDefinitions PackageDefinition[] @relation("PackageDefinitionSessionDuration")
+  rates              Rate[]
   scheduleTemplates  ScheduleTemplate[]  @relation("ScheduleTemplateSessionDuration")
+  schedules          Schedule[]
+  soulPackages       SoulPackage[]
 
   @@map("session_durations")
 }
@@ -607,7 +509,6 @@ model Rate {
   sessionDuration        SessionDuration @relation(fields: [sessionDurationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([currencyId, sessionDurationId, sessionType])
-  @@index([currencyId, sessionDurationId], map: "idx_rates_currency_session")
   @@map("rates")
 }
 
@@ -630,62 +531,32 @@ model group_booking_tiers {
 model kv_store_f839855f {
   key   String @id
   value Json
-
-  @@index([key])
-  @@index([key], map: "kv_store_f839855f_key_idx1")
-  @@index([key], map: "kv_store_f839855f_key_idx10")
-  @@index([key], map: "kv_store_f839855f_key_idx11")
-  @@index([key], map: "kv_store_f839855f_key_idx12")
-  @@index([key], map: "kv_store_f839855f_key_idx13")
-  @@index([key], map: "kv_store_f839855f_key_idx14")
-  @@index([key], map: "kv_store_f839855f_key_idx15")
-  @@index([key], map: "kv_store_f839855f_key_idx16")
-  @@index([key], map: "kv_store_f839855f_key_idx17")
-  @@index([key], map: "kv_store_f839855f_key_idx18")
-  @@index([key], map: "kv_store_f839855f_key_idx19")
-  @@index([key], map: "kv_store_f839855f_key_idx2")
-  @@index([key], map: "kv_store_f839855f_key_idx20")
-  @@index([key], map: "kv_store_f839855f_key_idx21")
-  @@index([key], map: "kv_store_f839855f_key_idx22")
-  @@index([key], map: "kv_store_f839855f_key_idx23")
-  @@index([key], map: "kv_store_f839855f_key_idx24")
-  @@index([key], map: "kv_store_f839855f_key_idx25")
-  @@index([key], map: "kv_store_f839855f_key_idx3")
-  @@index([key], map: "kv_store_f839855f_key_idx4")
-  @@index([key], map: "kv_store_f839855f_key_idx5")
-  @@index([key], map: "kv_store_f839855f_key_idx6")
-  @@index([key], map: "kv_store_f839855f_key_idx7")
-  @@index([key], map: "kv_store_f839855f_key_idx8")
-  @@index([key], map: "kv_store_f839855f_key_idx9")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model soultpath {
-  id         BigInt   @id @default(autoincrement())
-  created_at DateTime @default(now()) @db.Timestamptz(6)
+  id         BigInt    @id @default(autoincrement())
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
 }
 
-// Bug Report System
 model BugReport {
-  id          String      @id @default(cuid())
-  title       String      @db.VarChar(255)
-  description String      @db.Text
-  screenshot  String?     @db.Text // Base64 encoded screenshot
-  status      BugStatus   @default(OPEN)
-  priority    Priority    @default(MEDIUM)
-  category    String?     @db.VarChar(100)
-  reporterId  String?     @map("reporter_id")
-  assignedTo  String?     @map("assigned_to")
-  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  resolvedAt  DateTime?   @map("resolved_at") @db.Timestamptz(6)
-  archivedAt  DateTime?   @map("archived_at") @db.Timestamptz(6)
-  
-  // Relationships
-  reporter    Profile?    @relation("BugReportReporter", fields: [reporterId], references: [id])
-  assignee    Profile?    @relation("BugReportAssignee", fields: [assignedTo], references: [id])
+  id          String          @id @default(dbgenerated("(gen_random_uuid())::text"))
+  title       String          @db.VarChar(255)
+  description String
+  screenshot  String?
+  status      bug_status?     @default(OPEN)
+  priority    priority_level? @default(MEDIUM)
+  category    String?         @db.VarChar(100)
+  reporterId  String?         @map("reporter_id")
+  assignedTo  String?         @map("assigned_to")
+  createdAt   DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  resolvedAt  DateTime?       @map("resolved_at") @db.Timestamptz(6)
+  archivedAt  DateTime?       @map("archived_at") @db.Timestamptz(6)
   comments    BugComment[]
-  
+  assignee    Profile?        @relation("BugReportAssignee", fields: [assignedTo], references: [id], onUpdate: NoAction)
+  reporter    Profile?        @relation("BugReportReporter", fields: [reporterId], references: [id], onUpdate: NoAction)
+
   @@index([status], map: "idx_bug_reports_status")
   @@index([priority], map: "idx_bug_reports_priority")
   @@index([reporterId], map: "idx_bug_reports_reporter")
@@ -695,23 +566,33 @@ model BugReport {
 }
 
 model BugComment {
-  id           String     @id @default(cuid())
-  content      String     @db.Text
-  authorId     String     @map("author_id")
-  bugReportId  String     @map("bug_report_id")
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  
-  // Relationships
-  author       Profile    @relation("BugCommentAuthor", fields: [authorId], references: [id])
-  bugReport    BugReport  @relation(fields: [bugReportId], references: [id], onDelete: Cascade)
-  
+  id          String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  content     String
+  authorId    String    @map("author_id")
+  bugReportId String    @map("bug_report_id")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  author      Profile   @relation("BugCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  bugReport   BugReport @relation(fields: [bugReportId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
   @@index([bugReportId], map: "idx_bug_comments_bug_report")
   @@index([authorId], map: "idx_bug_comments_author")
   @@map("bug_comments")
 }
 
-enum BugStatus {
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model payment_methods {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  description String?
+  currency_id Int
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+  currencies  Currency  @relation(fields: [currency_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+enum bug_status {
   OPEN
   IN_PROGRESS
   RESOLVED
@@ -719,7 +600,14 @@ enum BugStatus {
   ARCHIVED
 }
 
-enum Priority {
+enum priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum priority_level {
   LOW
   MEDIUM
   HIGH
