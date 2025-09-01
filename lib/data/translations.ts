@@ -17,6 +17,21 @@ export const defaultTranslations = {
     approach: {
       title: 'Our Approach',
       description: 'We believe in a holistic approach that addresses the mind, body, and spirit. Each session is uniquely tailored to your individual needs and spiritual journey.',
+      content: 'We believe in a holistic approach that addresses the mind, body, and spirit. Each session is uniquely tailored to your individual needs and spiritual journey.',
+      items: [
+        {
+          title: 'Heart-Centered Healing',
+          text: 'Connect with your emotional core and release past traumas through compassionate guidance and energy work.'
+        },
+        {
+          title: 'Mindful Transformation',
+          text: 'Develop mental clarity and break free from limiting beliefs that hold you back from your true potential.'
+        },
+        {
+          title: 'Spiritual Awakening',
+          text: 'Discover your spiritual path and deepen your connection to the divine through meditation and spiritual practices.'
+        }
+      ],
       heartTitle: 'Heart-Centered Healing',
       heartDescription: 'Connect with your emotional core and release past traumas through compassionate guidance and energy work.',
       mindTitle: 'Mindful Transformation',
@@ -53,6 +68,7 @@ export const defaultTranslations = {
     },
     about: {
       title: 'About SOULPATH',
+      text: 'SOULPATH was founded with a simple yet profound mission: to help people find their true selves and live authentic, fulfilling lives. Through spiritual guidance, energy healing, and compassionate counseling, we\'ve helped hundreds of individuals transform their lives and discover their purpose.',
       description: 'SOULPATH was founded with a simple yet profound mission: to help people find their true selves and live authentic, fulfilling lives. Through spiritual guidance, energy healing, and compassionate counseling, we\'ve helped hundreds of individuals transform their lives and discover their purpose.',
       statsClients: 'Clients Helped',
       statsYears: 'Years Experience',
@@ -114,6 +130,21 @@ export const defaultTranslations = {
     approach: {
       title: 'Nuestro Enfoque',
       description: 'Creemos en un enfoque holístico que aborda la mente, el cuerpo y el espíritu. Cada sesión está únicamente adaptada a tus necesidades individuales y tu viaje espiritual.',
+      content: 'Creemos en un enfoque holístico que aborda la mente, el cuerpo y el espíritu. Cada sesión está únicamente adaptada a tus necesidades individuales y tu viaje espiritual.',
+      items: [
+        {
+          title: 'Sanación Centrada en el Corazón',
+          text: 'Conecta con tu núcleo emocional y libera traumas pasados a través de guía compasiva y trabajo energético.'
+        },
+        {
+          title: 'Transformación Consciente',
+          text: 'Desarrolla claridad mental y libérate de creencias limitantes que te impiden alcanzar tu verdadero potencial.'
+        },
+        {
+          title: 'Despertar Espiritual',
+          text: 'Descubre tu camino espiritual y profundiza tu conexión con lo divino a través de la meditación y prácticas espirituales.'
+        }
+      ],
       heartTitle: 'Sanación Centrada en el Corazón',
       heartDescription: 'Conecta con tu núcleo emocional y libera traumas pasados a través de guía compasiva y trabajo energético.',
       mindTitle: 'Transformación Consciente',
@@ -150,6 +181,7 @@ export const defaultTranslations = {
     },
     about: {
       title: 'Acerca de SOULPATH',
+      text: 'SOULPATH fue fundado con una misión simple pero profunda: ayudar a las personas a encontrar su verdadero ser y vivir vidas auténticas y satisfactorias. A través de la guía espiritual, la sanación energética y el asesoramiento compasivo, hemos ayudado a cientos de individuos a transformar sus vidas y descubrir su propósito.',
       description: 'SOULPATH fue fundado con una misión simple pero profunda: ayudar a las personas a encontrar su verdadero ser y vivir vidas auténticas y satisfactorias. A través de la guía espiritual, la sanación energética y el asesoramiento compasivo, hemos ayudado a cientos de individuos a transformar sus vidas y descubrir su propósito.',
       statsClients: 'Clientes Ayudados',
       statsYears: 'Años de Experiencia',
