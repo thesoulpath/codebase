@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
 
 export async function GET() {
   try {
     console.log('🔍 Debug endpoint - Testing database connection...');
     
+    const prisma = new PrismaClient();
     
     console.log('🔍 Prisma client created');
 

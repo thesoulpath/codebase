@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 
 // Zod schemas for user package validation
 const createUserPackageSchema = z.object({
