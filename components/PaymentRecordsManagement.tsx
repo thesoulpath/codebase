@@ -93,7 +93,7 @@ const PaymentRecordsManagement: React.FC = () => {
     notes: ''
   });
   const [filters, setFilters] = useState<PurchaseFilters>({
-    userId: '',
+    userId: 'all',
     paymentMethod: 'all',
     paymentStatus: 'all',
     dateFrom: '',
@@ -141,7 +141,7 @@ const PaymentRecordsManagement: React.FC = () => {
       const params = new URLSearchParams();
       
       // Add filters
-      if (filters.userId) params.append('userId', filters.userId);
+      if (filters.userId && filters.userId !== 'all') params.append('userId', filters.userId);
       if (filters.paymentMethod && filters.paymentMethod !== 'all') params.append('paymentMethod', filters.paymentMethod);
       if (filters.paymentStatus && filters.paymentStatus !== 'all') params.append('paymentStatus', filters.paymentStatus);
       if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
@@ -306,7 +306,7 @@ const PaymentRecordsManagement: React.FC = () => {
 
   const clearFilters = () => {
     setFilters({
-      userId: '',
+      userId: 'all',
       paymentMethod: 'all',
       paymentStatus: 'all',
       dateFrom: '',
@@ -402,7 +402,7 @@ const PaymentRecordsManagement: React.FC = () => {
                   <SelectValue placeholder="All users" />
                 </SelectTrigger>
                 <SelectContent className="dashboard-dropdown-content">
-                  <SelectItem value="" className="dashboard-dropdown-item">All users</SelectItem>
+                  <SelectItem value="all" className="dashboard-dropdown-item">All users</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id} className="dashboard-dropdown-item">
                       {user.fullName || user.email}
