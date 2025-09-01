@@ -1125,6 +1125,14 @@ section {
   min-height: 100svh;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .safe-padding {
@@ -1137,6 +1145,31 @@ section {
 /* Navigation dots mobile improvements */
 .navigation-dots {
   right: max(0.5rem, env(safe-area-inset-right));
+}
+
+/* Prevent white background and ensure mobile view */
+html, body {
+  background: #0A0A23;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Force mobile view on all devices */
+@media (max-width: 1024px) {
+  .mobile-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
 }
 
 /* Mobile-specific improvements */

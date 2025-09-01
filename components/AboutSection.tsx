@@ -65,9 +65,9 @@ export function AboutSection({ t }: AboutSectionProps) {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="order-1 md:order-2"
           >
-            <div className="relative max-w-md mx-auto">
+            <div className="relative max-w-sm mx-auto">
               <motion.div 
-                className="w-64 h-64 xs:w-72 xs:h-72 sm:w-80 sm:h-80 md:w-72 md:h-72 lg:w-80 lg:h-80 xl:w-96 xl:h-96 mx-auto bg-gradient-to-br from-[#191970]/30 to-[#0A0A23]/30 rounded-full border border-[#C0C0C0]/20 p-2 sm:p-3 cosmic-glow relative overflow-hidden"
+                className="w-48 h-48 xs:w-56 xs:h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 lg:w-80 lg:h-80 xl:w-96 xl:h-96 mx-auto bg-gradient-to-br from-[#191970]/30 to-[#0A0A23]/30 rounded-full border border-[#C0C0C0]/20 p-2 sm:p-3 cosmic-glow relative overflow-hidden"
                 whileHover={{ scale: 1.02 }}
                 transition={{ duration: 0.3 }}
               >
