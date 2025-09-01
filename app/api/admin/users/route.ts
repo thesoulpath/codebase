@@ -107,36 +107,7 @@ export async function GET(request: NextRequest) {
     // Enhanced mode includes related data
     if (enhanced === 'true') {
       select._count = {
-        bookings: true,
-        purchases: true,
         paymentRecords: true
-      };
-      select.purchases = {
-        take: 5,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          totalAmount: true,
-          paymentStatus: true,
-          purchasedAt: true,
-          userPackages: {
-            select: {
-              id: true,
-              isActive: true,
-              sessionsUsed: true,
-              packagePrice: {
-                select: {
-                  packageDefinition: {
-                    select: {
-                      name: true,
-                      sessionsCount: true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
       };
     }
 

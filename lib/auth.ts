@@ -1,20 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+import jwt from 'jsonwebtoken';
 import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
 
-function createSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
-  if (!supabaseUrl) {
-    throw new Error('NEXT_PUBLIC_SUPABASE_URL is required');
-  }
-  
-  if (!supabaseKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required');
-  }
-  
-  return createClient(supabaseUrl, supabaseKey);
-}
+const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 export interface AuthenticatedUser {
   id: string;
@@ -34,22 +23,27 @@ export async function requireAuth(request: NextRequest): Promise<AuthenticatedUs
   console.log('Auth: Token received, length:', token.length);
   
   try {
-    const supabase = createSupabaseClient();
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    // Verify JWT token
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
     
-    if (error) {
-      console.log('Auth: Supabase auth error:', error.message);
+    if (!decoded || !decoded.userId) {
+      console.log('Auth: Invalid JWT token or missing userId');
       return null;
     }
-    
+
+    // Get user from database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId }
+    });
+
     if (!user) {
-      console.log('Auth: No user returned from Supabase');
+      console.log('Auth: User not found in database');
       return null;
     }
 
-    console.log('Auth: User authenticated:', user.email, 'Role:', user.user_metadata?.role);
+    console.log('Auth: User authenticated:', user.email, 'Role:', user.role);
 
-    // Check if user is admin by email first (more reliable)
+    // Check if user is admin
     const isAdminByEmail = user.email && [
       'admin@soulpath.lat',
       'coco@soulpath.lat',
@@ -57,11 +51,10 @@ export async function requireAuth(request: NextRequest): Promise<AuthenticatedUs
       'alberto@matmax.world'
     ].includes(user.email);
 
-    // Also check by role metadata (fallback)
-    const isAdminByRole = user.user_metadata?.role === 'admin';
+    const isAdminByRole = user.role === 'admin';
 
     if (!isAdminByEmail && !isAdminByRole) {
-      console.log('Auth: User is not admin, email:', user.email, 'role:', user.user_metadata?.role);
+      console.log('Auth: User is not admin, email:', user.email, 'role:', user.role);
       return null;
     }
 
@@ -69,11 +62,11 @@ export async function requireAuth(request: NextRequest): Promise<AuthenticatedUs
 
     return {
       id: user.id,
-      email: user.email!,
-      role: user.user_metadata?.role || 'admin'
+      email: user.email,
+      role: user.role || 'admin'
     };
   } catch (error) {
-    console.log('Auth: Unexpected error:', error);
+    console.log('Auth: JWT verification error:', error);
     return null;
   }
 }
