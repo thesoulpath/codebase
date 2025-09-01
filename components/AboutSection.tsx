@@ -78,7 +78,7 @@ export function AboutSection({ t }: AboutSectionProps) {
                   className="absolute inset-2 border border-[#FFD700]/10 rounded-full"
                 />
                 
-                <div className="w-full h-full rounded-full overflow-hidden border-2 border-[#FFD700]/30 relative z-10">
+                <div className="w-full h-full rounded-full overflow-hidden border-2 border-[#FFD700]/30 relative z-10 flex items-center justify-center">
                   {isImageLoading ? (
                     <div className="w-full h-full bg-[#191970]/30 flex items-center justify-center">
                       <motion.div
@@ -91,14 +91,20 @@ export function AboutSection({ t }: AboutSectionProps) {
                     <img
                       src={profileImage}
                       alt="José Garfias - Cosmic Navigator and Astrologer"
-                      className="w-full h-full object-cover object-center"
+                      className="w-full h-full object-cover object-center rounded-full"
+                      style={{
+                        minWidth: '100%',
+                        minHeight: '100%',
+                        maxWidth: '100%',
+                        maxHeight: '100%'
+                      }}
                       onError={(e) => {
                         console.error('Profile image failed to load, using fallback');
                         const target = e.target as HTMLImageElement;
                         // Use a default background color on error
                         target.style.display = 'none';
                         target.parentElement!.innerHTML = `
-                          <div class="w-full h-full bg-gradient-to-br from-[#191970]/60 to-[#0A0A23]/80 flex items-center justify-center">
+                          <div class="w-full h-full bg-gradient-to-br from-[#191970]/60 to-[#0A0A23]/80 flex items-center justify-center rounded-full">
                             <span class="text-[#FFD700] text-2xl font-heading">JG</span>
                           </div>
                         `;
