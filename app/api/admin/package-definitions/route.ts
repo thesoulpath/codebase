@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 
 
 // Zod schemas for package definition validation
