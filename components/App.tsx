@@ -17,7 +17,6 @@ import { ApproachSection } from './ApproachSection';
 import { SessionSection } from './SessionSection';
 import { AboutSection } from './AboutSection';
 import { MobileMenu } from './MobileMenu';
-import { BugReportButton } from './BugReportButton';
 
 export function App() {
   const { language, setLanguage } = useLanguage();
@@ -273,25 +272,9 @@ export function App() {
         ))}
       </div>
 
-      {/* Bug Report Button */}
-      <BugReportButton />
+
 
       {/* Navigation arrows */}
-      {currentSection > 0 && (
-        <motion.button
-          onClick={() => scrollToSectionByIndex(currentSection - 1)}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 w-14 h-14 sm:w-12 sm:h-12 rounded-full border-2 border-[#C0C0C0]/30 bg-black/30 backdrop-blur-md flex items-center justify-center text-[#C0C0C0] hover:text-[#FFD700] hover:border-[#FFD700]/50 transition-all duration-300 z-[9995] navigation-arrow touch-manipulation shadow-lg"
-          aria-label="Previous section"
-        >
-          <ChevronLeft size={24} className="sm:w-5 sm:h-5" />
-        </motion.button>
-      )}
-
       {currentSection < sections.length - 1 && (
         <motion.button
           onClick={() => scrollToSectionByIndex(currentSection + 1)}
