@@ -60,18 +60,24 @@ export function App() {
     };
 
     let touchStartY = 0;
+    let touchStartTime = 0;
     const handleTouchStart = (e: TouchEvent) => {
       touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
       if (showAdmin || showLoginModal || isMenuOpen) return;
       
       const touchEndY = e.changedTouches[0].clientY;
+      const touchEndTime = Date.now();
       const diff = touchStartY - touchEndY;
-      const minSwipeDistance = 50;
+      const timeDiff = touchEndTime - touchStartTime;
+      const minSwipeDistance = 40; // Reduced for better mobile responsiveness
+      const maxSwipeTime = 500; // Maximum time for a valid swipe
 
-      if (Math.abs(diff) > minSwipeDistance) {
+      // Only register swipe if it's fast enough and far enough
+      if (Math.abs(diff) > minSwipeDistance && timeDiff < maxSwipeTime) {
         if (diff > 0) {
           setCurrentSection((prev) => Math.min(sections.length - 1, prev + 1));
         } else {
@@ -219,10 +225,14 @@ export function App() {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentSection}
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -50 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            initial={{ opacity: 0, y: 30, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -30, scale: 0.98 }}
+            transition={{ 
+              duration: 0.5, 
+              ease: [0.4, 0.0, 0.2, 1], // Custom easing for smoother mobile feel
+              scale: { duration: 0.4 }
+            }}
             className="h-full"
           >
             {currentSection === 0 && <HeroSection t={t} />}
@@ -235,14 +245,14 @@ export function App() {
       </main>
 
       {/* Section Navigation Dots */}
-      <div className="fixed right-2 sm:right-3 lg:right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col space-y-2 sm:space-y-3 lg:space-y-4 navigation-dots">
+      <div className="fixed right-2 sm:right-3 lg:right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col space-y-3 sm:space-y-4 lg:space-y-5 navigation-dots">
         {sections.map((section, index) => (
           <motion.button
             key={section}
             onClick={() => scrollToSectionByIndex(index)}
-            whileHover={{ scale: 1.2 }}
-            whileTap={{ scale: 0.9 }}
-            className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 transition-all duration-300 touch-manipulation relative ${
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 rounded-full border-2 transition-all duration-300 touch-manipulation relative ${
               currentSection === index 
                 ? 'bg-[#FFD700] border-[#FFD700] cosmic-glow shadow-lg shadow-[#FFD700]/30' 
                 : 'bg-transparent border-[#C0C0C0]/50 hover:border-[#FFD700] hover:bg-[#FFD700]/10'
@@ -273,12 +283,12 @@ export function App() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="fixed bottom-6 left-6 w-12 h-12 rounded-full border-2 border-[#C0C0C0]/30 bg-black/20 backdrop-blur-md flex items-center justify-center text-[#C0C0C0] hover:text-[#FFD700] hover:border-[#FFD700]/50 transition-all duration-300 z-[9995] navigation-arrow touch-manipulation"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 w-14 h-14 sm:w-12 sm:h-12 rounded-full border-2 border-[#C0C0C0]/30 bg-black/30 backdrop-blur-md flex items-center justify-center text-[#C0C0C0] hover:text-[#FFD700] hover:border-[#FFD700]/50 transition-all duration-300 z-[9995] navigation-arrow touch-manipulation shadow-lg"
           aria-label="Previous section"
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={24} className="sm:w-5 sm:h-5" />
         </motion.button>
       )}
 
@@ -288,12 +298,12 @@ export function App() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="fixed bottom-6 right-6 w-12 h-12 rounded-full border-2 border-[#C0C0C0]/30 bg-black/20 backdrop-blur-md flex items-center justify-center text-[#C0C0C0] hover:text-[#FFD700] hover:border-[#FFD700]/50 transition-all duration-300 z-[9995] navigation-arrow touch-manipulation"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-14 h-14 sm:w-12 sm:h-12 rounded-full border-2 border-[#C0C0C0]/30 bg-black/30 backdrop-blur-md flex items-center justify-center text-[#C0C0C0] hover:text-[#FFD700] hover:border-[#FFD700]/50 transition-all duration-300 z-[9995] navigation-arrow touch-manipulation shadow-lg"
           aria-label="Next section"
         >
-          <ChevronRight size={20} />
+          <ChevronRight size={24} className="sm:w-5 sm:h-5" />
         </motion.button>
       )}
 
@@ -305,20 +315,20 @@ export function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="fixed bottom-3 sm:bottom-4 lg:bottom-6 left-0 right-0 z-[9996] cta-button-container flex justify-center"
+            className="fixed bottom-2 sm:bottom-4 lg:bottom-6 left-2 right-2 sm:left-0 sm:right-0 z-[9996] cta-button-container flex justify-center"
           >
             <motion.button
               onClick={() => scrollToSection('apply')}
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
-              className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90 px-6 sm:px-8 lg:px-10 py-3 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg font-medium rounded-lg shadow-lg shadow-[#FFD700]/20 cosmic-glow touch-manipulation transition-all duration-300 whitespace-nowrap"
+              className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90 px-6 sm:px-8 lg:px-10 py-4 sm:py-3 lg:py-4 text-base sm:text-base lg:text-lg font-medium rounded-xl shadow-xl shadow-[#FFD700]/30 cosmic-glow touch-manipulation transition-all duration-300 whitespace-nowrap w-full sm:w-auto max-w-sm sm:max-w-none"
             >
-              <div className="flex items-center justify-center space-x-2 sm:space-x-3">
+              <div className="flex items-center justify-center space-x-3">
                 <span>{t.cta.bookReading}</span>
                 <motion.div
-                  animate={{ x: [0, 2, 0] }}
+                  animate={{ x: [0, 3, 0] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
-                  className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#0A0A23] rounded-full flex-shrink-0"
+                  className="w-2 h-2 bg-[#0A0A23] rounded-full flex-shrink-0"
                 />
               </div>
             </motion.button>

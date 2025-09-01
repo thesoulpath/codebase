@@ -63,39 +63,39 @@ export function MobileMenu({
                   </button>
                 </div>
                 
-                <nav className="flex-1 space-y-4">
+                <nav className="flex-1 space-y-2">
                   {sections.map((section, index) => (
                     <button
                       key={section}
                       onClick={() => scrollToSection(section)}
-                      className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center space-x-3 ${
+                      className={`w-full text-left px-6 py-4 rounded-xl transition-all duration-200 flex items-center space-x-4 touch-manipulation ${
                         currentSection === index
-                          ? 'bg-[#FFD700]/10 text-[#FFD700] border border-[#FFD700]/30'
-                          : 'text-[#C0C0C0] hover:text-[#EAEAEA] hover:bg-[#C0C0C0]/5'
+                          ? 'bg-[#FFD700]/15 text-[#FFD700] border border-[#FFD700]/40 shadow-lg shadow-[#FFD700]/10'
+                          : 'text-[#C0C0C0] hover:text-[#EAEAEA] hover:bg-[#C0C0C0]/10 active:bg-[#C0C0C0]/15'
                       }`}
                     >
-                      <div className={`w-2 h-2 rounded-full ${
-                        currentSection === index ? 'bg-[#FFD700]' : 'bg-[#C0C0C0]/50'
+                      <div className={`w-3 h-3 rounded-full ${
+                        currentSection === index ? 'bg-[#FFD700] shadow-sm' : 'bg-[#C0C0C0]/50'
                       }`} />
-                      <span>{t.nav[section as keyof typeof t.nav]}</span>
+                      <span className="text-base font-medium">{t.nav[section as keyof typeof t.nav]}</span>
                     </button>
                   ))}
                 </nav>
                 
                 <div className="border-t border-[#C0C0C0]/20 pt-6 mt-6">
-                  <div className="flex items-center justify-center space-x-4 mb-4">
+                  <div className="flex items-center justify-center space-x-3 mb-6">
                     <button 
                       onClick={() => setLanguage('en')}
-                      className={`px-4 py-2 rounded-lg transition-colors ${
-                        language === 'en' ? 'text-[#FFD700] bg-[#FFD700]/10' : 'text-[#C0C0C0] hover:text-[#FFD700]'
+                      className={`px-6 py-3 rounded-xl transition-all duration-200 touch-manipulation font-medium ${
+                        language === 'en' ? 'text-[#FFD700] bg-[#FFD700]/15 border border-[#FFD700]/30' : 'text-[#C0C0C0] hover:text-[#FFD700] hover:bg-[#C0C0C0]/10'
                       }`}
                     >
                       English
                     </button>
                     <button 
                       onClick={() => setLanguage('es')}
-                      className={`px-4 py-2 rounded-lg transition-colors ${
-                        language === 'es' ? 'text-[#FFD700] bg-[#FFD700]/10' : 'text-[#C0C0C0] hover:text-[#FFD700]'
+                      className={`px-6 py-3 rounded-xl transition-all duration-200 touch-manipulation font-medium ${
+                        language === 'es' ? 'text-[#FFD700] bg-[#FFD700]/15 border border-[#FFD700]/30' : 'text-[#C0C0C0] hover:text-[#FFD700] hover:bg-[#C0C0C0]/10'
                       }`}
                     >
                       Español
@@ -111,9 +111,9 @@ export function MobileMenu({
                       }}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="w-full flex items-center justify-center space-x-2 text-[#C0C0C0] hover:text-[#FFD700] transition-colors px-4 py-3 rounded-lg hover:bg-[#FFD700]/10 border border-[#C0C0C0]/20 hover:border-[#FFD700]/30"
+                      className="w-full flex items-center justify-center space-x-3 text-[#C0C0C0] hover:text-[#FFD700] transition-all duration-200 px-6 py-4 rounded-xl hover:bg-[#FFD700]/10 border border-[#C0C0C0]/20 hover:border-[#FFD700]/30 touch-manipulation font-medium"
                     >
-                      <LogIn size={16} />
+                      <LogIn size={18} />
                       <span>{t.nav.login}</span>
                     </motion.button>
                   )}
@@ -126,9 +126,9 @@ export function MobileMenu({
                       }}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="w-full flex items-center justify-center space-x-2 text-[#FFD700] bg-[#FFD700]/10 px-4 py-3 rounded-lg border border-[#FFD700]/30"
+                      className="w-full flex items-center justify-center space-x-3 text-[#FFD700] bg-[#FFD700]/15 px-6 py-4 rounded-xl border border-[#FFD700]/40 touch-manipulation font-medium shadow-lg shadow-[#FFD700]/10"
                     >
-                      <Settings size={16} />
+                      <Settings size={18} />
                       <span>Dashboard</span>
                     </motion.button>
                   )}

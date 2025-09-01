@@ -1112,22 +1112,108 @@ section {
 .touch-manipulation {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Mobile responsive improvements */
 .mobile-container {
   min-height: 100vh;
   min-height: 100svh;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
 }
 
 .safe-padding {
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
 /* Navigation dots mobile improvements */
 .navigation-dots {
   right: max(0.5rem, env(safe-area-inset-right));
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 640px) {
+  .navigation-arrow {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  
+  .cta-button-container {
+    padding: 0 1rem;
+  }
+  
+  .mobile-menu {
+    width: 85vw;
+    max-width: 320px;
+  }
+  
+  /* Improve touch feedback */
+  .touch-manipulation:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+  
+  /* Better mobile scrolling */
+  .mobile-container {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  /* Enhanced navigation dots for mobile */
+  .navigation-dots button {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .navigation-dots button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 215, 0, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+  }
+  
+  .navigation-dots button:active::before {
+    width: 200%;
+    height: 200%;
+  }
+  
+  /* Mobile menu enhanced feedback */
+  .mobile-menu button {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .mobile-menu button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+  }
+  
+  .mobile-menu button:active::before {
+    width: 200%;
+    height: 200%;
+  }
 }
 
 /* Mobile breakpoint extensions */

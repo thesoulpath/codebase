@@ -167,7 +167,7 @@ export function Header({
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="w-10 h-10 flex items-center justify-center rounded-lg header-button-menu touch-manipulation focus-visible"
+            className="w-12 h-12 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg header-button-menu touch-manipulation focus-visible"
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={isMenuOpen}
           >
