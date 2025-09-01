@@ -337,7 +337,7 @@ export function App() {
               console.error('Login error:', error);
               return false;
             }
-            if (data?.user) {
+            if (data) {
               setShowLoginModal(false);
               return true;
             }

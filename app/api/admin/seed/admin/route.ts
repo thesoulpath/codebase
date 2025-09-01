@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
@@ -53,23 +53,10 @@ export async function POST() {
       }, { status: 400 });
     }
 
-    // Check if admin user already exists
-    const existingUser = await prisma.user.findUnique({
+    // Delete existing admin user if it exists
+    await prisma.user.deleteMany({
       where: { email: adminData.email }
     });
-
-    if (existingUser) {
-      return NextResponse.json({
-        success: false,
-        error: 'User already exists',
-        message: 'Admin user already exists',
-        toast: {
-          type: 'warning',
-          title: 'User Already Exists',
-          description: `Admin user ${adminData.email} already exists in the system.`
-        }
-      }, { status: 409 });
-    }
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(adminData.password, 12);
@@ -83,7 +70,7 @@ export async function POST() {
         role: adminData.role,
         phone: adminData.phone,
         birthDate: adminData.birthDate ? new Date(adminData.birthDate) : null,
-        birthTime: adminData.birthTime,
+        birthTime: adminData.birthTime ? new Date(`1970-01-01T${adminData.birthTime}`) : null,
         birthPlace: adminData.birthPlace,
         question: adminData.question,
         language: adminData.language,
