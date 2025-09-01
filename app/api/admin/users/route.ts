@@ -106,9 +106,8 @@ export async function GET(request: NextRequest) {
 
     // Enhanced mode includes related data
     if (enhanced === 'true') {
-      select._count = {
-        paymentRecords: true
-      };
+      // For now, just return basic user data without complex relationships
+      // TODO: Add proper relationship queries once schema is fully migrated
     }
 
     console.log('🔍 Executing database query...');
