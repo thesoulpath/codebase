@@ -22,32 +22,96 @@ function transformFlatContentToNested(flatContent: any): TransformedContent {
   if (flatContent) {
     // Hero section
     nestedContent.en.hero = {
-      title: flatContent.heroTitleEn || 'Welcome to SOULPATH',
+      title: flatContent.heroTitleEn || 'SOULPATH',
+      tagline: 'Transform your life through spiritual guidance and healing',
+      description: 'Experience profound transformation through personalized spiritual sessions, energy healing, and guidance on your journey to inner peace and self-discovery.',
+      ctaPrimary: 'Book Your Session',
+      ctaSecondary: 'Learn More',
       subtitle: flatContent.heroSubtitleEn || 'Your journey to wellness starts here'
     };
     nestedContent.es.hero = {
-      title: flatContent.heroTitleEs || 'Bienvenido a SOULPATH',
+      title: flatContent.heroTitleEs || 'SOULPATH',
+      tagline: 'Transforma tu vida a través de la guía espiritual y la sanación',
+      description: 'Experimenta una transformación profunda a través de sesiones espirituales personalizadas, sanación energética y guía en tu camino hacia la paz interior y el autodescubrimiento.',
+      ctaPrimary: 'Reserva tu Sesión',
+      ctaSecondary: 'Conoce Más',
       subtitle: flatContent.heroSubtitleEs || 'Tu camino al bienestar comienza aquí'
     };
 
     // About section
     nestedContent.en.about = {
-      title: flatContent.aboutTitleEn || 'About Us',
-      content: flatContent.aboutContentEn || 'We are dedicated to helping you achieve your wellness goals.'
+      title: flatContent.aboutTitleEn || 'About SOULPATH',
+      text: flatContent.aboutContentEn || 'SOULPATH was founded with a simple yet profound mission: to help people find their true selves and live authentic, fulfilling lives. Through spiritual guidance, energy healing, and compassionate counseling, we\'ve helped hundreds of individuals transform their lives and discover their purpose.',
+      description: flatContent.aboutContentEn || 'SOULPATH was founded with a simple yet profound mission: to help people find their true selves and live authentic, fulfilling lives. Through spiritual guidance, energy healing, and compassionate counseling, we\'ve helped hundreds of individuals transform their lives and discover their purpose.',
+      statsClients: 'Clients Helped',
+      statsYears: 'Years Experience',
+      statsSessions: 'Sessions Completed',
+      statsCountries: 'Countries Served',
+      valuesTitle: 'Our Core Values',
+      value1Title: 'Compassion',
+      value1Description: 'We approach every client with deep empathy and understanding, creating a safe space for healing and growth.',
+      value2Title: 'Authenticity',
+      value2Description: 'Our guidance comes from genuine spiritual wisdom and personal experience, not from textbooks or theories.',
+      value3Title: 'Transformation',
+      value3Description: 'We believe in the power of real change and are committed to helping you achieve lasting transformation.',
+      storyTitle: 'Jose\'s Story',
+      storyText: 'My journey began over 15 years ago when I experienced a profound spiritual awakening that changed my life forever. Since then, I\'ve dedicated myself to helping others find their own path to spiritual growth and personal transformation. Through years of study, practice, and working with clients from around the world, I\'ve developed a unique approach that combines traditional spiritual wisdom with modern understanding of human psychology and energy work.'
     };
     nestedContent.es.about = {
-      title: flatContent.aboutTitleEs || 'Sobre Nosotros',
-      content: flatContent.aboutContentEs || 'Estamos dedicados a ayudarte a alcanzar tus metas de bienestar.'
+      title: flatContent.aboutTitleEs || 'Acerca de SOULPATH',
+      text: flatContent.aboutContentEs || 'SOULPATH fue fundado con una misión simple pero profunda: ayudar a las personas a encontrar su verdadero ser y vivir vidas auténticas y satisfactorias. A través de la guía espiritual, la sanación energética y el asesoramiento compasivo, hemos ayudado a cientos de individuos a transformar sus vidas y descubrir su propósito.',
+      description: flatContent.aboutContentEs || 'SOULPATH fue fundado con una misión simple pero profunda: ayudar a las personas a encontrar su verdadero ser y vivir vidas auténticas y satisfactorias. A través de la guía espiritual, la sanación energética y el asesoramiento compasivo, hemos ayudado a cientos de individuos a transformar sus vidas y descubrir su propósito.',
+      statsClients: 'Clientes Ayudados',
+      statsYears: 'Años de Experiencia',
+      statsSessions: 'Sesiones Completadas',
+      statsCountries: 'Países Atendidos',
+      valuesTitle: 'Nuestros Valores Fundamentales',
+      value1Title: 'Compasión',
+      value1Description: 'Nos acercamos a cada cliente con profunda empatía y comprensión, creando un espacio seguro para la sanación y el crecimiento.',
+      value2Title: 'Autenticidad',
+      value2Description: 'Nuestra guía proviene de la sabiduría espiritual genuina y la experiencia personal, no de libros de texto o teorías.',
+      value3Title: 'Transformación',
+      value3Description: 'Creemos en el poder del cambio real y estamos comprometidos a ayudarte a lograr una transformación duradera.',
+      storyTitle: 'La Historia de José',
+      storyText: 'Mi viaje comenzó hace más de 15 años cuando experimenté un despertar espiritual profundo que cambió mi vida para siempre. Desde entonces, me he dedicado a ayudar a otros a encontrar su propio camino hacia el crecimiento espiritual y la transformación personal. A través de años de estudio, práctica y trabajo con clientes de todo el mundo, he desarrollado un enfoque único que combina la sabiduría espiritual tradicional con la comprensión moderna de la psicología humana y el trabajo energético.'
     };
 
     // Approach section
     nestedContent.en.approach = {
       title: flatContent.approachTitleEn || 'Our Approach',
-      content: flatContent.approachContentEn || 'We use a holistic approach to wellness.'
+      content: flatContent.approachContentEn || 'We use a holistic approach to wellness.',
+      items: [
+        {
+          title: 'Heart-Centered Healing',
+          text: 'Connect with your emotional core and release past traumas through compassionate guidance and energy work.'
+        },
+        {
+          title: 'Mindful Transformation',
+          text: 'Develop mental clarity and break free from limiting beliefs that hold you back from your true potential.'
+        },
+        {
+          title: 'Spiritual Awakening',
+          text: 'Discover your spiritual path and deepen your connection to the divine through meditation and spiritual practices.'
+        }
+      ]
     };
     nestedContent.es.approach = {
       title: flatContent.approachTitleEs || 'Nuestro Enfoque',
-      content: flatContent.approachContentEs || 'Usamos un enfoque holístico para el bienestar.'
+      content: flatContent.approachContentEs || 'Usamos un enfoque holístico para el bienestar.',
+      items: [
+        {
+          title: 'Sanación Centrada en el Corazón',
+          text: 'Conecta con tu núcleo emocional y libera traumas pasados a través de guía compasiva y trabajo energético.'
+        },
+        {
+          title: 'Transformación Consciente',
+          text: 'Desarrolla claridad mental y libérate de creencias limitantes que te impiden alcanzar tu verdadero potencial.'
+        },
+        {
+          title: 'Despertar Espiritual',
+          text: 'Descubre tu camino espiritual y profundiza tu conexión con lo divino a través de la meditación y prácticas espirituales.'
+        }
+      ]
     };
 
     // Services section
