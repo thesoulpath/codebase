@@ -13,11 +13,6 @@ import { toast } from 'sonner';
 import { useAuth } from '../hooks/useAuth';
 import { PaymentMethod, PaymentStatus } from '../lib/types';
 
-interface PurchaseHistoryProps {
-  clientEmail: string;
-  clientName: string;
-}
-
 interface UserPackage {
   id: number;
   package: {
@@ -45,32 +40,6 @@ interface UserPackage {
   isActive: boolean;
 }
 
-interface SessionUsage {
-  id: number;
-  sessionDate: string;
-  sessionTime: string;
-  sessionType: string;
-  status: string;
-  paymentStatus: PaymentStatus;
-  paymentMethod?: PaymentMethod;
-  cost?: number;
-  notes?: string;
-  createdAt: string;
-}
-
-interface GroupBooking {
-  id: number;
-  sessionDate: string;
-  sessionTime: string;
-  groupSize: number;
-  status: string;
-  paymentStatus: PaymentStatus;
-  paymentMethod?: PaymentMethod;
-  totalCost?: number;
-  notes?: string;
-  createdAt: string;
-}
-
 interface PurchaseStats {
   totalPackages: number;
   totalSpent: number;
@@ -82,10 +51,8 @@ interface PurchaseStats {
   failedPayments: number;
 }
 
-export function PurchaseHistory({ clientEmail }: PurchaseHistoryProps) {
+export function PurchaseHistory() {
   const [userPackages, setUserPackages] = useState<UserPackage[]>([]);
-  const [sessionUsage, setSessionUsage] = useState<SessionUsage[]>([]);
-  const [groupBookings, setGroupBookings] = useState<GroupBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [dateFilter, setDateFilter] = useState('all');
@@ -105,7 +72,7 @@ export function PurchaseHistory({ clientEmail }: PurchaseHistoryProps) {
     setIsLoading(true);
     try {
       // Load user packages
-      const packagesResponse = await fetch(`/api/admin/user-packages?clientEmail=${encodeURIComponent(clientEmail)}`, {
+      const packagesResponse = await fetch(`/api/client/my-packages`, {
         headers: {
           'Authorization': `Bearer ${user.access_token}`,
           'Content-Type': 'application/json'
@@ -116,29 +83,16 @@ export function PurchaseHistory({ clientEmail }: PurchaseHistoryProps) {
         setUserPackages(packagesData.data || []);
       }
 
-      // Load session usage
-      const usageResponse = await fetch(`/api/admin/session-usage?clientEmail=${encodeURIComponent(clientEmail)}`, {
+      // Load purchase history
+      const purchaseResponse = await fetch(`/api/client/purchase-history`, {
         headers: {
           'Authorization': `Bearer ${user.access_token}`,
           'Content-Type': 'application/json'
         }
       });
-      if (usageResponse.ok) {
-        const usageData = await usageResponse.json();
-        setSessionUsage(usageData.data || []);
-      }
-
-      // Load group bookings
-      const groupResponse = await fetch(`/api/admin/group-bookings?clientEmail=${encodeURIComponent(clientEmail)}`, {
-        headers: {
-          'Authorization': `Bearer ${user.access_token}`,
-          'Content-Type': 'application/json'
+              if (purchaseResponse.ok) {
+          // Purchase data loaded successfully
         }
-      });
-      if (groupResponse.ok) {
-        const groupData = await groupResponse.json();
-        setGroupBookings(groupData.data || []);
-      }
     } catch (error) {
       // Error loading purchase history
       toast.error('Failed to load purchase history');
@@ -170,20 +124,6 @@ export function PurchaseHistory({ clientEmail }: PurchaseHistoryProps) {
       completedPayments,
       failedPayments
     };
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      'paid': { color: 'bg-green-500/20 text-green-400', label: 'Paid' },
-      'pending': { color: 'bg-yellow-500/20 text-yellow-400', label: 'Pending' },
-      'failed': { color: 'bg-red-500/20 text-red-400', label: 'Failed' },
-      'completed': { color: 'bg-green-500/20 text-green-400', label: 'Completed' },
-      'cancelled': { color: 'bg-red-500/20 text-red-400', label: 'Cancelled' },
-      'no-show': { color: 'bg-gray-500/20 text-gray-400', label: 'No Show' }
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-    return <Badge className={config.color}>{config.label}</Badge>;
   };
 
   const getPaymentStatusBadge = (status: PaymentStatus) => {
@@ -489,97 +429,6 @@ export function PurchaseHistory({ clientEmail }: PurchaseHistoryProps) {
                 {userPackages.length === 0 && (
                   <div className="text-center py-8 text-gray-400">
                     No packages purchased yet.
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="sessions" className="space-y-4">
-          {/* Individual Sessions */}
-          <Card className="bg-[#191970]/30 border-[#C0C0C0]/20">
-            <CardHeader>
-              <CardTitle className="text-white">Individual Sessions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {sessionUsage.map((session) => (
-                  <div key={session.id} className="border border-[#C0C0C0]/20 rounded-lg p-3 bg-[#191970]/20">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Users className="h-5 w-5 text-[#FFD700]" />
-                        <div>
-                          <div className="text-white font-medium">{session.sessionType}</div>
-                          <div className="text-sm text-gray-400">
-                            {new Date(session.sessionDate).toLocaleDateString()} at {session.sessionTime}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(session.status)}
-                        {getPaymentStatusBadge(session.paymentStatus)}
-                        {session.paymentMethod && (
-                          <div className="flex items-center gap-1 text-gray-400">
-                            {getPaymentMethodIcon(session.paymentMethod)}
-                            <span className="text-xs">{getPaymentMethodLabel(session.paymentMethod)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {sessionUsage.length === 0 && (
-                  <div className="text-center py-8 text-gray-400">
-                    No individual sessions found.
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Group Bookings */}
-          <Card className="bg-[#191970]/30 border-[#C0C0C0]/20">
-            <CardHeader>
-              <CardTitle className="text-white">Group Bookings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {groupBookings.map((booking) => (
-                  <div key={booking.id} className="border border-[#C0C0C0]/20 rounded-lg p-3 bg-[#191970]/20">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Users className="h-5 w-5 text-[#FFD700]" />
-                        <div>
-                          <div className="text-white font-medium">Group Session ({booking.groupSize} people)</div>
-                          <div className="text-sm text-gray-400">
-                            {new Date(booking.sessionDate).toLocaleDateString()} at {booking.sessionTime}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(booking.status)}
-                        {getPaymentStatusBadge(booking.paymentStatus)}
-                        {booking.paymentMethod && (
-                          <div className="flex items-center gap-1 text-gray-400">
-                            {getPaymentMethodIcon(booking.paymentMethod)}
-                            <span className="text-xs">{getPaymentMethodLabel(booking.paymentMethod)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {booking.totalCost && (
-                      <div className="mt-2 text-sm text-gray-400">
-                        Cost: {formatCurrency(booking.totalCost, '$')}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {groupBookings.length === 0 && (
-                  <div className="text-center py-8 text-gray-400">
-                    No group bookings found.
                   </div>
                 )}
               </div>

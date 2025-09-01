@@ -6,18 +6,33 @@ import { cn } from '@/lib/utils';
 
 // Fetch SEO data on the server
 async function getSeoData() {
+  // Check if we have a valid service role key (should be longer than 50 chars)
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey || serviceRoleKey.length < 50) {
+    console.warn('Skipping SEO data fetch - invalid or missing service role key');
+    return null;
+  }
+  
   try {
     const supabase = createAdminClient();
     const { data } = await supabase.from('seo').select('*').single();
     return data;
   } catch (error) {
     console.error('Error fetching SEO data:', error);
+    // Return null to use fallback metadata
     return null;
   }
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const seo = await getSeoData();
+  let seo = null;
+  
+  try {
+    seo = await getSeoData();
+  } catch (error) {
+    console.error('Failed to generate metadata:', error);
+    // Continue with fallback metadata
+  }
 
   return {
     title: seo?.title || 'Full-Page Scroll Website',

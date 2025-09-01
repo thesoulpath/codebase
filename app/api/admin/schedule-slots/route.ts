@@ -1,144 +1,193 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { PrismaClient } from '@prisma/client';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const prisma = new PrismaClient();
 
-// Zod schemas
-const scheduleSlotSchema = z.object({
-  schedule_template_id: z.number().int().positive('Schedule template ID must be a positive integer'),
-  start_time: z.string().datetime('Start time must be a valid datetime'),
-  end_time: z.string().datetime('End time must be a valid datetime'),
-  capacity: z.number().int().positive('Capacity must be a positive integer'),
-  booked_count: z.number().int().min(0).default(0),
-  is_available: z.boolean().default(true)
+// Zod schemas for schedule slot validation
+const createScheduleSlotSchema = z.object({
+  scheduleTemplateId: z.number().int().positive('Schedule template ID must be positive'),
+  startTime: z.string().datetime('Invalid start time format'),
+  endTime: z.string().datetime('Invalid end time format'),
+  capacity: z.number().int().positive('Capacity must be positive').default(3),
+  bookedCount: z.number().int().min(0, 'Booked count cannot be negative').default(0),
+  isAvailable: z.boolean().default(true)
 });
 
-const updateScheduleSlotSchema = scheduleSlotSchema.partial().extend({
-  id: z.number().int().positive('Schedule slot ID must be a positive integer')
+const updateScheduleSlotSchema = createScheduleSlotSchema.partial().extend({
+  id: z.number().int().positive('Schedule slot ID must be positive')
 });
 
-const generateSlotsSchema = z.object({
-  template_ids: z.array(z.number().int().positive()).min(1, 'At least one template ID is required'),
-  start_date: z.string().datetime('Start date must be a valid datetime'),
-  end_date: z.string().datetime('End date must be a valid datetime'),
-  overwrite_existing: z.boolean().default(false)
+const querySchema = z.object({
+  scheduleTemplateId: z.coerce.number().int().positive().optional(),
+  isAvailable: z.enum(['true', 'false']).optional(),
+  dateFrom: z.string().datetime().optional(),
+  dateTo: z.string().datetime().optional(),
+  hasCapacity: z.enum(['true', 'false']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  enhanced: z.enum(['true', 'false']).optional()
 });
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 GET /api/admin/schedule-slots - Starting request...');
+    
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
+      console.log('❌ Unauthorized access attempt');
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
+    console.log('✅ Admin user authenticated:', user.email);
+
     const { searchParams } = new URL(request.url);
-    const templateId = searchParams.get('schedule_template_id');
-    const startDate = searchParams.get('start_date');
-    const endDate = searchParams.get('end_date');
-    const isAvailable = searchParams.get('is_available');
-    const hasCapacity = searchParams.get('has_capacity');
+    const queryParams = Object.fromEntries(searchParams.entries());
+    const validation = querySchema.safeParse(queryParams);
 
-    // Build the query
-    let query = supabase
-      .from('schedule_slots')
-      .select(`
-        *,
-        schedule_templates (
-          id,
-          day_of_week,
-          start_time,
-          end_time,
-          capacity,
-          is_available,
-          session_durations (
-            id,
-            name,
-            duration_minutes
-          )
-        ),
-        bookings (
-          id,
-          client_id,
-          status,
-          booking_type,
-          group_size
-        )
-      `)
-      .order('start_time', { ascending: true });
-
-    // Apply filters
-    if (templateId && templateId !== 'all') {
-      query = query.eq('schedule_template_id', templateId);
-    }
-    if (startDate) {
-      query = query.gte('start_time', startDate);
-    }
-    if (endDate) {
-      query = query.lte('start_time', endDate);
-    }
-    if (isAvailable !== null && isAvailable !== 'all') {
-      query = query.eq('is_available', isAvailable === 'true');
-    }
-    if (hasCapacity === 'true') {
-      query = query.gt('capacity', 0).gt('capacity', 'booked_count');
-    }
-
-    const { data: scheduleSlots, error } = await query;
-
-    if (error) {
-      console.error('Error fetching schedule slots:', error);
+    if (!validation.success) {
       return NextResponse.json({
         success: false,
-        error: 'Database error',
-        message: 'Failed to fetch schedule slots',
-        details: error.message
-      }, { status: 500 });
+        error: 'Invalid query parameters',
+        details: validation.error.issues
+      }, { status: 400 });
     }
+
+    const { scheduleTemplateId, isAvailable, dateFrom, dateTo, hasCapacity, page, limit, enhanced } = validation.data;
+    const offset = (page - 1) * limit;
+
+    console.log('🔍 Query parameters:', { scheduleTemplateId, isAvailable, dateFrom, dateTo, hasCapacity, page, limit, enhanced });
+
+    // Build the query with proper relationships
+    const where: any = {};
+    
+    if (scheduleTemplateId) where.scheduleTemplateId = scheduleTemplateId;
+    if (isAvailable !== undefined) where.isAvailable = isAvailable === 'true';
+    if (dateFrom) where.startTime = { gte: new Date(dateFrom) };
+    if (dateTo) {
+      where.startTime = {
+        ...where.startTime,
+        lte: new Date(dateTo)
+      };
+    }
+    if (hasCapacity === 'true') {
+      where.bookedCount = { lt: { capacity: true } };
+    } else if (hasCapacity === 'false') {
+      where.bookedCount = { gte: { capacity: true } };
+    }
+
+    // Base select fields
+    const select: any = {
+      id: true,
+      scheduleTemplateId: true,
+      startTime: true,
+      endTime: true,
+      capacity: true,
+      bookedCount: true,
+      isAvailable: true,
+      createdAt: true,
+      updatedAt: true,
+      scheduleTemplate: {
+        select: {
+          id: true,
+          dayOfWeek: true,
+          startTime: true,
+          endTime: true,
+          capacity: true,
+          sessionDuration: {
+            select: {
+              id: true,
+              name: true,
+              duration_minutes: true
+            }
+          }
+        }
+      }
+    };
+
+    // Enhanced mode includes booking information
+    if (enhanced === 'true') {
+      select._count = {
+        bookings: true
+      };
+      select.bookings = {
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          sessionType: true,
+          status: true,
+          createdAt: true,
+          user: {
+            select: {
+              id: true,
+              email: true,
+              fullName: true
+            }
+          }
+        }
+      };
+    }
+
+    console.log('🔍 Executing database query...');
+    
+    const [scheduleSlots, totalCount] = await Promise.all([
+      prisma.scheduleSlot.findMany({
+        where,
+        select,
+        skip: offset,
+        take: limit,
+        orderBy: { startTime: 'asc' }
+      }),
+      prisma.scheduleSlot.count({ where })
+    ]);
+
+    console.log('✅ Database query successful, found', scheduleSlots.length, 'schedule slots');
+
+    const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
       success: true,
-      data: scheduleSlots
+      data: scheduleSlots,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages
+      }
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Unexpected error in schedule-slots API:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'An unexpected error occurred',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
     const body = await request.json();
-    
-    // Check if this is a slot generation request
-    if (body.action === 'generate_slots') {
-      return handleGenerateSlots(body);
-    }
-
-    // Regular slot creation
-    const validation = scheduleSlotSchema.safeParse(body);
+    const validation = createScheduleSlotSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json({
@@ -152,246 +201,110 @@ export async function POST(request: NextRequest) {
     const slotData = validation.data;
 
     // Validate time logic
-    const startTime = new Date(slotData.start_time);
-    const endTime = new Date(slotData.end_time);
-    
+    const startTime = new Date(slotData.startTime);
+    const endTime = new Date(slotData.endTime);
+
     if (startTime >= endTime) {
       return NextResponse.json({
         success: false,
         error: 'Invalid time range',
-        message: 'Start time must be before end time'
+        message: 'End time must be after start time'
       }, { status: 400 });
     }
 
-    // Check if template exists
-    const { data: template, error: templateError } = await supabase
-      .from('schedule_templates')
-      .select('*')
-      .eq('id', slotData.schedule_template_id)
-      .single();
+    // Verify schedule template exists
+    const scheduleTemplate = await prisma.scheduleTemplate.findUnique({
+      where: { id: slotData.scheduleTemplateId }
+    });
 
-    if (templateError || !template) {
+    if (!scheduleTemplate) {
       return NextResponse.json({
         success: false,
-        error: 'Template not found',
+        error: 'Schedule template not found',
         message: 'The specified schedule template does not exist'
       }, { status: 404 });
     }
 
-    // Check for overlapping slots
-    const { data: overlappingSlots, error: overlapError } = await supabase
-      .from('schedule_slots')
-      .select('*')
-      .eq('schedule_template_id', slotData.schedule_template_id)
-      .overlaps('start_time', slotData.start_time);
-
-    if (overlapError) {
-      console.error('Error checking overlapping slots:', overlapError);
-    } else if (overlappingSlots && overlappingSlots.length > 0) {
+    // Validate capacity
+    if (slotData.bookedCount > slotData.capacity) {
       return NextResponse.json({
         success: false,
-        error: 'Time conflict',
-        message: 'This time slot conflicts with existing slots'
+        error: 'Invalid capacity',
+        message: 'Booked count cannot exceed capacity'
       }, { status: 400 });
     }
 
-    // Create the schedule slot
-    const { data: newSlot, error: createError } = await supabase
-      .from('schedule_slots')
-      .insert(slotData)
-      .select(`
-        *,
-        schedule_templates (
-          id,
-          day_of_week,
-          start_time,
-          end_time,
-          capacity,
-          is_available,
-          session_durations (
-            id,
-            name,
-            duration_minutes
-          )
-        )
-      `)
-      .single();
+    // Check for overlapping slots
+    const overlappingSlot = await prisma.scheduleSlot.findFirst({
+      where: {
+        scheduleTemplateId: slotData.scheduleTemplateId,
+        OR: [
+          {
+            startTime: { lt: endTime },
+            endTime: { gt: startTime }
+          }
+        ]
+      }
+    });
 
-    if (createError) {
-      console.error('Error creating schedule slot:', createError);
+    if (overlappingSlot) {
       return NextResponse.json({
         success: false,
-        error: 'Database error',
-        message: 'Failed to create schedule slot',
-        details: createError.message
-      }, { status: 500 });
+        error: 'Time conflict',
+        message: 'This time slot overlaps with an existing slot'
+      }, { status: 409 });
     }
+
+    // Create the schedule slot
+    const newScheduleSlot = await prisma.scheduleSlot.create({
+      data: slotData,
+      include: {
+        scheduleTemplate: {
+          select: {
+            id: true,
+            dayOfWeek: true,
+            startTime: true,
+            endTime: true,
+            capacity: true,
+            sessionDuration: {
+              select: {
+                id: true,
+                name: true,
+                duration_minutes: true
+              }
+            }
+          }
+        }
+      }
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Schedule slot created successfully',
-      data: newSlot
+      data: newScheduleSlot
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error creating schedule slot:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'Failed to create schedule slot',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
-  }
-}
-
-async function handleGenerateSlots(body: any) {
-  try {
-    const validation = generateSlotsSchema.safeParse(body);
-
-    if (!validation.success) {
-      return NextResponse.json({
-        success: false,
-        error: 'Validation failed',
-        message: 'Invalid slot generation data',
-        details: validation.error.issues
-      }, { status: 400 });
-    }
-
-    const { template_ids, start_date, end_date, overwrite_existing } = validation.data;
-
-    const startDate = new Date(start_date);
-    const endDate = new Date(end_date);
-
-    if (startDate >= endDate) {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid date range',
-        message: 'Start date must be before end date'
-      }, { status: 400 });
-    }
-
-    // Get templates
-    const { data: templates, error: templatesError } = await supabase
-      .from('schedule_templates')
-      .select('*')
-      .in('id', template_ids)
-      .eq('is_available', true);
-
-    if (templatesError || !templates || templates.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'Templates not found',
-        message: 'No valid templates found for slot generation'
-      }, { status: 404 });
-    }
-
-    // Delete existing slots if overwrite is enabled
-    if (overwrite_existing) {
-      const { error: deleteError } = await supabase
-        .from('schedule_slots')
-        .delete()
-        .in('schedule_template_id', template_ids)
-        .gte('start_time', start_date)
-        .lte('start_time', end_date);
-
-      if (deleteError) {
-        console.error('Error deleting existing slots:', deleteError);
-      }
-    }
-
-    // Generate slots for each template
-    const slotsToInsert = [];
-    const currentDate = new Date(startDate);
-
-    while (currentDate <= endDate) {
-      const dayOfWeek = currentDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-      
-      for (const template of templates) {
-        if (template.day_of_week.toLowerCase() === dayOfWeek) {
-          const slotStartTime = new Date(currentDate);
-          const [startHour, startMinute] = template.start_time.split(':');
-          slotStartTime.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
-
-          const slotEndTime = new Date(currentDate);
-          const [endHour, endMinute] = template.end_time.split(':');
-          slotEndTime.setHours(parseInt(endHour), parseInt(endMinute), 0, 0);
-
-          // Check if slot already exists
-          if (!overwrite_existing) {
-            const { data: existingSlot } = await supabase
-              .from('schedule_slots')
-              .select('id')
-              .eq('schedule_template_id', template.id)
-              .eq('start_time', slotStartTime.toISOString())
-              .single();
-
-            if (existingSlot) continue; // Skip if slot already exists
-          }
-
-          slotsToInsert.push({
-            schedule_template_id: template.id,
-            start_time: slotStartTime.toISOString(),
-            end_time: slotEndTime.toISOString(),
-            capacity: template.capacity,
-            booked_count: 0,
-            is_available: template.is_available
-          });
-        }
-      }
-      
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    if (slotsToInsert.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: 'No new slots generated (all slots already exist)',
-        data: { slots_generated: 0 }
-      });
-    }
-
-    // Insert all slots
-    const { data: newSlots, error: insertError } = await supabase
-      .from('schedule_slots')
-      .insert(slotsToInsert)
-      .select('*');
-
-    if (insertError) {
-      console.error('Error generating schedule slots:', insertError);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: 'Failed to generate schedule slots',
-        details: insertError.message
-      }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: `Successfully generated ${slotsToInsert.length} schedule slots`,
-      data: { 
-        slots_generated: slotsToInsert.length,
-        slots: newSlots
-      }
-    }, { status: 201 });
-
-  } catch (error) {
-    console.error('Error generating slots:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Slot generation failed',
-      message: 'An error occurred while generating schedule slots'
-    }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
@@ -409,148 +322,197 @@ export async function PUT(request: NextRequest) {
 
     const { id, ...updateData } = validation.data;
 
-    // Check if slot exists
-    const { data: existingSlot, error: checkError } = await supabase
-      .from('schedule_slots')
-      .select('*')
-      .eq('id', id)
-      .single();
+    // Check if schedule slot exists
+    const existingSlot = await prisma.scheduleSlot.findUnique({
+      where: { id }
+    });
 
-    if (checkError || !existingSlot) {
+    if (!existingSlot) {
       return NextResponse.json({
         success: false,
-        error: 'Slot not found',
-        message: 'The specified schedule slot does not exist'
+        error: 'Schedule slot not found',
+        message: 'Schedule slot with this ID does not exist'
       }, { status: 404 });
     }
 
-    // Validate capacity logic
-    if (updateData.capacity !== undefined && updateData.capacity < existingSlot.booked_count) {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid capacity',
-        message: `Capacity cannot be less than current booked count (${existingSlot.booked_count})`
-      }, { status: 400 });
+    // Validate time logic if times are being updated
+    if (updateData.startTime || updateData.endTime) {
+      const startTime = updateData.startTime ? new Date(updateData.startTime) : existingSlot.startTime;
+      const endTime = updateData.endTime ? new Date(updateData.endTime) : existingSlot.endTime;
+
+      if (startTime >= endTime) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid time range',
+          message: 'End time must be after start time'
+        }, { status: 400 });
+      }
     }
 
-    // Update the slot
-    const { data: updatedSlot, error: updateError } = await supabase
-      .from('schedule_slots')
-      .update(updateData)
-      .eq('id', id)
-      .select(`
-        *,
-        schedule_templates (
-          id,
-          day_of_week,
-          start_time,
-          end_time,
-          capacity,
-          is_available,
-          session_durations (
-            id,
-            name,
-            duration_minutes
-          )
-        )
-      `)
-      .single();
+    // Verify schedule template exists if being updated
+    if (updateData.scheduleTemplateId) {
+      const scheduleTemplate = await prisma.scheduleTemplate.findUnique({
+        where: { id: updateData.scheduleTemplateId }
+      });
 
-    if (updateError) {
-      console.error('Error updating schedule slot:', updateError);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: 'Failed to update schedule slot',
-        details: updateError.message
-      }, { status: 500 });
+      if (!scheduleTemplate) {
+        return NextResponse.json({
+          success: false,
+          error: 'Schedule template not found',
+          message: 'The specified schedule template does not exist'
+        }, { status: 404 });
+      }
     }
+
+    // Validate capacity if being updated
+    if (updateData.capacity !== undefined || updateData.bookedCount !== undefined) {
+      const newCapacity = updateData.capacity ?? existingSlot.capacity;
+      const newBookedCount = updateData.bookedCount ?? existingSlot.bookedCount;
+
+      if (newBookedCount && newCapacity && newBookedCount > newCapacity) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid capacity',
+          message: 'Booked count cannot exceed capacity'
+        }, { status: 400 });
+      }
+    }
+
+    // Check for overlapping slots if time is being updated
+    if (updateData.startTime || updateData.endTime) {
+      const newStartTime = updateData.startTime ? new Date(updateData.startTime) : existingSlot.startTime;
+      const newEndTime = updateData.endTime ? new Date(updateData.endTime) : existingSlot.endTime;
+      const newTemplateId = updateData.scheduleTemplateId ?? existingSlot.scheduleTemplateId;
+
+      const overlappingSlot = await prisma.scheduleSlot.findFirst({
+        where: {
+          scheduleTemplateId: newTemplateId,
+          id: { not: id },
+          OR: [
+            {
+              startTime: { lt: newEndTime },
+              endTime: { gt: newStartTime }
+            }
+          ]
+        }
+      });
+
+      if (overlappingSlot) {
+        return NextResponse.json({
+          success: false,
+          error: 'Time conflict',
+          message: 'This time slot overlaps with an existing slot'
+        }, { status: 409 });
+      }
+    }
+
+    // Update the schedule slot
+    const updatedScheduleSlot = await prisma.scheduleSlot.update({
+      where: { id },
+      data: updateData,
+      include: {
+        scheduleTemplate: {
+          select: {
+            id: true,
+            dayOfWeek: true,
+            startTime: true,
+            endTime: true,
+            capacity: true,
+            sessionDuration: {
+              select: {
+                id: true,
+                name: true,
+                duration_minutes: true
+              }
+            }
+          }
+        }
+      }
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Schedule slot updated successfully',
-      data: updatedSlot
+      data: updatedScheduleSlot
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error updating schedule slot:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'Failed to update schedule slot',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const slotId = searchParams.get('id');
 
-    if (!id) {
+    if (!slotId) {
       return NextResponse.json({
         success: false,
         error: 'Missing ID',
-        message: 'Slot ID is required'
+        message: 'Schedule slot ID is required'
       }, { status: 400 });
     }
 
-    // Check if slot exists
-    const { data: existingSlot, error: checkError } = await supabase
-      .from('schedule_slots')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (checkError || !existingSlot) {
+    const id = parseInt(slotId);
+    if (isNaN(id)) {
       return NextResponse.json({
         success: false,
-        error: 'Slot not found',
-        message: 'The specified schedule slot does not exist'
+        error: 'Invalid ID',
+        message: 'Schedule slot ID must be a number'
+      }, { status: 400 });
+    }
+
+    // Check if schedule slot exists and has no active bookings
+    const existingSlot = await prisma.scheduleSlot.findUnique({
+      where: { id },
+      include: {
+        bookings: {
+          where: {
+            status: { in: ['confirmed', 'pending'] }
+          }
+        }
+      }
+    });
+
+    if (!existingSlot) {
+      return NextResponse.json({
+        success: false,
+        error: 'Schedule slot not found',
+        message: 'Schedule slot with this ID does not exist'
       }, { status: 404 });
     }
 
-    // Check if slot has bookings
-    const { data: bookings, error: bookingsError } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('schedule_slot_id', id)
-      .limit(1);
-
-    if (bookingsError) {
-      console.error('Error checking bookings:', bookingsError);
-    } else if (bookings && bookings.length > 0) {
+    // Check if there are active bookings
+    if (existingSlot.bookings.length > 0) {
       return NextResponse.json({
         success: false,
-        error: 'Slot in use',
-        message: 'Cannot delete slot that has associated bookings'
+        error: 'Cannot delete schedule slot',
+        message: 'Schedule slot has active bookings and cannot be deleted'
       }, { status: 400 });
     }
 
-    // Delete the slot
-    const { error: deleteError } = await supabase
-      .from('schedule_slots')
-      .delete()
-      .eq('id', id);
-
-    if (deleteError) {
-      console.error('Error deleting schedule slot:', deleteError);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: 'Failed to delete schedule slot',
-        details: deleteError.message
-      }, { status: 500 });
-    }
+    // Delete the schedule slot (cascading will handle related records)
+    await prisma.scheduleSlot.delete({
+      where: { id }
+    });
 
     return NextResponse.json({
       success: true,
@@ -558,11 +520,14 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error deleting schedule slot:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'Failed to delete schedule slot',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }

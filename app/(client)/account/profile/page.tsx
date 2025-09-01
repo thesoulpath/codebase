@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ClientProfile {
   id: string;
@@ -24,6 +24,7 @@ interface ClientProfile {
 }
 
 export default function ProfilePage() {
+  const { user } = useAuth();
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -43,27 +44,28 @@ export default function ProfilePage() {
   }, []);
 
   const fetchProfile = async () => {
+    if (!user?.access_token) return;
+    
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        const { data: profileData } = await supabase
-          .from('clients')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+      const response = await fetch('/api/client/me', {
+        headers: {
+          'Authorization': `Bearer ${user.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-        if (profileData) {
-          setProfile(profileData);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setProfile(data.data);
           setFormData({
-            full_name: profileData.full_name || '',
-            phone: profileData.phone || '',
-            date_of_birth: profileData.date_of_birth || '',
-            address: profileData.address || '',
-            emergency_contact: profileData.emergency_contact || '',
-            medical_conditions: profileData.medical_conditions || '',
-            spiritual_preferences: profileData.spiritual_preferences || ''
+            full_name: data.data.fullName || '',
+            phone: data.data.phone || '',
+            date_of_birth: data.data.birthDate || '',
+            address: data.data.birthPlace || '',
+            emergency_contact: '',
+            medical_conditions: '',
+            spiritual_preferences: data.data.question || ''
           });
         }
       }
@@ -76,33 +78,38 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
-    if (!profile) return;
+    if (!profile || !user?.access_token) return;
 
     setSaving(true);
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('clients')
-        .update({
-          full_name: formData.full_name || null,
-          phone: formData.phone || null,
-          date_of_birth: formData.date_of_birth || null,
-          address: formData.address || null,
-          emergency_contact: formData.emergency_contact || null,
-          medical_conditions: formData.medical_conditions || null,
-          spiritual_preferences: formData.spiritual_preferences || null,
-          updated_at: new Date().toISOString()
+      const response = await fetch('/api/client/me', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${user.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fullName: formData.full_name,
+          phone: formData.phone,
+          birthDate: formData.date_of_birth,
+          birthPlace: formData.address,
+          question: formData.spiritual_preferences
         })
-        .eq('id', profile.id);
+      });
 
-      if (error) {
-        throw error;
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          toast.success('Profile updated successfully');
+          setIsEditing(false);
+          fetchProfile(); // Refresh profile data
+        } else {
+          throw new Error(data.error || 'Failed to update profile');
+        }
+      } else {
+        throw new Error('Failed to update profile');
       }
-
-      toast.success('Profile updated successfully');
-      setIsEditing(false);
-      fetchProfile(); // Refresh profile data
     } catch (error) {
       console.error('Error updating profile:', error);
       toast.error('Failed to update profile');

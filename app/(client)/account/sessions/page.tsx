@@ -32,7 +32,7 @@ export default function SessionsPage() {
 
   const fetchSessions = async () => {
     try {
-      const response = await fetch('/api/client/sessions');
+      const response = await fetch('/api/client/my-bookings');
       const result = await response.json();
       
       if (result.success) {

@@ -20,7 +20,7 @@ import CreateBookingModal from './modals/CreateBookingModal';
 
 interface Client {
   id: string;
-  name: string;
+  fullName: string; // Changed from 'name' to 'fullName'
   email: string;
   phone?: string;
   status: string;
@@ -39,6 +39,7 @@ interface Client {
   updatedAt?: string;
   totalBookings?: number;
   isRecurrent?: boolean;
+  role?: string; // Added role field
 }
 
 interface Booking {
@@ -66,7 +67,7 @@ interface ClientModalProps {
 
 function ClientModal({ client, isOpen, mode, onClose, onSave }: ClientModalProps) {
   const [formData, setFormData] = useState<Partial<Client>>({
-    name: '',
+    fullName: '',
     email: '',
     phone: '',
     status: 'active',
@@ -82,17 +83,17 @@ function ClientModal({ client, isOpen, mode, onClose, onSave }: ClientModalProps
     if (client && mode !== 'create') {
       setFormData(client);
     } else {
-      setFormData({
-        name: '',
+            setFormData({
+        fullName: '',
         email: '',
         phone: '',
         status: 'active',
-              birthDate: '',
-      birthTime: '',
-      birthPlace: '',
-      question: '',
-      language: 'en',
-      adminNotes: ''
+        birthDate: '',
+        birthTime: '',
+        birthPlace: '',
+        question: '',
+        language: 'en',
+        adminNotes: ''
       });
     }
   }, [client, mode]);
@@ -143,8 +144,8 @@ function ClientModal({ client, isOpen, mode, onClose, onSave }: ClientModalProps
                   <Label htmlFor="name" className="text-gray-400">Full Name *</Label>
                   <BaseInput
                     id="name"
-                    value={formData.name || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    value={formData.fullName || ''}
+                                          onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
                     className="bg-[#1a1a2e] border-[#16213e] text-white"
                     disabled={mode === 'view'}
                     required
@@ -348,7 +349,7 @@ function BookingHistoryModal({ client, isOpen, onClose }: BookingHistoryModalPro
     setIsLoading(true);
     try {
       const response = await fetch(
-        `/api/admin/clients/${client.email}/bookings`,
+        `/api/admin/users/${client.id}/bookings`,
         {
           headers: {
             'Authorization': `Bearer ${user.access_token}`,
@@ -396,7 +397,7 @@ function BookingHistoryModal({ client, isOpen, onClose }: BookingHistoryModalPro
             <div>
               <h2 className="text-xl font-heading text-white">Booking History</h2>
               <p className="text-sm text-gray-400 mt-1">
-                All bookings for {client?.name} ({client?.email})
+                All bookings for {client?.fullName} ({client?.email})
               </p>
             </div>
             <BaseButton
@@ -628,7 +629,7 @@ export function ClientManagement() {
       console.log('Loading clients...');
 
       const response = await fetch(
-        `/api/admin/clients?enhanced=true`,
+        `/api/admin/users?enhanced=true`,
         {
           headers: {
             'Authorization': `Bearer ${user.access_token}`,
@@ -674,7 +675,7 @@ export function ClientManagement() {
     // Search filter
     if (searchQuery) {
       filtered = filtered.filter(client =>
-        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        client.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         client.birthPlace?.toLowerCase().includes(searchQuery.toLowerCase())
       );
@@ -726,8 +727,8 @@ export function ClientManagement() {
       
       switch (sortBy) {
         case 'name':
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
+          aValue = a.fullName.toLowerCase();
+          bValue = b.fullName.toLowerCase();
           break;
         case 'date':
           aValue = new Date(a.createdAt);
@@ -785,13 +786,13 @@ export function ClientManagement() {
   const handleDeleteClient = async (client: Client) => {
     if (!user?.access_token) return;
     
-    if (!confirm(`Are you sure you want to delete ${client.name}? This action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete ${client.fullName}? This action cannot be undone.`)) {
       return;
     }
 
     try {
       const response = await fetch(
-        `/api/admin/clients/${client.email}`,
+        `/api/admin/users/${client.id}`,
         {
           method: 'DELETE',
           headers: {
@@ -804,7 +805,7 @@ export function ClientManagement() {
       if (response.ok) {
         setClients(prev => prev.filter(c => c.id !== client.id));
         toast.success('Client deleted successfully', {
-          description: `${client.name} has been removed from your client list.`
+          description: `${client.fullName} has been removed from your client list.`
         });
       } else {
         const errorData = await response.json();
@@ -826,8 +827,8 @@ export function ClientManagement() {
     try {
       const isCreate = modalState.mode === 'create';
       const url = isCreate 
-        ? `/api/admin/clients`
-        : `/api/admin/clients/${selectedClient?.email}`;
+        ? `/api/admin/users`
+        : `/api/admin/users/${selectedClient?.id}`;
 
       const response = await fetch(url, {
         method: isCreate ? 'POST' : 'PUT',
@@ -899,7 +900,7 @@ export function ClientManagement() {
     completed: clients.filter(c => c.status === 'completed').length,
     recurrent: clients.filter(c => c.isRecurrent).length
   });
-  console.log('All client statuses:', clients.map(c => ({ name: c.name, status: c.status })));
+  console.log('All client statuses:', clients.map(c => ({ name: c.fullName, status: c.status })));
 
   if (isLoading) {
     return (
@@ -1194,7 +1195,7 @@ export function ClientManagement() {
                             <User size={16} className="text-[#FFD700]" />
                           </div>
                           <div>
-                            <p className="font-medium text-white">{client.name}</p>
+                            <p className="font-medium text-white">{client.fullName}</p>
                             <p className="text-sm text-gray-400">
                               {client.language === 'en' ? '🇺🇸' : '🇪🇸'} {client.birthPlace}
                             </p>
@@ -1281,7 +1282,7 @@ export function ClientManagement() {
                       <User size={20} className="text-[#FFD700]" />
                     </div>
                     <div>
-                      <h3 className="font-medium text-white">{client.name}</h3>
+                      <h3 className="font-medium text-white">{client.fullName}</h3>
                       <p className="text-sm text-gray-400">
                         {client.language === 'en' ? '🇺🇸' : '🇪🇸'} {client.email}
                       </p>

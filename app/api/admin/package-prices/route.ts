@@ -1,124 +1,188 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { PrismaClient } from '@prisma/client';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const prisma = new PrismaClient();
 
-// Zod schemas
-const packagePriceSchema = z.object({
-  package_definition_id: z.number().int().positive('Package definition ID must be a positive integer'),
-  currency_id: z.number().int().positive('Currency ID must be a positive integer'),
-  price: z.number().min(0, 'Price must be non-negative'),
-  pricing_mode: z.enum(['custom', 'calculated']),
-  is_active: z.boolean().default(true)
+// Zod schemas for package price validation
+const createPackagePriceSchema = z.object({
+  packageDefinitionId: z.number().int().positive('Package definition ID must be positive'),
+  currencyId: z.number().int().positive('Currency ID must be positive'),
+  price: z.number().positive('Price must be positive'),
+  pricingMode: z.string().min(1, 'Pricing mode is required').max(20, 'Pricing mode too long'),
+  isActive: z.boolean().default(true)
 });
 
-const updatePackagePriceSchema = packagePriceSchema.partial().extend({
-  id: z.number().int().positive('Package price ID must be a positive integer')
+const updatePackagePriceSchema = createPackagePriceSchema.partial().extend({
+  id: z.number().int().positive('Package price ID must be positive')
+});
+
+const querySchema = z.object({
+  packageDefinitionId: z.coerce.number().int().positive().optional(),
+  currencyId: z.coerce.number().int().positive().optional(),
+  isActive: z.enum(['true', 'false']).optional(),
+  pricingMode: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  enhanced: z.enum(['true', 'false']).optional()
 });
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 GET /api/admin/package-prices - Starting request...');
+    
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
+      console.log('❌ Unauthorized access attempt');
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
+    console.log('✅ Admin user authenticated:', user.email);
+
     const { searchParams } = new URL(request.url);
-    const packageDefinitionId = searchParams.get('package_definition_id');
-    const currencyId = searchParams.get('currency_id');
-    const pricingMode = searchParams.get('pricing_mode');
-    const isActive = searchParams.get('is_active');
+    const queryParams = Object.fromEntries(searchParams.entries());
+    const validation = querySchema.safeParse(queryParams);
 
-    // Build the query
-    let query = supabase
-      .from('package_prices')
-      .select(`
-        *,
-        package_definitions (
-          id,
-          name,
-          sessions_count,
-          package_type,
-          max_group_size,
-          session_durations (
-            id,
-            name,
-            duration_minutes
-          )
-        ),
-        currencies (
-          id,
-          code,
-          name,
-          symbol,
-          exchange_rate
-        )
-      `)
-      .order('package_definition_id', { ascending: true });
-
-    // Apply filters
-    if (packageDefinitionId && packageDefinitionId !== 'all') {
-      query = query.eq('package_definition_id', packageDefinitionId);
-    }
-    if (currencyId && currencyId !== 'all') {
-      query = query.eq('currency_id', currencyId);
-    }
-    if (pricingMode && pricingMode !== 'all') {
-      query = query.eq('pricing_mode', pricingMode);
-    }
-    if (isActive !== null && isActive !== 'all') {
-      query = query.eq('is_active', isActive === 'true');
-    }
-
-    const { data: packagePrices, error } = await query;
-
-    if (error) {
-      console.error('Error fetching package prices:', error);
+    if (!validation.success) {
       return NextResponse.json({
         success: false,
-        error: 'Database error',
-        message: 'Failed to fetch package prices',
-        details: error.message
-      }, { status: 500 });
+        error: 'Invalid query parameters',
+        details: validation.error.issues
+      }, { status: 400 });
     }
+
+    const { packageDefinitionId, currencyId, isActive, pricingMode, page, limit, enhanced } = validation.data;
+    const offset = (page - 1) * limit;
+
+    console.log('🔍 Query parameters:', { packageDefinitionId, currencyId, isActive, pricingMode, page, limit, enhanced });
+
+    // Build the query with proper relationships
+    const where: any = {};
+    
+    if (packageDefinitionId) where.packageDefinitionId = packageDefinitionId;
+    if (currencyId) where.currencyId = currencyId;
+    if (isActive !== undefined) where.isActive = isActive === 'true';
+    if (pricingMode) where.pricingMode = pricingMode;
+
+    // Base select fields
+    const select: any = {
+      id: true,
+      packageDefinitionId: true,
+      currencyId: true,
+      price: true,
+      pricingMode: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+      packageDefinition: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          sessionsCount: true,
+          packageType: true,
+          sessionDuration: {
+            select: {
+              id: true,
+              name: true,
+              duration_minutes: true
+            }
+          }
+        }
+      },
+      currency: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          symbol: true
+        }
+      }
+    };
+
+    // Enhanced mode includes usage statistics
+    if (enhanced === 'true') {
+      select._count = {
+        userPackages: true
+      };
+      select.userPackages = {
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          quantity: true,
+          sessionsUsed: true,
+          isActive: true,
+          user: {
+            select: {
+              id: true,
+              email: true,
+              fullName: true
+            }
+          }
+        }
+      };
+    }
+
+    console.log('🔍 Executing database query...');
+    
+    const [packagePrices, totalCount] = await Promise.all([
+      prisma.packagePrice.findMany({
+        where,
+        select,
+        skip: offset,
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.packagePrice.count({ where })
+    ]);
+
+    console.log('✅ Database query successful, found', packagePrices.length, 'package prices');
+
+    const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
       success: true,
-      data: packagePrices
+      data: packagePrices,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages
+      }
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Unexpected error in package-prices API:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'An unexpected error occurred',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
     const body = await request.json();
-    const validation = packagePriceSchema.safeParse(body);
+    const validation = createPackagePriceSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json({
@@ -131,14 +195,12 @@ export async function POST(request: NextRequest) {
 
     const priceData = validation.data;
 
-    // Check if package definition exists
-    const { data: packageDefinition, error: packageError } = await supabase
-      .from('package_definitions')
-      .select('*')
-      .eq('id', priceData.package_definition_id)
-      .single();
+    // Verify package definition exists
+    const packageDefinition = await prisma.packageDefinition.findUnique({
+      where: { id: priceData.packageDefinitionId }
+    });
 
-    if (packageError || !packageDefinition) {
+    if (!packageDefinition) {
       return NextResponse.json({
         success: false,
         error: 'Package definition not found',
@@ -146,14 +208,12 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Check if currency exists
-    const { data: currency, error: currencyError } = await supabase
-      .from('currencies')
-      .select('*')
-      .eq('id', priceData.currency_id)
-      .single();
+    // Verify currency exists
+    const currency = await prisma.currency.findUnique({
+      where: { id: priceData.currencyId }
+    });
 
-    if (currencyError || !currency) {
+    if (!currency) {
       return NextResponse.json({
         success: false,
         error: 'Currency not found',
@@ -161,100 +221,52 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Check if price already exists for this package and currency
-    const { data: existingPrice, error: existingError } = await supabase
-      .from('package_prices')
-      .select('id')
-      .eq('package_definition_id', priceData.package_definition_id)
-      .eq('currency_id', priceData.currency_id)
-      .single();
+    // Check if price already exists for this package definition and currency
+    const existingPrice = await prisma.packagePrice.findFirst({
+      where: {
+        packageDefinitionId: priceData.packageDefinitionId,
+        currencyId: priceData.currencyId
+      }
+    });
 
-    if (existingError && existingError.code !== 'PGRST116') {
-      console.error('Error checking existing price:', existingError);
-    } else if (existingPrice) {
+    if (existingPrice) {
       return NextResponse.json({
         success: false,
         error: 'Price already exists',
-        message: 'A price for this package and currency combination already exists'
-      }, { status: 400 });
-    }
-
-    // If pricing mode is calculated, calculate the price based on exchange rate
-    if (priceData.pricing_mode === 'calculated') {
-      // Get the base currency (USD)
-      const { data: baseCurrency, error: baseCurrencyError } = await supabase
-        .from('currencies')
-        .select('*')
-        .eq('is_default', true)
-        .single();
-
-      if (baseCurrencyError || !baseCurrency) {
-        return NextResponse.json({
-          success: false,
-          error: 'Base currency not found',
-          message: 'No default currency found for price calculation'
-        }, { status: 500 });
-      }
-
-      // Get the base price for this package
-      const { data: basePrice, error: basePriceError } = await supabase
-        .from('package_prices')
-        .select('price')
-        .eq('package_definition_id', priceData.package_definition_id)
-        .eq('currency_id', baseCurrency.id)
-        .eq('is_active', true)
-        .single();
-
-      if (basePriceError || !basePrice) {
-        return NextResponse.json({
-          success: false,
-          error: 'Base price not found',
-          message: 'No base price found for this package. Please create a price in the base currency first.'
-        }, { status: 400 });
-      }
-
-      // Calculate price based on exchange rate
-      const calculatedPrice = basePrice.price * (currency.exchange_rate / baseCurrency.exchange_rate);
-      priceData.price = Math.round(calculatedPrice * 100) / 100; // Round to 2 decimal places
+        message: 'A price for this package definition and currency already exists'
+      }, { status: 409 });
     }
 
     // Create the package price
-    const { data: newPackagePrice, error: createError } = await supabase
-      .from('package_prices')
-      .insert(priceData)
-      .select(`
-        *,
-        package_definitions (
-          id,
-          name,
-          sessions_count,
-          package_type,
-          max_group_size,
-          session_durations (
-            id,
-            name,
-            duration_minutes
-          )
-        ),
-        currencies (
-          id,
-          code,
-          name,
-          symbol,
-          exchange_rate
-        )
-      `)
-      .single();
-
-    if (createError) {
-      console.error('Error creating package price:', createError);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: 'Failed to create package price',
-        details: createError.message
-      }, { status: 500 });
-    }
+    const newPackagePrice = await prisma.packagePrice.create({
+      data: priceData,
+      include: {
+        packageDefinition: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            sessionsCount: true,
+            packageType: true,
+            sessionDuration: {
+              select: {
+                id: true,
+                name: true,
+                duration_minutes: true
+              }
+            }
+          }
+        },
+        currency: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            symbol: true
+          }
+        }
+      }
+    });
 
     return NextResponse.json({
       success: true,
@@ -263,23 +275,26 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error creating package price:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'Failed to create package price',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
@@ -298,112 +313,101 @@ export async function PUT(request: NextRequest) {
     const { id, ...updateData } = validation.data;
 
     // Check if package price exists
-    const { data: existingPrice, error: checkError } = await supabase
-      .from('package_prices')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const existingPrice = await prisma.packagePrice.findUnique({
+      where: { id }
+    });
 
-    if (checkError || !existingPrice) {
+    if (!existingPrice) {
       return NextResponse.json({
         success: false,
         error: 'Package price not found',
-        message: 'The specified package price does not exist'
+        message: 'Package price with this ID does not exist'
       }, { status: 404 });
     }
 
-    // If updating pricing mode to calculated, recalculate the price
-    if (updateData.pricing_mode === 'calculated') {
-      // Get the base currency (USD)
-      const { data: baseCurrency, error: baseCurrencyError } = await supabase
-        .from('currencies')
-        .select('*')
-        .eq('is_default', true)
-        .single();
+    // Verify package definition exists if being updated
+    if (updateData.packageDefinitionId) {
+      const packageDefinition = await prisma.packageDefinition.findUnique({
+        where: { id: updateData.packageDefinitionId }
+      });
 
-      if (baseCurrencyError || !baseCurrency) {
+      if (!packageDefinition) {
         return NextResponse.json({
           success: false,
-          error: 'Base currency not found',
-          message: 'No default currency found for price calculation'
-        }, { status: 500 });
+          error: 'Package definition not found',
+          message: 'The specified package definition does not exist'
+        }, { status: 404 });
       }
+    }
 
-      // Get the base price for this package
-      const { data: basePrice, error: basePriceError } = await supabase
-        .from('package_prices')
-        .select('price')
-        .eq('package_definition_id', existingPrice.package_definition_id)
-        .eq('currency_id', baseCurrency.id)
-        .eq('is_active', true)
-        .single();
+    // Verify currency exists if being updated
+    if (updateData.currencyId) {
+      const currency = await prisma.currency.findUnique({
+        where: { id: updateData.currencyId }
+      });
 
-      if (basePriceError || !basePrice) {
-        return NextResponse.json({
-          success: false,
-          error: 'Base price not found',
-          message: 'No base price found for this package. Please create a price in the base currency first.'
-        }, { status: 400 });
-      }
-
-      // Get current currency
-      const { data: currency, error: currencyError } = await supabase
-        .from('currencies')
-        .select('*')
-        .eq('id', existingPrice.currency_id)
-        .single();
-
-      if (currencyError || !currency) {
+      if (!currency) {
         return NextResponse.json({
           success: false,
           error: 'Currency not found',
           message: 'The specified currency does not exist'
-        }, { status: 500 });
+        }, { status: 404 });
       }
+    }
 
-      // Calculate price based on exchange rate
-      const calculatedPrice = basePrice.price * (currency.exchange_rate / baseCurrency.exchange_rate);
-      updateData.price = Math.round(calculatedPrice * 100) / 100; // Round to 2 decimal places
+    // Check for conflicts if package definition or currency is being updated
+    if (updateData.packageDefinitionId || updateData.currencyId) {
+      const newPackageDefId = updateData.packageDefinitionId || existingPrice.packageDefinitionId;
+      const newCurrencyId = updateData.currencyId || existingPrice.currencyId;
+
+      const conflict = await prisma.packagePrice.findFirst({
+        where: {
+          packageDefinitionId: newPackageDefId,
+          currencyId: newCurrencyId,
+          id: { not: id }
+        }
+      });
+
+      if (conflict) {
+        return NextResponse.json({
+          success: false,
+          error: 'Price conflict',
+          message: 'A price for this package definition and currency already exists'
+        }, { status: 409 });
+      }
     }
 
     // Update the package price
-    const { data: updatedPackagePrice, error: updateError } = await supabase
-      .from('package_prices')
-      .update(updateData)
-      .eq('id', id)
-      .select(`
-        *,
-        package_definitions (
-          id,
-          name,
-          sessions_count,
-          package_type,
-          max_group_size,
-          session_durations (
-            id,
-            name,
-            duration_minutes
-          )
-        ),
-        currencies (
-          id,
-          code,
-          name,
-          symbol,
-          exchange_rate
-        )
-      `)
-      .single();
-
-    if (updateError) {
-      console.error('Error updating package price:', updateError);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: 'Failed to update package price',
-        details: updateError.message
-      }, { status: 500 });
-    }
+    const updatedPackagePrice = await prisma.packagePrice.update({
+      where: { id },
+      data: updateData,
+      include: {
+        packageDefinition: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            sessionsCount: true,
+            packageType: true,
+            sessionDuration: {
+              select: {
+                id: true,
+                name: true,
+                duration_minutes: true
+              }
+            }
+          }
+        },
+        currency: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            symbol: true
+          }
+        }
+      }
+    });
 
     return NextResponse.json({
       success: true,
@@ -412,30 +416,33 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error updating package price:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'Failed to update package price',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const priceId = searchParams.get('id');
 
-    if (!id) {
+    if (!priceId) {
       return NextResponse.json({
         success: false,
         error: 'Missing ID',
@@ -443,53 +450,46 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if package price exists
-    const { data: existingPrice, error: checkError } = await supabase
-      .from('package_prices')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const id = parseInt(priceId);
+    if (isNaN(id)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid ID',
+        message: 'Package price ID must be a number'
+      }, { status: 400 });
+    }
 
-    if (checkError || !existingPrice) {
+    // Check if package price exists and has no active user packages
+    const existingPrice = await prisma.packagePrice.findUnique({
+      where: { id },
+      include: {
+        userPackages: {
+          where: { isActive: true }
+        }
+      }
+    });
+
+    if (!existingPrice) {
       return NextResponse.json({
         success: false,
         error: 'Package price not found',
-        message: 'The specified package price does not exist'
+        message: 'Package price with this ID does not exist'
       }, { status: 404 });
     }
 
-    // Check if package price is being used in user packages
-    const { data: usedPackages, error: usageError } = await supabase
-      .from('user_packages')
-      .select('id')
-      .eq('package_price_id', id)
-      .limit(1);
-
-    if (usageError) {
-      console.error('Error checking package price usage:', usageError);
-    } else if (usedPackages && usedPackages.length > 0) {
+    // Check if there are active user packages
+    if (existingPrice.userPackages.length > 0) {
       return NextResponse.json({
         success: false,
-        error: 'Package price in use',
-        message: 'Cannot delete package price that is being used by users'
+        error: 'Cannot delete package price',
+        message: 'Package price has active user packages and cannot be deleted'
       }, { status: 400 });
     }
 
     // Delete the package price
-    const { error: deleteError } = await supabase
-      .from('package_prices')
-      .delete()
-      .eq('id', id);
-
-    if (deleteError) {
-      console.error('Error deleting package price:', deleteError);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: 'Failed to delete package price',
-        details: deleteError.message
-      }, { status: 500 });
-    }
+    await prisma.packagePrice.delete({
+      where: { id }
+    });
 
     return NextResponse.json({
       success: true,
@@ -497,11 +497,14 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error deleting package price:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'Failed to delete package price',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }

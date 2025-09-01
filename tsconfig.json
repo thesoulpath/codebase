@@ -43,6 +43,7 @@
     "lib/**/*.tsx",
     "hooks/**/*.ts",
     "hooks/**/*.tsx",
+    "types/**/*.d.ts",
     ".next/types/**/*.ts"
   ],
   "exclude": [

@@ -18,7 +18,8 @@ import {
   History, 
   Database,
   Bug,
-  User
+  User,
+  Star
 } from 'lucide-react';
 
 import { useAuth } from '../hooks/useAuth';
@@ -37,6 +38,9 @@ import PaymentRecordsManagement from './PaymentRecordsManagement';
 import PurchaseHistoryManagement from './PurchaseHistoryManagement';
 import { SettingsManagement } from './SettingsManagement';
 import { BugReportManagement } from './BugReportManagement';
+import { BugReportSystem } from './BugReportSystem';
+
+import { AstrologyManagement } from './AstrologyManagement';
 import Link from 'next/link';
 
 interface AdminDashboardProps {
@@ -81,13 +85,26 @@ export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps)
           </div>
           
           <div className="flex items-center space-x-3">
+            {/* Report Bug Button */}
+            <BugReportSystem>
+              {({ openReport }) => (
+                <button
+                  onClick={openReport}
+                  className="inline-flex items-center justify-center font-[var(--font-weight-medium)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 focus:ring-offset-[var(--color-background-primary)] disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 bg-purple-600 text-white hover:bg-purple-700 border border-purple-500 rounded-[var(--border-radius-md)] px-[var(--spacing-2)] py-[var(--spacing-1)] text-[var(--font-size-sm)]"
+                >
+                  <Bug size={16} className="mr-2 text-white" />
+                  Report Bug
+                </button>
+              )}
+            </BugReportSystem>
+
             {/* Close button - only show in modal mode */}
             {isModal && onClose && (
               <button
                 onClick={onClose}
                 className="inline-flex items-center justify-center font-[var(--font-weight-medium)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-secondary-600)] focus:ring-offset-2 focus:ring-offset-[var(--color-background-primary)] disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 bg-[var(--color-secondary-800)] text-white hover:bg-[var(--color-secondary-700)] border border-[var(--color-secondary-600)] rounded-[var(--border-radius-md)] px-[var(--spacing-2)] py-[var(--spacing-1)] text-[var(--font-size-sm)]"
               >
-                <X size={16} className="mr-2" />
+                <X size={16} className="mr-2 text-white" />
                 Close
               </button>
             )}
@@ -117,9 +134,11 @@ export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps)
 
       <div className="flex h-[calc(100vh-80px)]">
         {/* Sidebar Navigation */}
-        <nav className="w-56 bg-[var(--color-sidebar-800)] border-r border-[var(--color-border-500)] p-3 overflow-y-auto">
+        <nav className="w-56 bg-[var(--color-sidebar-800)] border-r border-[var(--color-border-500)] p-3 overflow-y-auto">e
+          
           <div className="space-y-1">
             {[
+              { key: 'astrology', icon: Star, label: 'Astrology Charts' },
               { key: 'clients', icon: Users, label: 'Client Management' },
               { key: 'bookings', icon: Calendar, label: 'Bookings Management' },
               { key: 'schedules', icon: Clock, label: 'Schedule Management' },
@@ -134,19 +153,33 @@ export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps)
               { key: 'purchase-history', icon: History, label: 'Purchase History' },
               { key: 'settings', icon: Database, label: 'Settings' },
               { key: 'bug-reports', icon: Bug, label: 'Bug Reports' },
-            ].map(({ key, icon: Icon, label }) => (
-              <button
-                key={key}
-                onClick={() => setActiveTab(key)}
-                className={combineStyles(
-                  sidebarButtonStyles.base,
-                  activeTab === key ? sidebarButtonStyles.variants.active : sidebarButtonStyles.variants.inactive
-                )}
-              >
-                <Icon size={18} className={sidebarButtonStyles.icon} />
-                <span className={sidebarButtonStyles.label}>{label}</span>
-              </button>
-            ))}
+            ].map(({ key, icon: Icon, label }) => {
+              // Special styling for astrology button
+              const isAstrology = key === 'astrology';
+              const isActive = activeTab === key;
+              
+              const buttonClasses = isAstrology 
+                ? `w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                    isActive 
+                      ? 'bg-purple-600 text-white' 
+                      : 'bg-purple-600 text-white hover:bg-orange-500'
+                  }`
+                : combineStyles(
+                    sidebarButtonStyles.base,
+                    isActive ? sidebarButtonStyles.variants.active : sidebarButtonStyles.variants.inactive
+                  );
+              
+              return (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={buttonClasses}
+                >
+                  <Icon size={18} className={sidebarButtonStyles.icon} />
+                  <span className={sidebarButtonStyles.label}>{label}</span>
+                </button>
+              );
+            })}
           </div>
         </nav>
 
@@ -175,6 +208,8 @@ export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps)
                 {activeTab === 'purchase-history' && <PurchaseHistoryManagement />}
                 {activeTab === 'settings' && <SettingsManagement />}
                 {activeTab === 'bug-reports' && <BugReportManagement />}
+
+                {activeTab === 'astrology' && <AstrologyManagement />}
               </motion.div>
             </AnimatePresence>
           </div>

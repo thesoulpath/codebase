@@ -1,208 +1,267 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
+import Stripe from 'stripe';
+import { headers } from 'next/headers';
 
-// Build-time check - prevent Stripe imports during build
-let getStripe: any;
-let stripeConfig: any;
+// Initialize Stripe client inside the function to avoid build-time issues
+const getStripe = () => {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    console.warn('STRIPE_SECRET_KEY is not configured - Stripe webhook disabled');
+    return null;
+  }
+  return new Stripe(secretKey, {
+    apiVersion: '2025-08-27.basil',
+  });
+};
 
-if (process.env.NODE_ENV !== 'production' || process.env.STRIPE_SECRET_KEY) {
-  const stripeModule = require('@/lib/stripe/config');
-  getStripe = stripeModule.getStripe;
-  stripeConfig = stripeModule.stripeConfig;
-}
+const getEndpointSecret = () => {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) {
+    console.warn('STRIPE_WEBHOOK_SECRET is not configured - Stripe webhook disabled');
+    return null;
+  }
+  return secret;
+};
 
 export async function POST(request: NextRequest) {
-  // Build-time check - prevent execution during build
-  if (process.env.NODE_ENV === 'production' && !process.env.STRIPE_SECRET_KEY) {
-    return NextResponse.json(
-      { error: 'Stripe not configured' },
-      { status: 500 }
-    );
-  }
-
-  // Runtime check - ensure Stripe is available
-  if (!getStripe || !stripeConfig) {
-    return NextResponse.json(
-      { error: 'Stripe not configured' },
-      { status: 500 }
-    );
-  }
-
-  const body = await request.text();
-  const signature = request.headers.get('stripe-signature');
-
-  if (!signature) {
-    return NextResponse.json(
-      { error: 'Missing stripe signature' },
-      { status: 400 }
-    );
-  }
-
-  let event;
-
   try {
+    const body = await request.text();
+    const headersList = await headers();
+    const sig = headersList.get('stripe-signature');
+
+    if (!sig) {
+      return NextResponse.json(
+        { error: 'No signature provided' },
+        { status: 400 }
+      );
+    }
+
     const stripe = getStripe();
-    event = stripe.webhooks.constructEvent(body, signature, stripeConfig.webhookSecret);
-  } catch (err) {
-    console.error('Webhook signature verification failed:', err);
-    return NextResponse.json(
-      { error: 'Invalid signature' },
-      { status: 400 }
+    const endpointSecret = getEndpointSecret();
+
+    // If Stripe is not configured, return success to avoid build errors
+    if (!stripe || !endpointSecret) {
+      console.log('Stripe webhook disabled - returning success');
+      return NextResponse.json({ received: true, message: 'Stripe webhook disabled' });
+    }
+
+    let event: Stripe.Event;
+
+    try {
+      event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
+    } catch (err) {
+      console.error('Webhook signature verification failed:', err);
+      return NextResponse.json(
+        { error: 'Invalid signature' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
-  }
 
-  try {
-    const supabase = await createServerClient();
-
+    // Handle the event
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object, supabase);
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session, supabase);
         break;
-
+      
       case 'payment_intent.succeeded':
-        await handlePaymentIntentSucceeded(event.data.object, supabase);
+        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent, supabase);
         break;
-
+      
       case 'payment_intent.payment_failed':
-        await handlePaymentIntentFailed(event.data.object, supabase);
+        await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent, supabase);
         break;
-
-      case 'customer.subscription.created':
-        await handleSubscriptionCreated(event.data.object, supabase);
+      
+      case 'invoice.payment_succeeded':
+        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice, supabase);
         break;
-
-      case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object, supabase);
+      
+      case 'invoice.payment_failed':
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice, supabase);
         break;
-
-      case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object, supabase);
-        break;
-
+      
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }
 
     return NextResponse.json({ received: true });
+
   } catch (error) {
-    console.error('Error processing webhook:', error);
+    console.error('Webhook error:', error);
     return NextResponse.json(
-      { error: 'Webhook processing failed' },
+      { error: 'Webhook handler failed' },
       { status: 500 }
     );
   }
 }
 
-async function handleCheckoutSessionCompleted(session: any, supabase: any) {
-  console.log('Checkout session completed:', session.id);
-
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, supabase: any) {
   try {
-    // Extract customer information
-    const customerEmail = session.customer_details?.email;
-    const amount = session.amount_total;
-    const currency = session.currency;
-    const metadata = session.metadata;
+    console.log('Processing checkout session completed:', session.id);
 
-    if (customerEmail && amount) {
-      // Create or update payment record
-      const { error } = await supabase
-        .from('payment_records')
+    const metadata = session.metadata;
+    if (!metadata) {
+      console.error('No metadata found in session');
+      return;
+    }
+
+    const customerId = metadata.customer_id;
+    const packageId = metadata.package_id;
+    // const paymentMethodId = metadata.payment_method_id; // Unused for now
+    const quantity = parseInt(metadata.quantity || '1');
+    const totalAmount = parseFloat(metadata.total_amount || '0');
+
+    // Update purchase record to completed
+    const { error: purchaseUpdateError } = await supabase
+      .from('purchases')
+      .update({
+        status: 'completed',
+        transaction_id: session.payment_intent as string,
+        updated_at: new Date().toISOString(),
+        metadata: {
+          ...session.metadata,
+          stripe_payment_intent: session.payment_intent,
+          stripe_customer: session.customer
+        }
+      })
+      .eq('stripe_session_id', session.id);
+
+    if (purchaseUpdateError) {
+      console.error('Error updating purchase record:', purchaseUpdateError);
+    }
+
+    // Get package details
+    const { data: packageData, error: packageError } = await supabase
+      .from('package_definitions')
+      .select(`
+        id,
+        name,
+        description,
+        sessions_count,
+        session_duration_id,
+        package_type,
+        max_group_size
+      `)
+      .eq('id', packageId)
+      .single();
+
+    if (packageError || !packageData) {
+      console.error('Package not found:', packageId);
+      return;
+    }
+
+    // Create customer packages for each quantity
+    for (let i = 0; i < quantity; i++) {
+      const { error: customerPackageError } = await supabase
+        .from('customer_packages')
         .insert({
-          client_id: metadata?.client_id,
-          amount: amount / 100, // Convert from cents
-          currency_id: await getCurrencyId(currency, supabase),
-          payment_method: 'stripe',
-          payment_status: 'completed',
-          transaction_id: session.id,
-          notes: `Stripe checkout completed - ${metadata?.description || 'Payment'}`,
+          customer_id: customerId,
+          package_definition_id: packageId,
+          status: 'active',
+                  sessions_remaining: packageData.sessions_count,
+        total_sessions: packageData.sessions_count,
+          purchase_date: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
           metadata: {
             stripe_session_id: session.id,
-            stripe_customer_id: session.customer,
-            ...metadata,
-          },
+            stripe_payment_intent: session.payment_intent,
+            purchase_amount: totalAmount / quantity
+          }
         });
 
-      if (error) {
-        console.error('Error creating payment record:', error);
+      if (customerPackageError) {
+        console.error('Error creating customer package:', customerPackageError);
       }
     }
+
+    // Send confirmation email (you can implement this)
+    console.log(`Successfully processed payment for customer ${customerId}, package ${packageId}`);
+
   } catch (error) {
     console.error('Error handling checkout session completed:', error);
   }
 }
 
-async function handlePaymentIntentSucceeded(paymentIntent: any, supabase: any) {
-  console.log('Payment intent succeeded:', paymentIntent.id);
-
+async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent, supabase: any) {
   try {
-    // Update payment record status
-    const { error } = await supabase
-      .from('payment_records')
-      .update({
-        payment_status: 'completed',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('transaction_id', paymentIntent.id);
+    console.log('Processing payment intent succeeded:', paymentIntent.id);
 
-    if (error) {
-      console.error('Error updating payment record:', error);
+    // Update any pending purchases with this payment intent
+    const { error: updateError } = await supabase
+      .from('purchases')
+      .update({
+        status: 'completed',
+        transaction_id: paymentIntent.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq('transaction_id', paymentIntent.id)
+      .eq('status', 'pending');
+
+    if (updateError) {
+      console.error('Error updating purchase with payment intent:', updateError);
     }
+
   } catch (error) {
     console.error('Error handling payment intent succeeded:', error);
   }
 }
 
-async function handlePaymentIntentFailed(paymentIntent: any, supabase: any) {
-  console.log('Payment intent failed:', paymentIntent.id);
-
+async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent, supabase: any) {
   try {
-    // Update payment record status
-    const { error } = await supabase
-      .from('payment_records')
+    console.log('Processing payment intent failed:', paymentIntent.id);
+
+    // Update purchase record to failed
+    const { error: updateError } = await supabase
+      .from('purchases')
       .update({
-        payment_status: 'failed',
+        status: 'failed',
         updated_at: new Date().toISOString(),
+        metadata: {
+          failure_reason: paymentIntent.last_payment_error?.message,
+          failure_code: paymentIntent.last_payment_error?.code
+        }
       })
       .eq('transaction_id', paymentIntent.id);
 
-    if (error) {
-      console.error('Error updating payment record:', error);
+    if (updateError) {
+      console.error('Error updating failed purchase:', updateError);
     }
+
   } catch (error) {
     console.error('Error handling payment intent failed:', error);
   }
 }
 
-async function handleSubscriptionCreated(subscription: any, _supabase: any) {
-  console.log('Subscription created:', subscription.id);
-  // Handle subscription creation logic
-}
-
-async function handleSubscriptionUpdated(subscription: any, _supabase: any) {
-  console.log('Subscription updated:', subscription.id);
-  // Handle subscription update logic
-}
-
-async function handleSubscriptionDeleted(subscription: any, _supabase: any) {
-  console.log('Subscription deleted:', subscription.id);
-  // Handle subscription deletion logic
-}
-
-async function getCurrencyId(currencyCode: string, supabase: any): Promise<number | null> {
+async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, _supabase: any) {
   try {
-    const { data, error } = await supabase
-      .from('currencies')
-      .select('id')
-      .eq('code', currencyCode.toUpperCase())
-      .single();
+    console.log('Processing invoice payment succeeded:', invoice.id);
 
-    if (error || !data) {
-      return null;
+    // Handle subscription payments if needed
+    if ('subscription' in invoice && invoice.subscription) {
+      // Update subscription status
+      console.log('Subscription payment processed:', invoice.subscription);
     }
 
-    return data.id;
   } catch (error) {
-    console.error('Error getting currency ID:', error);
-    return null;
+    console.error('Error handling invoice payment succeeded:', error);
+  }
+}
+
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, _supabase: any) {
+  try {
+    console.log('Processing invoice payment failed:', invoice.id);
+
+    // Handle failed subscription payments
+    if ('subscription' in invoice && invoice.subscription) {
+      console.log('Subscription payment failed:', invoice.subscription);
+    }
+
+  } catch (error) {
+    console.error('Error handling invoice payment failed:', error);
   }
 }

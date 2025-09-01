@@ -40,7 +40,7 @@ export function SettingsManagement() {
     setSeedMessage('');
 
     try {
-      const response = await fetch('http://localhost:3001/api/admin/content/seed', {
+      const response = await fetch('/api/admin/content/seed', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,8 +86,8 @@ export function SettingsManagement() {
 
     try {
       const url = clearExisting 
-        ? 'http://localhost:3001/api/admin/seed/clients?clear=true'
-        : 'http://localhost:3001/api/admin/seed/clients';
+        ? '/api/admin/seed/users?clear=true'
+        : '/api/admin/seed/users';
         
       const response = await fetch(url, {
         method: 'POST',
@@ -133,7 +133,7 @@ export function SettingsManagement() {
     setSeedSchedulesMessage('');
 
     try {
-      const response = await fetch('http://localhost:3001/api/admin/seed/schedules', {
+      const response = await fetch('/api/admin/seed/schedules', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

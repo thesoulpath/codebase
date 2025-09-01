@@ -21,12 +21,14 @@ import { BaseInput } from '@/components/ui/BaseInput';
 import { BaseModal } from '@/components/ui/BaseModal';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { BugReportSystem } from './BugReportSystem';
 
 interface BugReport {
   id: string;
   title: string;
   description: string;
   screenshot: string | null;
+  annotations: any[] | null;
   status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'ARCHIVED';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   category: string;
@@ -257,12 +259,28 @@ export function BugReportManagement() {
     <div className="space-y-6">
       {/* Header */}
       <div className="border-b border-gray-600/20 pb-4">
-        <h2 className="text-2xl font-bold text-white mb-2">
-          Bug Report Management
-        </h2>
-        <p className="text-gray-400">
-          Monitor and manage bug reports from users
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Bug Report Management
+            </h2>
+            <p className="text-gray-400">
+              Monitor and manage bug reports from users
+            </p>
+          </div>
+          <BugReportSystem>
+            {({ openReport }) => (
+              <BaseButton
+                onClick={openReport}
+                variant="primary"
+                size="md"
+                leftIcon={<Bug size={16} />}
+              >
+                Report Bug
+              </BaseButton>
+            )}
+          </BugReportSystem>
+        </div>
       </div>
 
       {/* Filters */}
@@ -366,13 +384,24 @@ export function BugReportManagement() {
                       <div className="flex items-center space-x-1">
                         <User size={14} />
                         <span>{bug.reporter?.fullName || 'Anonymous'}</span>
+                        {bug.reporter?.email && (
+                          <span className="text-gray-600">({bug.reporter.email})</span>
+                        )}
                       </div>
                       <div className="flex items-center space-x-1">
                         <Calendar size={14} />
                         <span>{new Date(bug.createdAt).toLocaleDateString()}</span>
+                        <span className="text-gray-600">
+                          {new Date(bug.createdAt).toLocaleTimeString()}
+                        </span>
                       </div>
                       {bug.category && (
                         <span className="px-2 py-1 bg-gray-700 rounded text-xs">{bug.category}</span>
+                      )}
+                      {bug.annotations && bug.annotations.length > 0 && (
+                        <span className="px-2 py-1 bg-blue-700 rounded text-xs">
+                          {bug.annotations.length} annotation{bug.annotations.length !== 1 ? 's' : ''}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -429,25 +458,118 @@ export function BugReportManagement() {
       >
         {selectedBug && (
           <div className="space-y-6">
-            {/* Screenshot */}
-            {selectedBug.screenshot && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-300 mb-2">Screenshot</h4>
-                <img
-                  src={selectedBug.screenshot}
-                  alt="Bug Screenshot"
-                  className="max-w-full h-64 object-contain rounded-lg border border-gray-600"
-                />
+            {/* Summary Card */}
+            <div className="p-4 bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold text-white">Bug Report Summary</h3>
+                <div className="flex items-center space-x-2">
+                  <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(selectedBug.status)}`}>
+                    {selectedBug.status.replace('_', ' ')}
+                  </span>
+                  <span className={`px-2 py-1 rounded text-xs font-medium border ${getPriorityColor(selectedBug.priority)}`}>
+                    {selectedBug.priority}
+                  </span>
+                </div>
               </div>
-            )}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-400">Category</p>
+                  <p className="text-white font-medium">{selectedBug.category || 'Not specified'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Reporter</p>
+                  <p className="text-white font-medium">{selectedBug.reporter?.fullName || 'Anonymous'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Annotations</p>
+                  <p className="text-white font-medium">{selectedBug.annotations?.length || 0}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Comments</p>
+                  <p className="text-white font-medium">{selectedBug.comments?.length || 0}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Header with Status and Priority */}
+            <div className="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
+              <div className="flex items-center space-x-4">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(selectedBug.status)}`}>
+                  {getStatusIcon(selectedBug.status)} {selectedBug.status.replace('_', ' ')}
+                </span>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getPriorityColor(selectedBug.priority)}`}>
+                  {selectedBug.priority}
+                </span>
+                {selectedBug.category && (
+                  <span className="px-3 py-1 bg-gray-700 rounded-full text-sm text-gray-300">
+                    {selectedBug.category}
+                  </span>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-gray-400 text-sm">Report ID</p>
+                <p className="text-white font-mono text-sm">{selectedBug.id}</p>
+              </div>
+            </div>
+
+            {/* Reporter Information */}
+            <div className="p-4 bg-gray-800 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-300 mb-3">Reporter Information</h4>
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                  <span className="text-white font-semibold text-lg">
+                    {selectedBug.reporter?.fullName?.charAt(0).toUpperCase() || 'A'}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-white font-medium">{selectedBug.reporter?.fullName || 'Anonymous'}</p>
+                  <p className="text-gray-400 text-sm">{selectedBug.reporter?.email}</p>
+                  <p className="text-gray-500 text-xs mt-1">
+                    Submitted on {new Date(selectedBug.createdAt).toLocaleDateString()} at {new Date(selectedBug.createdAt).toLocaleTimeString()}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-gray-400 text-xs">Last Updated</p>
+                  <p className="text-white text-xs">{new Date(selectedBug.updatedAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
 
             {/* Description */}
             <div>
               <h4 className="text-sm font-medium text-gray-300 mb-2">Description</h4>
-              <p className="text-white">{selectedBug.description}</p>
+              <div className="p-4 bg-gray-800 rounded-lg">
+                <p className="text-white whitespace-pre-wrap">{selectedBug.description}</p>
+              </div>
             </div>
 
-            {/* Metadata */}
+            {/* Screenshot with Annotations */}
+            {selectedBug.screenshot && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-gray-300">Screenshot</h4>
+                  {selectedBug.annotations && selectedBug.annotations.length > 0 && (
+                    <span className="px-2 py-1 bg-blue-600 rounded text-xs text-white">
+                      {selectedBug.annotations.length} annotation{selectedBug.annotations.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <img
+                    src={selectedBug.screenshot}
+                    alt="Bug Screenshot"
+                    className="max-w-full h-80 object-contain rounded-lg border border-gray-600"
+                  />
+                  {selectedBug.annotations && selectedBug.annotations.length > 0 && (
+                    <div className="absolute top-2 right-2 bg-black/70 rounded p-2">
+                      <p className="text-white text-xs">Contains annotations</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Management Controls */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="text-sm font-medium text-gray-300 mb-2">Status</h4>
@@ -465,19 +587,6 @@ export function BugReportManagement() {
               </div>
               
               <div>
-                <h4 className="text-sm font-medium text-gray-300 mb-2">Priority</h4>
-                <span className={`px-3 py-2 rounded-lg text-sm font-medium border ${getPriorityColor(selectedBug.priority)}`}>
-                  {selectedBug.priority}
-                </span>
-              </div>
-              
-              <div>
-                <h4 className="text-sm font-medium text-gray-300 mb-2">Reporter</h4>
-                <p className="text-white">{selectedBug.reporter?.fullName || 'Anonymous'}</p>
-                <p className="text-gray-400 text-sm">{selectedBug.reporter?.email}</p>
-              </div>
-              
-              <div>
                 <h4 className="text-sm font-medium text-gray-300 mb-2">Assigned To</h4>
                 <select
                   value={selectedBug.assignedTo || ''}
@@ -489,6 +598,68 @@ export function BugReportManagement() {
                 </select>
               </div>
             </div>
+
+            {/* Timestamps */}
+            <div className="grid grid-cols-3 gap-4 p-4 bg-gray-800 rounded-lg">
+              <div>
+                <h4 className="text-sm font-medium text-gray-300 mb-1">Created</h4>
+                <p className="text-white text-sm">{new Date(selectedBug.createdAt).toLocaleString()}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-gray-300 mb-1">Last Updated</h4>
+                <p className="text-white text-sm">{new Date(selectedBug.updatedAt).toLocaleString()}</p>
+              </div>
+              {selectedBug.resolvedAt && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-300 mb-1">Resolved</h4>
+                  <p className="text-white text-sm">{new Date(selectedBug.resolvedAt).toLocaleString()}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Annotations */}
+            {selectedBug.annotations && selectedBug.annotations.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-300 mb-2">
+                  Annotations ({selectedBug.annotations.length})
+                </h4>
+                <div className="p-4 bg-gray-800 rounded-lg">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {selectedBug.annotations.map((annotation: any, index: number) => (
+                      <div key={annotation.id || index} className="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg">
+                        <div 
+                          className="w-6 h-6 rounded border-2 border-white"
+                          style={{ backgroundColor: annotation.color }}
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-white font-medium text-sm">
+                              {annotation.type === 'drawing' ? 'Drawing' : 'Text'}
+                            </span>
+                            <span className="text-gray-400 text-xs">
+                              Color: {annotation.color}
+                            </span>
+                          </div>
+                          {annotation.type === 'text' && annotation.text && (
+                            <p className="text-gray-300 text-sm mt-1">"{annotation.text}"</p>
+                          )}
+                          {annotation.type === 'drawing' && (
+                            <p className="text-gray-400 text-xs mt-1">
+                              {annotation.points?.length || 0} points • Width: {annotation.strokeWidth}px
+                            </p>
+                          )}
+                          {annotation.type === 'text' && (
+                            <p className="text-gray-400 text-xs mt-1">
+                              Font size: {annotation.fontSize}px
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Comments */}
             {selectedBug.comments && selectedBug.comments.length > 0 && (

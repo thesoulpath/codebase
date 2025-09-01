@@ -1,10 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function createSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL is required');
+  }
+  
+  if (!supabaseKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required');
+  }
+  
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 export interface AuthenticatedUser {
   id: string;
@@ -24,6 +34,7 @@ export async function requireAuth(request: NextRequest): Promise<AuthenticatedUs
   console.log('Auth: Token received, length:', token.length);
   
   try {
+    const supabase = createSupabaseClient();
     const { data: { user }, error } = await supabase.auth.getUser(token);
     
     if (error) {

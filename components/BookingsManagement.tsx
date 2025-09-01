@@ -192,7 +192,7 @@ const BookingsManagement: React.FC = () => {
   const fetchClients = async () => {
     if (!user?.access_token) return;
     try {
-      const response = await fetch('/api/admin/clients', {
+      const response = await fetch('/api/admin/users', {
         headers: {
           'Authorization': `Bearer ${user.access_token}`,
           'Content-Type': 'application/json'

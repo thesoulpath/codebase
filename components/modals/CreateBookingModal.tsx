@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 
 interface Client {
   id: string;
-  name: string;
+  fullName: string;
   email: string;
   phone?: string;
   status: string;
@@ -258,7 +258,7 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
       isOpen={isOpen}
       onClose={handleClose}
       title="Create New Booking"
-      description={`Create a new booking for ${client.name} (${client.email})`}
+              description={`Create a new booking for ${client.fullName} (${client.email})`}
       size="full"
       variant="default"
     >

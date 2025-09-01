@@ -1,121 +1,174 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { PrismaClient } from '@prisma/client';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const prisma = new PrismaClient();
 
-// Zod schemas
-const packageDefinitionSchema = z.object({
-  name: z.string().min(1, 'Package name is required').max(255, 'Package name too long'),
+// Zod schemas for package definition validation
+const createPackageDefinitionSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(255, 'Name too long'),
   description: z.string().optional(),
-  sessions_count: z.number().int().positive('Sessions count must be a positive integer'),
-  session_duration_id: z.number().int().positive('Session duration ID must be a positive integer'),
-  package_type: z.enum(['individual', 'group', 'mixed']),
-  max_group_size: z.number().int().positive().optional(),
-  is_active: z.boolean().default(true)
+  sessionsCount: z.number().int().positive('Sessions count must be positive'),
+  sessionDurationId: z.number().int().positive('Session duration ID must be positive'),
+  packageType: z.string().min(1, 'Package type is required').max(20, 'Package type too long'),
+  maxGroupSize: z.number().int().positive('Max group size must be positive').optional(),
+  isActive: z.boolean().default(true)
 });
 
-const updatePackageDefinitionSchema = packageDefinitionSchema.partial().extend({
-  id: z.number().int().positive('Package definition ID must be a positive integer')
+const updatePackageDefinitionSchema = createPackageDefinitionSchema.partial().extend({
+  id: z.number().int().positive('Package definition ID must be positive')
+});
+
+const querySchema = z.object({
+  packageType: z.string().optional(),
+  isActive: z.enum(['true', 'false']).optional(),
+  sessionDurationId: z.coerce.number().int().positive().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  enhanced: z.enum(['true', 'false']).optional()
 });
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 GET /api/admin/package-definitions - Starting request...');
+    
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
+      console.log('❌ Unauthorized access attempt');
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
+    console.log('✅ Admin user authenticated:', user.email);
+
     const { searchParams } = new URL(request.url);
-    const packageType = searchParams.get('package_type');
-    const isActive = searchParams.get('is_active');
-    const sessionDurationId = searchParams.get('session_duration_id');
+    const queryParams = Object.fromEntries(searchParams.entries());
+    const validation = querySchema.safeParse(queryParams);
 
-    // Build the query
-    let query = supabase
-      .from('package_definitions')
-      .select(`
-        *,
-        session_durations (
-          id,
-          name,
-          duration_minutes,
-          description
-        ),
-        package_prices (
-          id,
-          price,
-          pricing_mode,
-          is_active,
-          currencies (
-            id,
-            code,
-            name,
-            symbol
-          )
-        )
-      `)
-      .order('name', { ascending: true });
-
-    // Apply filters
-    if (packageType && packageType !== 'all') {
-      query = query.eq('package_type', packageType);
-    }
-    if (isActive !== null && isActive !== 'all') {
-      query = query.eq('is_active', isActive === 'true');
-    }
-    if (sessionDurationId && sessionDurationId !== 'all') {
-      query = query.eq('session_duration_id', sessionDurationId);
-    }
-
-    const { data: packageDefinitions, error } = await query;
-
-    if (error) {
-      console.error('Error fetching package definitions:', error);
+    if (!validation.success) {
       return NextResponse.json({
         success: false,
-        error: 'Database error',
-        message: 'Failed to fetch package definitions',
-        details: error.message
-      }, { status: 500 });
+        error: 'Invalid query parameters',
+        details: validation.error.issues
+      }, { status: 400 });
     }
+
+    const { packageType, isActive, sessionDurationId, page, limit, enhanced } = validation.data;
+    const offset = (page - 1) * limit;
+
+    console.log('🔍 Query parameters:', { packageType, isActive, sessionDurationId, page, limit, enhanced });
+
+    // Build the query with proper relationships
+    const where: any = {};
+    
+    if (packageType) where.packageType = packageType;
+    if (isActive !== undefined) where.isActive = isActive === 'true';
+    if (sessionDurationId) where.sessionDurationId = sessionDurationId;
+
+    // Base select fields
+    const select: any = {
+      id: true,
+      name: true,
+      description: true,
+      sessionsCount: true,
+      sessionDurationId: true,
+      packageType: true,
+      maxGroupSize: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+      sessionDuration: {
+        select: {
+          id: true,
+          name: true,
+          duration_minutes: true,
+          description: true
+        }
+      }
+    };
+
+    // Enhanced mode includes pricing information
+    if (enhanced === 'true') {
+      select.packagePrices = {
+        where: { isActive: true },
+        select: {
+          id: true,
+          price: true,
+          pricingMode: true,
+          isActive: true,
+          currency: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              symbol: true
+            }
+          }
+        }
+      };
+      select._count = {
+        packagePrices: true
+      };
+    }
+
+    console.log('🔍 Executing database query...');
+    
+    const [packageDefinitions, totalCount] = await Promise.all([
+      prisma.packageDefinition.findMany({
+        where,
+        select,
+        skip: offset,
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.packageDefinition.count({ where })
+    ]);
+
+    console.log('✅ Database query successful, found', packageDefinitions.length, 'package definitions');
+
+    const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
       success: true,
-      data: packageDefinitions
+      data: packageDefinitions,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages
+      }
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Unexpected error in package-definitions API:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'An unexpected error occurred',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
     const body = await request.json();
-    const validation = packageDefinitionSchema.safeParse(body);
+    const validation = createPackageDefinitionSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json({
@@ -128,39 +181,46 @@ export async function POST(request: NextRequest) {
 
     const packageData = validation.data;
 
-    // Validate max_group_size for group packages
-    if (packageData.package_type === 'group' && !packageData.max_group_size) {
+    // Verify session duration exists
+    const sessionDuration = await prisma.sessionDuration.findUnique({
+      where: { id: packageData.sessionDurationId }
+    });
+
+    if (!sessionDuration) {
       return NextResponse.json({
         success: false,
-        error: 'Validation failed',
-        message: 'Max group size is required for group packages'
-      }, { status: 400 });
+        error: 'Session duration not found',
+        message: 'The specified session duration does not exist'
+      }, { status: 404 });
+    }
+
+    // Check if package definition with same name already exists
+    const existingPackage = await prisma.packageDefinition.findFirst({
+      where: { name: packageData.name }
+    });
+
+    if (existingPackage) {
+      return NextResponse.json({
+        success: false,
+        error: 'Package definition already exists',
+        message: 'A package definition with this name already exists'
+      }, { status: 409 });
     }
 
     // Create the package definition
-    const { data: newPackageDefinition, error: createError } = await supabase
-      .from('package_definitions')
-      .insert(packageData)
-      .select(`
-        *,
-        session_durations (
-          id,
-          name,
-          duration_minutes,
-          description
-        )
-      `)
-      .single();
-
-    if (createError) {
-      console.error('Error creating package definition:', createError);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: 'Failed to create package definition',
-        details: createError.message
-      }, { status: 500 });
-    }
+    const newPackageDefinition = await prisma.packageDefinition.create({
+      data: packageData,
+      include: {
+        sessionDuration: {
+          select: {
+            id: true,
+            name: true,
+            duration_minutes: true,
+            description: true
+          }
+        }
+      }
+    });
 
     return NextResponse.json({
       success: true,
@@ -169,23 +229,26 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error creating package definition:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'Failed to create package definition',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
@@ -204,54 +267,66 @@ export async function PUT(request: NextRequest) {
     const { id, ...updateData } = validation.data;
 
     // Check if package definition exists
-    const { data: existingPackage, error: checkError } = await supabase
-      .from('package_definitions')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const existingPackage = await prisma.packageDefinition.findUnique({
+      where: { id }
+    });
 
-    if (checkError || !existingPackage) {
+    if (!existingPackage) {
       return NextResponse.json({
         success: false,
         error: 'Package definition not found',
-        message: 'The specified package definition does not exist'
+        message: 'Package definition with this ID does not exist'
       }, { status: 404 });
     }
 
-    // Validate max_group_size for group packages
-    if (updateData.package_type === 'group' && !updateData.max_group_size) {
-      return NextResponse.json({
-        success: false,
-        error: 'Validation failed',
-        message: 'Max group size is required for group packages'
-      }, { status: 400 });
+    // Verify session duration exists if being updated
+    if (updateData.sessionDurationId) {
+      const sessionDuration = await prisma.sessionDuration.findUnique({
+        where: { id: updateData.sessionDurationId }
+      });
+
+      if (!sessionDuration) {
+        return NextResponse.json({
+          success: false,
+          error: 'Session duration not found',
+          message: 'The specified session duration does not exist'
+        }, { status: 404 });
+      }
+    }
+
+    // Check for name conflicts if name is being updated
+    if (updateData.name && updateData.name !== existingPackage.name) {
+      const nameConflict = await prisma.packageDefinition.findFirst({
+        where: { 
+          name: updateData.name,
+          id: { not: id }
+        }
+      });
+
+      if (nameConflict) {
+        return NextResponse.json({
+          success: false,
+          error: 'Name conflict',
+          message: 'A package definition with this name already exists'
+        }, { status: 409 });
+      }
     }
 
     // Update the package definition
-    const { data: updatedPackageDefinition, error: updateError } = await supabase
-      .from('package_definitions')
-      .update(updateData)
-      .eq('id', id)
-      .select(`
-        *,
-        session_durations (
-          id,
-          name,
-          duration_minutes,
-          description
-        )
-      `)
-      .single();
-
-    if (updateError) {
-      console.error('Error updating package definition:', updateError);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: 'Failed to update package definition',
-        details: updateError.message
-      }, { status: 500 });
-    }
+    const updatedPackageDefinition = await prisma.packageDefinition.update({
+      where: { id },
+      data: updateData,
+      include: {
+        sessionDuration: {
+          select: {
+            id: true,
+            name: true,
+            duration_minutes: true,
+            description: true
+          }
+        }
+      }
+    });
 
     return NextResponse.json({
       success: true,
@@ -260,30 +335,33 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error updating package definition:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'Failed to update package definition',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const packageId = searchParams.get('id');
 
-    if (!id) {
+    if (!packageId) {
       return NextResponse.json({
         success: false,
         error: 'Missing ID',
@@ -291,70 +369,54 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if package definition exists
-    const { data: existingPackage, error: checkError } = await supabase
-      .from('package_definitions')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const id = parseInt(packageId);
+    if (isNaN(id)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid ID',
+        message: 'Package definition ID must be a number'
+      }, { status: 400 });
+    }
 
-    if (checkError || !existingPackage) {
+    // Check if package definition exists and has no active user packages
+    const existingPackage = await prisma.packageDefinition.findUnique({
+      where: { id },
+      include: {
+        packagePrices: {
+          include: {
+            userPackages: {
+              where: { isActive: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!existingPackage) {
       return NextResponse.json({
         success: false,
         error: 'Package definition not found',
-        message: 'The specified package definition does not exist'
+        message: 'Package definition with this ID does not exist'
       }, { status: 404 });
     }
 
-    // Check if package definition has associated prices
-    const { data: packagePrices, error: pricesError } = await supabase
-      .from('package_prices')
-      .select('id')
-      .eq('package_definition_id', id)
-      .limit(1);
+    // Check if there are active user packages
+    const hasActivePackages = existingPackage.packagePrices.some(
+      price => price.userPackages.length > 0
+    );
 
-    if (pricesError) {
-      console.error('Error checking package prices:', pricesError);
-    } else if (packagePrices && packagePrices.length > 0) {
+    if (hasActivePackages) {
       return NextResponse.json({
         success: false,
-        error: 'Package definition in use',
-        message: 'Cannot delete package definition that has associated prices'
+        error: 'Cannot delete package definition',
+        message: 'Package definition has active user packages and cannot be deleted'
       }, { status: 400 });
     }
 
-    // Check if package definition is being used in user packages
-    const { data: usedPackages, error: usageError } = await supabase
-      .from('user_packages')
-      .select('id')
-      .eq('package_price_id', id)
-      .limit(1);
-
-    if (usageError) {
-      console.error('Error checking package usage:', usageError);
-    } else if (usedPackages && usedPackages.length > 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'Package definition in use',
-        message: 'Cannot delete package definition that is being used by users'
-      }, { status: 400 });
-    }
-
-    // Delete the package definition
-    const { error: deleteError } = await supabase
-      .from('package_definitions')
-      .delete()
-      .eq('id', id);
-
-    if (deleteError) {
-      console.error('Error deleting package definition:', deleteError);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: 'Failed to delete package definition',
-        details: deleteError.message
-      }, { status: 500 });
-    }
+    // Delete the package definition (cascading will handle related records)
+    await prisma.packageDefinition.delete({
+      where: { id }
+    });
 
     return NextResponse.json({
       success: true,
@@ -362,11 +424,14 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error deleting package definition:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'Failed to delete package definition',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }

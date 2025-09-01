@@ -218,7 +218,7 @@ const PurchaseHistoryManagement: React.FC = () => {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch('/api/admin/clients', {
+      const response = await fetch('/api/admin/users', {
         headers: {
           'Authorization': `Bearer ${user!.access_token}`,
           'Content-Type': 'application/json'

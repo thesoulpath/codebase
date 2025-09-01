@@ -12,10 +12,11 @@ export const stripeConfig = {
 // Lazy initialization of Stripe server instance
 let stripeInstance: Stripe | null = null;
 
-export const getStripe = (): Stripe => {
+export const getStripe = (): Stripe | null => {
   if (!stripeInstance) {
     if (!stripeConfig.secretKey) {
-      throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+      console.warn('STRIPE_SECRET_KEY environment variable is not set - Stripe functionality disabled');
+      return null;
     }
     stripeInstance = new Stripe(stripeConfig.secretKey, {
       apiVersion: '2025-08-27.basil',

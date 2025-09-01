@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { createEmailService } from '@/lib/brevo-email-service';
 
+export async function GET() {
+  // This endpoint requires authentication for all methods
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerClient();
@@ -22,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Get package details
     const { data: packageData, error: packageError } = await supabase
-      .from('packages')
+      .from('soul_packages')
       .select('*')
       .eq('id', packageId)
       .single();

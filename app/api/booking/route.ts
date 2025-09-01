@@ -9,10 +9,12 @@ const supabase = createClient(
 
 // Zod schema for booking creation
 const bookingCreateSchema = z.object({
-  client_id: z.string().uuid('Invalid client ID'),
-  schedule_id: z.string().uuid('Invalid schedule ID'),
+  user_id: z.string().min(1, 'User ID is required'),
+  schedule_slot_id: z.number().int('Invalid schedule slot ID'),
+  user_package_id: z.number().int('Invalid user package ID'),
+  session_type: z.string().min(1, 'Session type is required'),
   notes: z.string().optional(),
-  status: z.enum(['pending', 'confirmed', 'cancelled']).default('pending')
+  status: z.enum(['pending', 'confirmed', 'cancelled', 'completed']).default('confirmed')
 });
 
 export async function POST(request: NextRequest) {
@@ -38,64 +40,64 @@ export async function POST(request: NextRequest) {
 
     const bookingData = validation.data;
 
-    // Check if client exists
-    const { data: client, error: clientError } = await supabase
-      .from('clients')
-      .select('id, name')
-      .eq('id', bookingData.client_id)
+    // Check if user exists
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, full_name')
+      .eq('id', bookingData.user_id)
       .single();
 
-    if (clientError || !client) {
+    if (userError || !user) {
       return NextResponse.json({
         success: false,
-        error: 'Client not found',
-        message: 'The specified client does not exist',
+        error: 'User not found',
+        message: 'The specified user does not exist',
         toast: {
           type: 'error',
-          title: 'Client Not Found',
-          description: 'The specified client does not exist'
+          title: 'User Not Found',
+          description: 'The specified user does not exist'
         }
       }, { status: 404 });
     }
 
-    // Check if schedule exists and is available
-    const { data: schedule, error: scheduleError } = await supabase
-      .from('schedules')
-      .select('id, date, time, available, capacity')
-      .eq('id', bookingData.schedule_id)
+    // Check if schedule slot exists and is available
+    const { data: scheduleSlot, error: scheduleError } = await supabase
+      .from('schedule_slots')
+      .select('id, start_time, end_time, capacity, booked_count, is_available')
+      .eq('id', bookingData.schedule_slot_id)
       .single();
 
-    if (scheduleError || !schedule) {
+    if (scheduleError || !scheduleSlot) {
       return NextResponse.json({
         success: false,
-        error: 'Schedule not found',
-        message: 'The specified schedule does not exist',
+        error: 'Schedule slot not found',
+        message: 'The specified schedule slot does not exist',
         toast: {
           type: 'error',
-          title: 'Schedule Not Found',
-          description: 'The specified schedule does not exist'
+          title: 'Schedule Slot Not Found',
+          description: 'The specified schedule slot does not exist'
         }
       }, { status: 404 });
     }
 
-    if (!schedule.available) {
+    if (!scheduleSlot.is_available) {
       return NextResponse.json({
         success: false,
-        error: 'Schedule unavailable',
-        message: 'The specified schedule is not available',
+        error: 'Schedule slot unavailable',
+        message: 'The specified schedule slot is not available',
         toast: {
           type: 'error',
-          title: 'Schedule Unavailable',
-          description: 'The specified schedule is not available'
+          title: 'Schedule Slot Unavailable',
+          description: 'The specified schedule slot is not available'
         }
       }, { status: 400 });
     }
 
-    // Check current bookings for this schedule
+    // Check current bookings for this schedule slot
     const { data: existingBookings, error: bookingsError } = await supabase
       .from('bookings')
       .select('id')
-      .eq('schedule_id', bookingData.schedule_id)
+      .eq('schedule_slot_id', bookingData.schedule_slot_id)
       .eq('status', 'confirmed');
 
     if (bookingsError) {
@@ -103,25 +105,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: 'Database error',
-        message: 'Failed to check schedule availability',
+        message: 'Failed to check schedule slot availability',
         details: bookingsError.message,
         toast: {
           type: 'error',
           title: 'Database Error',
-          description: 'Failed to check schedule availability. Please try again.'
+          description: 'Failed to check schedule slot availability. Please try again.'
         }
       }, { status: 500 });
     }
 
-    if (existingBookings && existingBookings.length >= schedule.capacity) {
+    const currentBookings = existingBookings?.length || 0;
+    if (currentBookings >= (scheduleSlot.capacity || 3)) {
       return NextResponse.json({
         success: false,
-        error: 'Schedule full',
-        message: 'The specified schedule is at full capacity',
+        error: 'Schedule slot full',
+        message: 'The specified schedule slot is at full capacity',
         toast: {
           type: 'error',
-          title: 'Schedule Full',
-          description: 'The specified schedule is at full capacity'
+          title: 'Schedule Slot Full',
+          description: 'The specified schedule slot is at full capacity'
         }
       }, { status: 400 });
     }
@@ -130,8 +133,10 @@ export async function POST(request: NextRequest) {
     const { data: booking, error: createError } = await supabase
       .from('bookings')
       .insert({
-        client_id: bookingData.client_id,
-        schedule_id: bookingData.schedule_id,
+        user_id: bookingData.user_id,
+        schedule_slot_id: bookingData.schedule_slot_id,
+        user_package_id: bookingData.user_package_id,
+        session_type: bookingData.session_type,
         notes: bookingData.notes,
         status: bookingData.status,
         created_at: new Date().toISOString()
@@ -161,7 +166,7 @@ export async function POST(request: NextRequest) {
       toast: {
         type: 'success',
         title: 'Success!',
-        description: `Booking created for ${client.name} on ${schedule.date} at ${schedule.time}`
+        description: `Booking created for ${user.full_name} on ${scheduleSlot.start_time}`
       }
     }, { status: 201 });
 
@@ -183,31 +188,19 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const clientId = searchParams.get('client_id');
-    const scheduleId = searchParams.get('schedule_id');
+    const userId = searchParams.get('user_id');
+    const scheduleSlotId = searchParams.get('schedule_slot_id');
 
     let query = supabase
       .from('bookings')
-      .select(`
-        *,
-        clients (
-          id,
-          name,
-          email
-        ),
-        schedules (
-          id,
-          date,
-          time
-        )
-      `);
+      .select('*');
 
-    if (clientId) {
-      query = query.eq('client_id', clientId);
+    if (userId) {
+      query = query.eq('user_id', userId);
     }
 
-    if (scheduleId) {
-      query = query.eq('schedule_id', scheduleId);
+    if (scheduleSlotId) {
+      query = query.eq('schedule_slot_id', scheduleSlotId);
     }
 
     const { data: bookings, error } = await query

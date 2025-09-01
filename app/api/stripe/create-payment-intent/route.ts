@@ -9,19 +9,27 @@ if (process.env.NODE_ENV !== 'production' || process.env.STRIPE_SECRET_KEY) {
 }
 
 export async function POST(request: NextRequest) {
-  // Build-time check - prevent execution during build
-  if (process.env.NODE_ENV === 'production' && !process.env.STRIPE_SECRET_KEY) {
+  // Check if Stripe is configured
+  if (!process.env.STRIPE_SECRET_KEY) {
     return NextResponse.json(
-      { error: 'Stripe not configured' },
-      { status: 500 }
+      { 
+        error: 'Stripe not configured',
+        message: 'Payment processing is not available. Please contact support.',
+        code: 'STRIPE_NOT_CONFIGURED'
+      },
+      { status: 503 }
     );
   }
 
   // Runtime check - ensure Stripe is available
   if (!StripePaymentService) {
     return NextResponse.json(
-      { error: 'Stripe not configured' },
-      { status: 500 }
+      { 
+        error: 'Stripe service unavailable',
+        message: 'Payment processing is temporarily unavailable.',
+        code: 'STRIPE_SERVICE_UNAVAILABLE'
+      },
+      { status: 503 }
     );
   }
 

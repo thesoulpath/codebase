@@ -1,110 +1,174 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { PrismaClient } from '@prisma/client';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const prisma = new PrismaClient();
 
-// Zod schemas
-const scheduleTemplateSchema = z.object({
-  day_of_week: z.string().min(1, 'Day of week is required'),
-  start_time: z.string().min(1, 'Start time is required'),
-  end_time: z.string().min(1, 'End time is required'),
-  capacity: z.number().int().positive('Capacity must be a positive integer'),
-  is_available: z.boolean().default(true),
-  session_duration_id: z.number().int().positive().optional(),
-  auto_available: z.boolean().default(true)
+// Zod schemas for schedule template validation
+const createScheduleTemplateSchema = z.object({
+  dayOfWeek: z.string().min(1, 'Day of week is required').max(20, 'Day of week too long'),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
+  capacity: z.number().int().positive('Capacity must be positive').default(3),
+  isAvailable: z.boolean().default(true),
+  sessionDurationId: z.number().int().positive('Session duration ID must be positive').optional(),
+  autoAvailable: z.boolean().default(true)
 });
 
-const updateScheduleTemplateSchema = scheduleTemplateSchema.partial().extend({
-  id: z.number().int().positive('Schedule template ID must be a positive integer')
+const updateScheduleTemplateSchema = createScheduleTemplateSchema.partial().extend({
+  id: z.number().int().positive('Schedule template ID must be positive')
+});
+
+const querySchema = z.object({
+  dayOfWeek: z.string().optional(),
+  isAvailable: z.enum(['true', 'false']).optional(),
+  sessionDurationId: z.coerce.number().int().positive().optional(),
+  autoAvailable: z.enum(['true', 'false']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  enhanced: z.enum(['true', 'false']).optional()
 });
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 GET /api/admin/schedule-templates - Starting request...');
+    
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
+      console.log('❌ Unauthorized access attempt');
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
+    console.log('✅ Admin user authenticated:', user.email);
+
     const { searchParams } = new URL(request.url);
-    const dayOfWeek = searchParams.get('day_of_week');
-    const isAvailable = searchParams.get('is_available');
-    const sessionDurationId = searchParams.get('session_duration_id');
+    const queryParams = Object.fromEntries(searchParams.entries());
+    const validation = querySchema.safeParse(queryParams);
 
-    // Build the query
-    let query = supabase
-      .from('schedule_templates')
-      .select(`
-        *,
-        session_durations (
-          id,
-          name,
-          duration_minutes,
-          description
-        )
-      `)
-      .order('day_of_week', { ascending: true })
-      .order('start_time', { ascending: true });
-
-    // Apply filters
-    if (dayOfWeek && dayOfWeek !== 'all') {
-      query = query.eq('day_of_week', dayOfWeek);
-    }
-    if (isAvailable !== null && isAvailable !== 'all') {
-      query = query.eq('is_available', isAvailable === 'true');
-    }
-    if (sessionDurationId && sessionDurationId !== 'all') {
-      query = query.eq('session_duration_id', sessionDurationId);
-    }
-
-    const { data: scheduleTemplates, error } = await query;
-
-    if (error) {
-      console.error('Error fetching schedule templates:', error);
+    if (!validation.success) {
       return NextResponse.json({
         success: false,
-        error: 'Database error',
-        message: 'Failed to fetch schedule templates',
-        details: error.message
-      }, { status: 500 });
+        error: 'Invalid query parameters',
+        details: validation.error.issues
+      }, { status: 400 });
     }
+
+    const { dayOfWeek, isAvailable, sessionDurationId, autoAvailable, page, limit, enhanced } = validation.data;
+    const offset = (page - 1) * limit;
+
+    console.log('🔍 Query parameters:', { dayOfWeek, isAvailable, sessionDurationId, autoAvailable, page, limit, enhanced });
+
+    // Build the query with proper relationships
+    const where: any = {};
+    
+    if (dayOfWeek) where.dayOfWeek = dayOfWeek;
+    if (isAvailable !== undefined) where.isAvailable = isAvailable === 'true';
+    if (sessionDurationId) where.sessionDurationId = sessionDurationId;
+    if (autoAvailable !== undefined) where.autoAvailable = autoAvailable === 'true';
+
+    // Base select fields
+    const select: any = {
+      id: true,
+      dayOfWeek: true,
+      startTime: true,
+      endTime: true,
+      capacity: true,
+      isAvailable: true,
+      sessionDurationId: true,
+      autoAvailable: true,
+      createdAt: true,
+      updatedAt: true,
+      sessionDuration: {
+        select: {
+          id: true,
+          name: true,
+          duration_minutes: true,
+          description: true
+        }
+      }
+    };
+
+    // Enhanced mode includes slot information
+    if (enhanced === 'true') {
+      select._count = {
+        scheduleSlots: true
+      };
+      select.scheduleSlots = {
+        take: 10,
+        orderBy: { startTime: 'desc' },
+        select: {
+          id: true,
+          startTime: true,
+          endTime: true,
+          capacity: true,
+          bookedCount: true,
+          isAvailable: true
+        }
+      };
+    }
+
+    console.log('🔍 Executing database query...');
+    
+    const [scheduleTemplates, totalCount] = await Promise.all([
+      prisma.scheduleTemplate.findMany({
+        where,
+        select,
+        skip: offset,
+        take: limit,
+        orderBy: [
+          { dayOfWeek: 'asc' },
+          { startTime: 'asc' }
+        ]
+      }),
+      prisma.scheduleTemplate.count({ where })
+    ]);
+
+    console.log('✅ Database query successful, found', scheduleTemplates.length, 'schedule templates');
+
+    const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
       success: true,
-      data: scheduleTemplates
+      data: scheduleTemplates,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages
+      }
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Unexpected error in schedule-templates API:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'An unexpected error occurred',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
     const body = await request.json();
-    const validation = scheduleTemplateSchema.safeParse(body);
+    const validation = createScheduleTemplateSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json({
@@ -118,91 +182,91 @@ export async function POST(request: NextRequest) {
     const templateData = validation.data;
 
     // Validate time format and logic
-    const startTime = templateData.start_time;
-    const endTime = templateData.end_time;
-    
+    const startTime = new Date(`2000-01-01T${templateData.startTime}:00`);
+    const endTime = new Date(`2000-01-01T${templateData.endTime}:00`);
+
     if (startTime >= endTime) {
       return NextResponse.json({
         success: false,
         error: 'Invalid time range',
-        message: 'Start time must be before end time'
+        message: 'End time must be after start time'
       }, { status: 400 });
     }
 
-    // Check for overlapping templates on the same day
-    const { data: overlappingTemplates, error: overlapError } = await supabase
-      .from('schedule_templates')
-      .select('*')
-      .eq('day_of_week', templateData.day_of_week)
-      .eq('is_available', true);
+    // Verify session duration exists if provided
+    if (templateData.sessionDurationId) {
+      const sessionDuration = await prisma.sessionDuration.findUnique({
+        where: { id: templateData.sessionDurationId }
+      });
 
-    if (overlapError) {
-      console.error('Error checking overlapping templates:', overlapError);
-    } else if (overlappingTemplates) {
-      for (const template of overlappingTemplates) {
-        if (
-          (startTime >= template.start_time && startTime < template.end_time) ||
-          (endTime > template.start_time && endTime <= template.end_time) ||
-          (startTime <= template.start_time && endTime >= template.end_time)
-        ) {
-          return NextResponse.json({
-            success: false,
-            error: 'Time conflict',
-            message: `This time slot conflicts with existing template: ${template.start_time} - ${template.end_time}`
-          }, { status: 400 });
-        }
+      if (!sessionDuration) {
+        return NextResponse.json({
+          success: false,
+          error: 'Session duration not found',
+          message: 'The specified session duration does not exist'
+        }, { status: 404 });
       }
     }
 
-    // Create the schedule template
-    const { data: newTemplate, error: createError } = await supabase
-      .from('schedule_templates')
-      .insert(templateData)
-      .select(`
-        *,
-        session_durations (
-          id,
-          name,
-          duration_minutes,
-          description
-        )
-      `)
-      .single();
+    // Check if template already exists for this day and time
+    const existingTemplate = await prisma.scheduleTemplate.findFirst({
+      where: {
+        dayOfWeek: templateData.dayOfWeek,
+        startTime: templateData.startTime,
+        endTime: templateData.endTime
+      }
+    });
 
-    if (createError) {
-      console.error('Error creating schedule template:', createError);
+    if (existingTemplate) {
       return NextResponse.json({
         success: false,
-        error: 'Database error',
-        message: 'Failed to create schedule template',
-        details: createError.message
-      }, { status: 500 });
+        error: 'Template already exists',
+        message: 'A schedule template for this day and time already exists'
+      }, { status: 409 });
     }
+
+    // Create the schedule template
+    const newScheduleTemplate = await prisma.scheduleTemplate.create({
+      data: templateData,
+      include: {
+        sessionDuration: {
+          select: {
+            id: true,
+            name: true,
+            duration_minutes: true,
+            description: true
+          }
+        }
+      }
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Schedule template created successfully',
-      data: newTemplate
+      data: newScheduleTemplate
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error creating schedule template:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'Failed to create schedule template',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
@@ -220,172 +284,174 @@ export async function PUT(request: NextRequest) {
 
     const { id, ...updateData } = validation.data;
 
-    // Check if template exists
-    const { data: existingTemplate, error: checkError } = await supabase
-      .from('schedule_templates')
-      .select('*')
-      .eq('id', id)
-      .single();
+    // Check if schedule template exists
+    const existingTemplate = await prisma.scheduleTemplate.findUnique({
+      where: { id }
+    });
 
-    if (checkError || !existingTemplate) {
+    if (!existingTemplate) {
       return NextResponse.json({
         success: false,
-        error: 'Template not found',
-        message: 'The specified schedule template does not exist'
+        error: 'Schedule template not found',
+        message: 'Schedule template with this ID does not exist'
       }, { status: 404 });
     }
 
-    // Validate time logic if updating time fields
-    if (updateData.start_time !== undefined || updateData.end_time !== undefined) {
-      const startTime = updateData.start_time ?? existingTemplate.start_time;
-      const endTime = updateData.end_time ?? existingTemplate.end_time;
-      
+    // Validate time format and logic if times are being updated
+    if (updateData.startTime || updateData.endTime) {
+      const startTime = new Date(`2000-01-01T${updateData.startTime || existingTemplate.startTime}:00`);
+      const endTime = new Date(`2000-01-01T${updateData.endTime || existingTemplate.endTime}:00`);
+
       if (startTime >= endTime) {
         return NextResponse.json({
           success: false,
           error: 'Invalid time range',
-          message: 'Start time must be before end time'
+          message: 'End time must be after start time'
         }, { status: 400 });
       }
+    }
 
-      // Check for overlapping templates (excluding current template)
-      const { data: overlappingTemplates, error: overlapError } = await supabase
-        .from('schedule_templates')
-        .select('*')
-        .eq('day_of_week', updateData.day_of_week ?? existingTemplate.day_of_week)
-        .eq('is_available', true)
-        .neq('id', id);
+    // Verify session duration exists if being updated
+    if (updateData.sessionDurationId) {
+      const sessionDuration = await prisma.sessionDuration.findUnique({
+        where: { id: updateData.sessionDurationId }
+      });
 
-      if (overlapError) {
-        console.error('Error checking overlapping templates:', overlapError);
-      } else if (overlappingTemplates) {
-        for (const template of overlappingTemplates) {
-          if (
-            (startTime >= template.start_time && startTime < template.end_time) ||
-            (endTime > template.start_time && endTime <= template.end_time) ||
-            (startTime <= template.start_time && endTime >= template.end_time)
-          ) {
-            return NextResponse.json({
-              success: false,
-              error: 'Time conflict',
-              message: `This time slot conflicts with existing template: ${template.start_time} - ${template.end_time}`
-            }, { status: 400 });
+      if (!sessionDuration) {
+        return NextResponse.json({
+          success: false,
+          error: 'Session duration not found',
+          message: 'The specified session duration does not exist'
+        }, { status: 404 });
+      }
+    }
+
+    // Check for conflicts if day/time is being updated
+    if (updateData.dayOfWeek || updateData.startTime || updateData.endTime) {
+      const newDayOfWeek = updateData.dayOfWeek || existingTemplate.dayOfWeek;
+      const newStartTime = updateData.startTime || existingTemplate.startTime;
+      const newEndTime = updateData.endTime || existingTemplate.endTime;
+
+      const conflict = await prisma.scheduleTemplate.findFirst({
+        where: {
+          dayOfWeek: newDayOfWeek,
+          startTime: newStartTime,
+          endTime: newEndTime,
+          id: { not: id }
+        }
+      });
+
+      if (conflict) {
+        return NextResponse.json({
+          success: false,
+          error: 'Template conflict',
+          message: 'A schedule template for this day and time already exists'
+        }, { status: 409 });
+      }
+    }
+
+    // Update the schedule template
+    const updatedScheduleTemplate = await prisma.scheduleTemplate.update({
+      where: { id },
+      data: updateData,
+      include: {
+        sessionDuration: {
+          select: {
+            id: true,
+            name: true,
+            duration_minutes: true,
+            description: true
           }
         }
       }
-    }
-
-    // Update the template
-    const { data: updatedTemplate, error: updateError } = await supabase
-      .from('schedule_templates')
-      .update(updateData)
-      .eq('id', id)
-      .select(`
-        *,
-        session_durations (
-          id,
-          name,
-          duration_minutes,
-          description
-        )
-      `)
-      .single();
-
-    if (updateError) {
-      console.error('Error updating schedule template:', updateError);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: 'Failed to update schedule template',
-        details: updateError.message
-      }, { status: 500 });
-    }
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Schedule template updated successfully',
-      data: updatedTemplate
+      data: updatedScheduleTemplate
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error updating schedule template:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'Failed to update schedule template',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json({ 
         success: false,
         error: 'Unauthorized',
-        message: 'Authentication required'
+        message: 'Admin access required'
       }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const templateId = searchParams.get('id');
 
-    if (!id) {
+    if (!templateId) {
       return NextResponse.json({
         success: false,
         error: 'Missing ID',
-        message: 'Template ID is required'
+        message: 'Schedule template ID is required'
       }, { status: 400 });
     }
 
-    // Check if template exists
-    const { data: existingTemplate, error: checkError } = await supabase
-      .from('schedule_templates')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (checkError || !existingTemplate) {
+    const id = parseInt(templateId);
+    if (isNaN(id)) {
       return NextResponse.json({
         success: false,
-        error: 'Template not found',
-        message: 'The specified schedule template does not exist'
+        error: 'Invalid ID',
+        message: 'Schedule template ID must be a number'
+      }, { status: 400 });
+    }
+
+    // Check if schedule template exists and has no active slots
+    const existingTemplate = await prisma.scheduleTemplate.findUnique({
+      where: { id },
+      include: {
+        scheduleSlots: {
+          where: {
+            OR: [
+              { isAvailable: true },
+              { bookedCount: { gt: 0 } }
+            ]
+          }
+        }
+      }
+    });
+
+    if (!existingTemplate) {
+      return NextResponse.json({
+        success: false,
+        error: 'Schedule template not found',
+        message: 'Schedule template with this ID does not exist'
       }, { status: 404 });
     }
 
-    // Check if template has associated schedule slots
-    const { data: scheduleSlots, error: slotsError } = await supabase
-      .from('schedule_slots')
-      .select('id')
-      .eq('schedule_template_id', id)
-      .limit(1);
-
-    if (slotsError) {
-      console.error('Error checking schedule slots:', slotsError);
-    } else if (scheduleSlots && scheduleSlots.length > 0) {
+    // Check if there are active or booked slots
+    if (existingTemplate.scheduleSlots.length > 0) {
       return NextResponse.json({
         success: false,
-        error: 'Template in use',
-        message: 'Cannot delete template that has associated schedule slots'
+        error: 'Cannot delete schedule template',
+        message: 'Schedule template has active or booked slots and cannot be deleted'
       }, { status: 400 });
     }
 
-    // Delete the template
-    const { error: deleteError } = await supabase
-      .from('schedule_templates')
-      .delete()
-      .eq('id', id);
-
-    if (deleteError) {
-      console.error('Error deleting schedule template:', deleteError);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: 'Failed to delete schedule template',
-        details: deleteError.message
-      }, { status: 500 });
-    }
+    // Delete the schedule template (cascading will handle related records)
+    await prisma.scheduleTemplate.delete({
+      where: { id }
+    });
 
     return NextResponse.json({
       success: true,
@@ -393,11 +459,14 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error deleting schedule template:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
-      message: 'An unexpected error occurred'
+      message: 'Failed to delete schedule template',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }

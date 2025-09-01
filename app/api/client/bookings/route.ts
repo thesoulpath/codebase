@@ -1,14 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import { requireAuth } from '@/lib/auth';
+import { z } from 'zod';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+// Zod schema for booking creation
+const createBookingSchema = z.object({
+  scheduleSlotId: z.number().int().positive('Schedule slot ID must be positive'),
+  userPackageId: z.number().int().positive('User package ID must be positive'),
+  sessionType: z.string().min(1, 'Session type is required').default('Session'),
+  notes: z.string().optional()
+});
+
+const querySchema = z.object({
+  status: z.enum(['upcoming', 'past', 'all']).default('all'),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20)
+});
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerClient();
+    console.log('🔍 GET /api/client/bookings - Starting request...');
     
-    // Get the authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
+    const user = await requireAuth(request);
+    if (!user) {
+      console.log('❌ Unauthorized access attempt');
       return NextResponse.json({ 
         success: false, 
         error: 'Unauthorized',
@@ -16,94 +33,151 @@ export async function GET(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // Get query parameters
+    console.log('✅ User authenticated:', user.email);
+
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    
-    // Build the query for unified bookings
-    let query = supabase
-      .from('bookings')
-      .select(`
-        *,
-        unifiedClient:clientId(
-          id,
-          name,
-          email
-        ),
-        scheduleSlot:scheduleSlotId(
-          id,
-          startTime,
-          endTime
-        ),
-        unifiedUserPackage:userPackageId(
-          id,
-          packagePrice(
-            id,
-            packageDefinition(
-              id,
-              name,
-              description,
-              packageType
-            ),
-            currency(
-              id,
-              code,
-              symbol
-            )
-          )
-        )
-      `)
-      .eq('clientEmail', user.email);
+    const queryParams = Object.fromEntries(searchParams.entries());
+    const validation = querySchema.safeParse(queryParams);
 
-    // Filter by status if specified
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid query parameters',
+        details: validation.error.issues
+      }, { status: 400 });
+    }
+
+    const { status, page, limit } = validation.data;
+    const offset = (page - 1) * limit;
+
+    console.log('🔍 Query parameters:', { status, page, limit });
+
+    // Build the query with proper relationships
+    const where: any = {
+      userId: user.id
+    };
+
+    // Filter by status
     if (status === 'upcoming') {
-      query = query
-        .gte('booking_date', new Date().toISOString().split('T')[0])
-        .eq('status', 'confirmed');
+      where.scheduleSlot = {
+        startTime: { gte: new Date() }
+      };
+      where.status = 'confirmed';
     } else if (status === 'past') {
-      query = query
-        .lt('booking_date', new Date().toISOString().split('T')[0])
-        .eq('status', 'completed');
+      where.scheduleSlot = {
+        startTime: { lt: new Date() }
+      };
+      where.status = 'completed';
     }
 
-    // Order by date
-    query = query.order('booking_date', { ascending: status === 'upcoming' });
+    // Get bookings with enhanced relationships
+    const [bookings, totalCount] = await Promise.all([
+      prisma.booking.findMany({
+        where,
+        select: {
+          id: true,
+          sessionType: true,
+          status: true,
+          notes: true,
+          cancelledReason: true,
+          reminderSent: true,
+          createdAt: true,
+          updatedAt: true,
+          scheduleSlot: {
+            select: {
+              id: true,
+              startTime: true,
+              endTime: true,
+              capacity: true,
+              bookedCount: true,
+              scheduleTemplate: {
+                select: {
+                  dayOfWeek: true,
+                  sessionDuration: {
+                    select: {
+                      name: true,
+                      duration_minutes: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          userPackage: {
+            select: {
+              id: true,
+              quantity: true,
+              sessionsUsed: true,
+              isActive: true,
+              expiresAt: true,
+              packagePrice: {
+                select: {
+                  price: true,
+                  pricingMode: true,
+                  packageDefinition: {
+                    select: {
+                      name: true,
+                      description: true,
+                      sessionsCount: true,
+                      packageType: true
+                    }
+                  },
+                  currency: {
+                    select: {
+                      code: true,
+                      symbol: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        skip: offset,
+        take: limit,
+        orderBy: [
+          { scheduleSlot: { startTime: status === 'upcoming' ? 'asc' : 'desc' } }
+        ]
+      }),
+      prisma.booking.count({ where })
+    ]);
 
-    const { data: bookings, error } = await query;
+    console.log('✅ Database query successful, found', bookings.length, 'bookings');
 
-    if (error) {
-      console.error('Error fetching bookings:', error);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Database error',
-        message: 'Failed to fetch bookings' 
-      }, { status: 500 });
-    }
+    const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
       success: true,
       data: bookings,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages
+      },
       message: 'Bookings fetched successfully'
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error in GET /api/client/bookings:', error);
     return NextResponse.json({ 
       success: false, 
       error: 'Internal server error',
-      message: 'An unexpected error occurred' 
+      message: 'Failed to fetch bookings',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerClient();
+    console.log('🔍 POST /api/client/bookings - Starting request...');
     
-    // Get the authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
+    const user = await requireAuth(request);
+    if (!user) {
+      console.log('❌ Unauthorized access attempt');
       return NextResponse.json({ 
         success: false, 
         error: 'Unauthorized',
@@ -111,34 +185,43 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    const body = await request.json();
-    const {
-      schedule_slot_id,
-      user_package_id,
-      booking_type,
-      group_size,
-      notes
-    } = body;
+    console.log('✅ User authenticated:', user.email);
 
-    // Validation
-    if (!schedule_slot_id || !user_package_id) {
+    const body = await request.json();
+    const validation = createBookingSchema.safeParse(body);
+
+    if (!validation.success) {
       return NextResponse.json({
         success: false,
-        error: 'Missing required fields',
-        message: 'Schedule slot and user package are required'
+        error: 'Validation failed',
+        message: 'Invalid booking data',
+        details: validation.error.issues
       }, { status: 400 });
     }
 
-    // Verify the user owns the package
-    const { data: userPackage, error: packageError } = await supabase
-      .from('user_packages')
-      .select('*')
-      .eq('id', user_package_id)
-      .eq('client_email', user.email)
-      .eq('is_active', true)
-      .single();
+    const { scheduleSlotId, userPackageId, sessionType, notes } = validation.data;
 
-    if (packageError || !userPackage) {
+    // Verify the user owns the package and it's active
+    const userPackage = await prisma.userPackage.findFirst({
+      where: {
+        id: userPackageId,
+        userId: user.id,
+        isActive: true
+      },
+      include: {
+        packagePrice: {
+          include: {
+            packageDefinition: {
+              select: {
+                sessionsCount: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!userPackage) {
       return NextResponse.json({
         success: false,
         error: 'Invalid package',
@@ -146,15 +229,27 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Verify the schedule slot is available
-    const { data: scheduleSlot, error: slotError } = await supabase
-      .from('schedule_slots')
-      .select('*')
-      .eq('id', schedule_slot_id)
-      .eq('is_available', true)
-      .single();
+    // Check if user has remaining sessions
+    const totalSessions = userPackage.packagePrice.packageDefinition.sessionsCount * (userPackage.quantity || 1);
+    const remainingSessions = totalSessions - (userPackage.sessionsUsed || 0);
 
-    if (slotError || !scheduleSlot) {
+    if (remainingSessions <= 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'No sessions remaining',
+        message: 'You have no sessions remaining in this package'
+      }, { status: 400 });
+    }
+
+    // Verify the schedule slot is available
+    const scheduleSlot = await prisma.scheduleSlot.findFirst({
+      where: {
+        id: scheduleSlotId,
+        isAvailable: true
+      }
+    });
+
+    if (!scheduleSlot) {
       return NextResponse.json({
         success: false,
         error: 'Invalid schedule slot',
@@ -163,7 +258,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if slot has capacity
-    if (scheduleSlot.booked_count >= scheduleSlot.capacity) {
+    if (scheduleSlot.bookedCount && scheduleSlot.capacity && scheduleSlot.bookedCount >= scheduleSlot.capacity) {
       return NextResponse.json({
         success: false,
         error: 'Slot full',
@@ -171,51 +266,88 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Create the booking
-    const { data: booking, error: bookingError } = await supabase
-      .from('bookings')
-      .insert({
-        client_email: user.email,
-        schedule_slot_id: schedule_slot_id,
-        user_package_id: user_package_id,
-        booking_type: booking_type || 'individual',
-        group_size: booking_type === 'group' ? group_size : undefined,
-        notes: notes || undefined,
-        status: 'pending',
-        booking_date: scheduleSlot.start_time.split('T')[0],
-        session_time: scheduleSlot.start_time.split('T')[1] || '00:00:00',
-        session_type: 'Session'
-      })
-      .select()
-      .single();
+    // Create the booking and update counts in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the booking
+      const booking = await tx.booking.create({
+        data: {
+          userId: user.id,
+          userPackageId: userPackageId,
+          scheduleSlotId: scheduleSlotId,
+          sessionType: sessionType,
+          notes: notes,
+          status: 'confirmed'
+        },
+        include: {
+          scheduleSlot: {
+            select: {
+              id: true,
+              startTime: true,
+              endTime: true,
+              scheduleTemplate: {
+                select: {
+                  dayOfWeek: true,
+                  sessionDuration: {
+                    select: {
+                      name: true,
+                      duration_minutes: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          userPackage: {
+            select: {
+              id: true,
+              sessionsUsed: true,
+              packagePrice: {
+                select: {
+                  packageDefinition: {
+                    select: {
+                      name: true,
+                      sessionsCount: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
 
-    if (bookingError) {
-      console.error('Error creating booking:', bookingError);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: 'Failed to create booking'
-      }, { status: 500 });
-    }
+      // Update user package sessions used
+      await tx.userPackage.update({
+        where: { id: userPackageId },
+        data: { sessionsUsed: { increment: 1 } }
+      });
 
-    // Update the schedule slot booked count
-    await supabase
-      .from('schedule_slots')
-      .update({ booked_count: scheduleSlot.booked_count + 1 })
-      .eq('id', schedule_slot_id);
+      // Update schedule slot booked count
+      await tx.scheduleSlot.update({
+        where: { id: scheduleSlotId },
+        data: { bookedCount: { increment: 1 } }
+      });
+
+      return booking;
+    });
+
+    console.log('✅ Booking created successfully');
 
     return NextResponse.json({
       success: true,
-      data: booking,
+      data: result,
       message: 'Booking created successfully'
-    });
+    }, { status: 201 });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('❌ Error in POST /api/client/bookings:', error);
     return NextResponse.json({ 
       success: false, 
       error: 'Internal server error',
-      message: 'An unexpected error occurred' 
+      message: 'Failed to create booking',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }

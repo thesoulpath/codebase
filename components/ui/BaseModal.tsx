@@ -122,20 +122,19 @@ export function BaseModal({
       onOpenChange={closeOnOverlayClick ? onClose : undefined}
     >
       <DialogContent className={modalClasses}>
-        {(title || description) && (
-          <DialogHeader>
-            {title && (
-              <DialogTitle className="dashboard-modal-title text-white text-xl font-bold">
-                {title}
-              </DialogTitle>
-            )}
-            {description && (
-              <DialogDescription className="dashboard-modal-description text-gray-400 text-base">
-                {description}
-              </DialogDescription>
-            )}
-          </DialogHeader>
-        )}
+        <DialogHeader>
+          <DialogTitle className={cn(
+            "dashboard-modal-title text-xl font-bold",
+            title ? "text-white" : "sr-only" // sr-only hides the title visually but keeps it accessible
+          )}>
+            {title || "Modal"}
+          </DialogTitle>
+          {description && (
+            <DialogDescription className="dashboard-modal-description text-gray-400 text-base">
+              {description}
+            </DialogDescription>
+          )}
+        </DialogHeader>
         
         {children}
       </DialogContent>
@@ -345,8 +344,8 @@ export function ModalSection({
     )}>
       {title && (
         <div className="flex items-center gap-2 mb-3">
-                      {icon && <div className="text-gray-400">{icon}</div>}
-                      <h4 className="text-base font-medium text-white">
+          {icon && <div className="text-gray-400">{icon}</div>}
+          <h4 className="text-base font-medium text-white">
             {title}
           </h4>
         </div>

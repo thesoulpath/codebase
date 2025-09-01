@@ -107,7 +107,7 @@ const PaymentRecordsManagement: React.FC = () => {
       params.append('page', pagination.page.toString());
       params.append('limit', pagination.limit.toString());
 
-      const url = `/api/admin/payments?${params}`;
+      const url = `/api/admin/payment-records?${params}`;
       console.log('🌐 Making request to:', url);
 
       const response = await fetch(url, {
@@ -153,8 +153,8 @@ const PaymentRecordsManagement: React.FC = () => {
       }
 
       const url = editingRecord 
-        ? '/api/admin/payments' 
-        : '/api/admin/payments';
+        ? '/api/admin/payment-records' 
+        : '/api/admin/payment-records';
       
       const method = editingRecord ? 'PUT' : 'POST';
       const body = editingRecord 
@@ -211,7 +211,7 @@ const PaymentRecordsManagement: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`/api/admin/payments?id=${id}`, {
+      const response = await fetch(`/api/admin/payment-records?id=${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authToken}`,

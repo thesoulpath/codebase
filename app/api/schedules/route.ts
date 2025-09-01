@@ -9,32 +9,33 @@ const supabase = createClient(
 
 // Zod schema for schedule creation
 const scheduleCreateSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
-  time: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
-  duration: z.number().min(30, 'Duration must be at least 30 minutes').max(180, 'Duration cannot exceed 3 hours'),
-  capacity: z.number().min(1, 'Capacity must be at least 1').max(10, 'Capacity cannot exceed 10'),
-  available: z.boolean().default(true),
-  notes: z.string().optional()
+  day_of_week: z.string().min(1, 'Day of week is required'),
+  start_time: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
+  end_time: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
+  capacity: z.number().min(1, 'Capacity must be at least 1').max(10, 'Capacity cannot exceed 10').optional(),
+  is_available: z.boolean().default(true),
+  auto_available: z.boolean().default(true).optional(),
+  session_duration_id: z.number().optional()
 });
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const date = searchParams.get('date');
+    const dayOfWeek = searchParams.get('day_of_week');
     const available = searchParams.get('available');
 
     let query = supabase
-      .from('schedules')
+      .from('schedule_templates')
       .select('*')
-      .order('date', { ascending: true })
-      .order('time', { ascending: true });
+      .order('day_of_week', { ascending: true })
+      .order('start_time', { ascending: true });
 
-    if (date) {
-      query = query.eq('date', date);
+    if (dayOfWeek) {
+      query = query.eq('day_of_week', dayOfWeek);
     }
 
     if (available !== null) {
-      query = query.eq('available', available === 'true');
+      query = query.eq('is_available', available === 'true');
     }
 
     const { data: schedules, error } = await query;
@@ -99,35 +100,36 @@ export async function POST(request: NextRequest) {
 
     // Check if schedule already exists
     const { data: existingSchedule } = await supabase
-      .from('schedules')
+      .from('schedule_templates')
       .select('id')
-      .eq('date', scheduleData.date)
-      .eq('time', scheduleData.time)
+      .eq('day_of_week', scheduleData.day_of_week)
+      .eq('start_time', scheduleData.start_time)
       .single();
 
     if (existingSchedule) {
       return NextResponse.json({
         success: false,
         error: 'Schedule already exists',
-        message: 'A schedule already exists for this date and time',
+        message: 'A schedule already exists for this day and time',
         toast: {
           type: 'error',
           title: 'Schedule Exists',
-          description: 'A schedule already exists for this date and time'
+          description: 'A schedule already exists for this day and time'
         }
       }, { status: 409 });
     }
 
     // Insert schedule into database
     const { data, error } = await supabase
-      .from('schedules')
+      .from('schedule_templates')
       .insert({
-        date: scheduleData.date,
-        time: scheduleData.time,
-        duration: scheduleData.duration,
+        day_of_week: scheduleData.day_of_week,
+        start_time: scheduleData.start_time,
+        end_time: scheduleData.end_time,
         capacity: scheduleData.capacity,
-        available: scheduleData.available,
-        notes: scheduleData.notes,
+        is_available: scheduleData.is_available,
+        auto_available: scheduleData.auto_available,
+        session_duration_id: scheduleData.session_duration_id,
         created_at: new Date().toISOString()
       })
       .select()
@@ -155,7 +157,7 @@ export async function POST(request: NextRequest) {
       toast: {
         type: 'success',
         title: 'Success!',
-        description: `Schedule for ${data.date} at ${data.time} created successfully`
+        description: `Schedule for ${data.day_of_week} at ${data.start_time} created successfully`
       }
     }, { status: 201 });
 

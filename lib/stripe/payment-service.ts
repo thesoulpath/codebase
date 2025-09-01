@@ -62,6 +62,9 @@ export class StripePaymentService {
   static async createCheckoutSession(params: CreateCheckoutSessionParams) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const session = await stripe.checkout.sessions.create({
         customer: params.customerId,
         customer_email: params.customerEmail,
@@ -102,6 +105,9 @@ export class StripePaymentService {
   static async createPaymentIntent(params: CreatePaymentIntentParams) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const paymentIntent = await stripe.paymentIntents.create({
         amount: params.amount,
         currency: params.currency,
@@ -136,6 +142,9 @@ export class StripePaymentService {
   static async getCheckoutSession(sessionId: string) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const session = await stripe.checkout.sessions.retrieve(sessionId);
       return {
         success: true,
@@ -156,6 +165,9 @@ export class StripePaymentService {
   static async getPaymentIntent(paymentIntentId: string) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
       return {
         success: true,
@@ -176,6 +188,9 @@ export class StripePaymentService {
   static async confirmPaymentIntent(paymentIntentId: string, paymentMethodId: string) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const paymentIntent = await stripe.paymentIntents.confirm(paymentIntentId, {
         payment_method: paymentMethodId,
       });
@@ -199,6 +214,9 @@ export class StripePaymentService {
   static async cancelPaymentIntent(paymentIntentId: string) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const paymentIntent = await stripe.paymentIntents.cancel(paymentIntentId);
 
       return {
@@ -225,6 +243,9 @@ export class StripePaymentService {
   }) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const customer = await stripe.customers.create({
         email: params.email,
         name: params.name,
@@ -252,6 +273,9 @@ export class StripePaymentService {
   static async getCustomer(customerId: string) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const customer = await stripe.customers.retrieve(customerId);
 
       return {
@@ -278,6 +302,9 @@ export class StripePaymentService {
   }) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const customer = await stripe.customers.update(customerId, params);
 
       return {
@@ -299,6 +326,9 @@ export class StripePaymentService {
   static async deleteCustomer(customerId: string) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const customer = await stripe.customers.del(customerId);
 
       return {
@@ -338,6 +368,9 @@ export class StripePaymentService {
   }) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const paymentMethod = await stripe.paymentMethods.create(params);
 
       return {
@@ -360,6 +393,9 @@ export class StripePaymentService {
   static async attachPaymentMethod(paymentMethodId: string, customerId: string) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const paymentMethod = await stripe.paymentMethods.attach(paymentMethodId, {
         customer: customerId,
       });
@@ -383,6 +419,9 @@ export class StripePaymentService {
   static async detachPaymentMethod(paymentMethodId: string) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const paymentMethod = await stripe.paymentMethods.detach(paymentMethodId);
 
       return {
@@ -409,6 +448,9 @@ export class StripePaymentService {
   }) {
     try {
       const stripe = getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
       const paymentMethods = await stripe.paymentMethods.list({
         customer: customerId,
         type: params?.type || 'card',

@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function createSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 // Default logo configuration when table doesn't exist
 const defaultLogo = {
@@ -19,6 +25,8 @@ const defaultLogo = {
 
 export async function GET() {
   try {
+    const supabase = createSupabaseClient();
+    
     // First, check if the logo table exists by trying to query it
     const { data, error } = await supabase
       .from('logo')
@@ -45,6 +53,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createSupabaseClient();
     const body = await request.json();
     
     // Try to upsert, but if table doesn't exist, just return success with default

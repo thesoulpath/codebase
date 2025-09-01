@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PackageIcon, CalendarIcon, ShoppingCart } from 'lucide-react';
 
-import Link from 'next/link';
+
+import { PackagePurchaseFlow } from '@/components/PackagePurchaseFlow';
 
 interface Package {
   id: number;
@@ -22,6 +23,7 @@ interface Package {
 export default function PackagesPage() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showPurchaseFlow, setShowPurchaseFlow] = useState(false);
 
   useEffect(() => {
     fetchPackages();
@@ -48,6 +50,23 @@ export default function PackagesPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ffd700]"></div>
+      </div>
+    );
+  }
+
+  if (showPurchaseFlow) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="mb-6">
+          <Button
+            variant="outline"
+            onClick={() => setShowPurchaseFlow(false)}
+            className="mb-4 border-[#2a2a4a] text-gray-400 hover:bg-[#2a2a4a] hover:text-white"
+          >
+            ← Back to Packages
+          </Button>
+        </div>
+        <PackagePurchaseFlow />
       </div>
     );
   }
@@ -94,16 +113,59 @@ export default function PackagesPage() {
               )}
 
               <div className="pt-4">
-                <Link href={`/account/purchase?package=${pkg.id}`}>
-                  <Button className="w-full bg-[#ffd700] text-black hover:bg-[#ffd700]/90">
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    Purchase Package
-                  </Button>
-                </Link>
+                <Button 
+                  className="w-full bg-[#ffd700] text-black hover:bg-[#ffd700]/90"
+                  onClick={() => setShowPurchaseFlow(true)}
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  Purchase Package
+                </Button>
               </div>
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Additional Information */}
+      <div className="mt-12">
+        <Card className="bg-[#1a1a2e] border-[#16213e]">
+          <CardHeader>
+            <CardTitle className="text-white">About Our Packages</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-[#ffd700]/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <PackageIcon className="w-6 h-6 text-[#ffd700]" />
+                </div>
+                <h3 className="text-white font-semibold mb-2">Flexible Sessions</h3>
+                <p className="text-gray-400 text-sm">
+                  Choose from various session lengths and types to suit your needs
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-12 h-12 bg-[#ffd700]/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <CalendarIcon className="w-6 h-6 text-[#ffd700]" />
+                </div>
+                <h3 className="text-white font-semibold mb-2">Easy Booking</h3>
+                <p className="text-gray-400 text-sm">
+                  Book sessions at your convenience with our flexible scheduling system
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-12 h-12 bg-[#ffd700]/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <ShoppingCart className="w-6 h-6 text-[#ffd700]" />
+                </div>
+                <h3 className="text-white font-semibold mb-2">Secure Payment</h3>
+                <p className="text-gray-400 text-sm">
+                  Safe and secure payment processing with multiple payment options
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

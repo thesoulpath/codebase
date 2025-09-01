@@ -100,6 +100,28 @@ export function formatDateTime(datetime: string | Date | null | undefined): stri
   }
 }
 
+/**
+ * Safely formats a currency amount
+ * Returns a formatted currency string or "N/A" if the amount is invalid
+ */
+export function formatCurrency(amount: number | null | undefined, currency: string = 'USD'): string {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return "N/A";
+  }
+  
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  } catch (error) {
+    console.warn('Error formatting currency:', amount, currency, error);
+    return `$${amount.toFixed(2)}`;
+  }
+}
+
 export function generateId(): string {
   return Math.random().toString(36).substr(2, 9);
 }
