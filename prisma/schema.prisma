@@ -48,6 +48,7 @@ model User {
   purchases    Purchase[]
   paymentRecords PaymentRecord[]
   userPackages UserPackage[]
+  otpVerifications OtpVerification[]
 
   @@index([email], map: "idx_users_email")
   @@index([status], map: "idx_users_status")
@@ -67,14 +68,20 @@ model PackageDefinition {
   packageType       String          @map("package_type") @db.VarChar(20)
   maxGroupSize      Int?            @map("max_group_size")
   isActive          Boolean?        @default(true) @map("is_active")
+  isPopular         Boolean?        @default(false) @map("is_popular")
+  displayOrder      Int?            @default(0) @map("display_order")
+  featured          Boolean?        @default(false) @map("featured")
   createdAt         DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime?       @default(now()) @map("updated_at") @db.Timestamptz(6)
   
   // Relationships
-  sessionDuration   SessionDuration @relation("PackageDefinitionSessionDuration", fields: [sessionDurationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  sessionDuration   SessionDuration @relation("PackageDefinitionSessionDuration", fields: [sessionDurationId], references: [id], onDelete: Cascade, onUpdate: Restrict)
   packagePrices     PackagePrice[]
 
   @@index([isActive], map: "idx_package_definitions_active")
+  @@index([isPopular], map: "idx_package_definitions_popular")
+  @@index([displayOrder], map: "idx_package_definitions_order")
+  @@index([featured], map: "idx_package_definitions_featured")
   @@map("package_definitions")
 }
 
@@ -89,8 +96,8 @@ model PackagePrice {
   updatedAt           DateTime?         @default(now()) @map("updated_at") @db.Timestamptz(6)
   
   // Relationships
-  currency            Currency          @relation("PackagePriceCurrency", fields: [currencyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  packageDefinition   PackageDefinition @relation(fields: [packageDefinitionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  currency            Currency          @relation("PackagePriceCurrency", fields: [currencyId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  packageDefinition   PackageDefinition @relation(fields: [packageDefinitionId], references: [id], onDelete: Cascade, onUpdate: Restrict)
   userPackages        UserPackage[]
 
   @@unique([packageDefinitionId, currencyId])
@@ -116,7 +123,7 @@ model ScheduleTemplate {
   
   // Relationships
   scheduleSlots     ScheduleSlot[]
-  sessionDuration   SessionDuration? @relation("ScheduleTemplateSessionDuration", fields: [sessionDurationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sessionDuration   SessionDuration? @relation("ScheduleTemplateSessionDuration", fields: [sessionDurationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([dayOfWeek], map: "idx_schedule_templates_day")
   @@map("schedule_templates")
@@ -135,7 +142,7 @@ model ScheduleSlot {
   
   // Relationships
   bookings           Booking[]
-  scheduleTemplate   ScheduleTemplate @relation(fields: [scheduleTemplateId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  scheduleTemplate   ScheduleTemplate @relation(fields: [scheduleTemplateId], references: [id], onDelete: Cascade, onUpdate: Restrict)
 
   @@index([startTime], map: "idx_schedule_slots_start_time")
   @@map("schedule_slots")
@@ -160,7 +167,7 @@ model Purchase {
   updatedAt       DateTime?     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   
   // Relationships
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
   userPackages    UserPackage[]
   paymentRecords  PaymentRecord[]
 
@@ -183,9 +190,9 @@ model UserPackage {
   updatedAt                DateTime?      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   
   // Relationships
-  user                    User            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  purchase                Purchase        @relation(fields: [purchaseId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  packagePrice            PackagePrice    @relation(fields: [packagePriceId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user                    User            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  purchase                Purchase        @relation(fields: [purchaseId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  packagePrice            PackagePrice    @relation(fields: [packagePriceId], references: [id], onDelete: Cascade, onUpdate: Restrict)
   bookings                Booking[]
 
   @@index([userId], map: "idx_user_packages_user_id")
@@ -214,9 +221,9 @@ model Booking {
   updatedAt             DateTime?            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   
   // Relationships
-  user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  userPackage           UserPackage          @relation(fields: [userPackageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  scheduleSlot          ScheduleSlot         @relation(fields: [scheduleSlotId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  userPackage           UserPackage          @relation(fields: [userPackageId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  scheduleSlot          ScheduleSlot         @relation(fields: [scheduleSlotId], references: [id], onDelete: Cascade, onUpdate: Restrict)
 
   @@index([userId], map: "idx_bookings_user_id")
   @@index([userPackageId], map: "idx_bookings_user_package_id")
@@ -245,8 +252,8 @@ model PaymentRecord {
   updatedAt      DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   
   // Relationships
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  purchase       Purchase  @relation(fields: [purchaseId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  purchase       Purchase  @relation(fields: [purchaseId], references: [id], onDelete: Cascade, onUpdate: Restrict)
 
   @@index([userId], map: "idx_payment_records_user_id")
   @@index([purchaseId], map: "idx_payment_records_purchase_id")
@@ -309,8 +316,8 @@ model Rate {
   updatedAt              DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   
   // Relationships
-  currency               Currency        @relation(fields: [currencyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  sessionDuration        SessionDuration @relation(fields: [sessionDurationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  currency               Currency        @relation(fields: [currencyId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  sessionDuration        SessionDuration @relation(fields: [sessionDurationId], references: [id], onDelete: Cascade, onUpdate: Restrict)
 
   @@unique([currencyId, sessionDurationId, sessionType])
   @@map("rates")
@@ -421,6 +428,24 @@ model Content {
   @@map("content")
 }
 
+model Section {
+  id                Int       @id @default(autoincrement())
+  sectionId         String    @unique @map("section_id")
+  type              String    @default("content") @db.VarChar(50)
+  title             String    @db.VarChar(255)
+  description       String?   @db.Text
+  icon              String    @default("Circle") @db.VarChar(50)
+  component         String    @db.VarChar(100)
+  order             Int       @default(0)
+  enabled           Boolean   @default(true)
+  mobileConfig      Json?     @map("mobile_config")
+  desktopConfig     Json?     @map("desktop_config")
+  createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("sections")
+}
+
 model EmailConfig {
   id            Int       @id @default(autoincrement())
   smtpHost      String?   @default("smtp.gmail.com") @map("smtp_host")
@@ -461,8 +486,8 @@ model BugReport {
   
   // Relationships
   comments    BugComment[]
-  assignee    User?           @relation("BugReportAssignee", fields: [assignedTo], references: [id], onUpdate: NoAction)
-  reporter    User?           @relation("BugReportReporter", fields: [reporterId], references: [id], onUpdate: NoAction)
+  assignee    User?           @relation("BugReportAssignee", fields: [assignedTo], references: [id], onUpdate: Restrict)
+  reporter    User?           @relation("BugReportReporter", fields: [reporterId], references: [id], onUpdate: Restrict)
 
   @@index([status], map: "idx_bug_reports_status")
   @@index([priority], map: "idx_bug_reports_priority")
@@ -481,8 +506,8 @@ model BugComment {
   updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   
   // Relationships
-  author      User      @relation("BugCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  bugReport   BugReport @relation(fields: [bugReportId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  author      User      @relation("BugCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  bugReport   BugReport @relation(fields: [bugReportId], references: [id], onDelete: Cascade, onUpdate: Restrict)
 
   @@index([bugReportId], map: "idx_bug_comments_bug_report")
   @@index([authorId], map: "idx_bug_comments_author")
@@ -528,7 +553,7 @@ model payment_methods {
   is_active   Boolean?  @default(true)
   created_at  DateTime? @default(now()) @db.Timestamptz(6)
   updated_at  DateTime? @default(now()) @db.Timestamptz(6)
-  currencies  Currency  @relation(fields: [currency_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  currencies  Currency  @relation(fields: [currency_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
 }
 
 // ============================================================================
@@ -555,4 +580,43 @@ enum priority_level {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+// ============================================================================
+// SMS CONFIGURATION AND OTP VERIFICATION
+// ============================================================================
+
+model SmsConfiguration {
+  id                Int       @id @default(autoincrement())
+  provider          String    @default("labsmobile") // labsmobile, twilio, etc.
+  username          String    // LabsMobile username
+  tokenApi          String    @map("token_api") // LabsMobile API token
+  senderName        String?   @map("sender_name") // SMS sender name
+  isActive          Boolean   @default(true) @map("is_active")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("sms_configurations")
+}
+
+model OtpVerification {
+  id                Int       @id @default(autoincrement())
+  userId            String?   @map("user_id")
+  phoneNumber       String    @map("phone_number")
+  countryCode       String    @map("country_code")
+  otpCode           String    @map("otp_code")
+  isVerified        Boolean   @default(false) @map("is_verified")
+  expiresAt         DateTime  @map("expires_at") @db.Timestamptz(6)
+  attempts          Int       @default(0)
+  maxAttempts       Int       @default(3) @map("max_attempts")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relationships
+  user              User?     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([phoneNumber], map: "idx_otp_verifications_phone")
+  @@index([userId], map: "idx_otp_verifications_user")
+  @@index([expiresAt], map: "idx_otp_verifications_expires")
+  @@map("otp_verifications")
 }

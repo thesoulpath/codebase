@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Clock, FileText, Headphones } from 'lucide-react';
-import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { AstralChart } from './AstralChart';
 
@@ -15,7 +15,7 @@ export function SessionSection({ t, scrollToSection }: SessionSectionProps) {
   const deliverableIcons = [Clock, FileText, Headphones];
   
   return (
-    <section className="h-full flex flex-col justify-center px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 overflow-y-auto sm:overflow-hidden safe-padding">
+    <section className="h-full flex flex-col justify-start px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 overflow-hidden safe-padding pt-20 sm:pt-24 lg:pt-28">
       <div className="container mx-auto max-w-7xl">
         <div className="grid gap-8 md:grid-cols-2 md:gap-10 lg:gap-16 items-center">
           <motion.div

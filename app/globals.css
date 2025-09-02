@@ -1142,8 +1142,8 @@ section {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
-/* Navigation dots mobile improvements */
-.navigation-dots {
+/* Navigation icons mobile improvements */
+.navigation-icons {
   right: max(0.5rem, env(safe-area-inset-right));
 }
 
@@ -1200,13 +1200,13 @@ html, body {
     scroll-behavior: smooth;
   }
   
-  /* Enhanced navigation dots for mobile */
-  .navigation-dots button {
+  /* Enhanced navigation icons for mobile */
+  .navigation-icons button {
     position: relative;
     overflow: hidden;
   }
   
-  .navigation-dots button::before {
+  .navigation-icons button::before {
     content: '';
     position: absolute;
     top: 50%;
@@ -1219,7 +1219,7 @@ html, body {
     transition: width 0.3s ease, height 0.3s ease;
   }
   
-  .navigation-dots button:active::before {
+  .navigation-icons button:active::before {
     width: 200%;
     height: 200%;
   }
@@ -1646,13 +1646,13 @@ html, body {
     min-height: 44px !important;
   }
   
-  .navigation-dots {
+  .navigation-icons {
     right: 0.5rem !important;
   }
   
-  .navigation-dots button {
-    width: 0.75rem !important;
-    height: 0.75rem !important;
+  .navigation-icons button {
+    width: 3rem !important;
+    height: 3rem !important;
     border-width: 1.5px !important;
   }
   

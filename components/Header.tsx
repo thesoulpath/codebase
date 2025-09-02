@@ -167,13 +167,20 @@ export function Header({
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="w-12 h-12 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg header-button-menu touch-manipulation focus-visible"
+            className="flex items-center justify-center rounded-lg header-button-menu touch-manipulation focus-visible px-3 py-2 sm:px-2 sm:py-2"
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={isMenuOpen}
           >
+            {/* Mobile: Show "Menu" text */}
+            <span className="sm:hidden text-sm font-medium">
+              {isMenuOpen ? 'Close' : 'Menu'}
+            </span>
+            
+            {/* Desktop: Show hamburger icon */}
             <motion.div
               animate={{ rotate: isMenuOpen ? 180 : 0 }}
               transition={{ duration: 0.3 }}
+              className="hidden sm:block"
             >
               {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </motion.div>

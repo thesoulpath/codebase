@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
-import { motion } from 'motion/react';
 
 interface HeroSectionProps {
   t: any;
@@ -10,7 +10,7 @@ interface HeroSectionProps {
 
 export function HeroSection({ t }: HeroSectionProps) {
   return (
-    <section className="h-full flex flex-col items-center justify-center text-center px-4 sm:px-6 md:px-8 relative safe-padding">
+    <section className="h-full flex flex-col items-center justify-start text-center px-4 sm:px-6 md:px-8 relative safe-padding pt-20 sm:pt-24 lg:pt-28">
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}

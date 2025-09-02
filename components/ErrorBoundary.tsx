@@ -1,11 +1,10 @@
-import React from 'react';
-import { AlertCircle } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+'use client';
+
+import React, { Component, ReactNode } from 'react';
 
 interface Props {
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
+  children: ReactNode;
+  fallback?: ReactNode;
 }
 
 interface State {
@@ -13,7 +12,7 @@ interface State {
   error?: Error;
 }
 
-export class ErrorBoundary extends React.Component<Props, State> {
+export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
@@ -34,26 +33,21 @@ export class ErrorBoundary extends React.Component<Props, State> {
       }
 
       return (
-        <Card className="bg-red-500/10 border-red-500/20 max-w-md mx-auto mt-8">
-          <CardHeader>
-            <CardTitle className="text-red-400 flex items-center space-x-2">
-              <AlertCircle size={20} />
-              <span>Something went wrong</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-300 text-sm mb-4">
-              {this.state.error?.message || 'An unexpected error occurred.'}
-            </p>
-            <Button
-              onClick={() => this.setState({ hasError: false, error: undefined })}
-              variant="outline"
-              className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-            >
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="bg-red-500/10 border border-red-500/20 max-w-md mx-auto mt-8 p-6 rounded-lg">
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="w-5 h-5 bg-red-500 rounded-full"></div>
+            <h4 className="text-red-400 font-medium">Something went wrong</h4>
+          </div>
+          <p className="text-red-300 text-sm mb-4">
+            {this.state.error?.message || 'An unexpected error occurred.'}
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: undefined })}
+            className="px-4 py-2 border border-red-500/30 text-red-400 hover:bg-red-500/10 rounded transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
       );
     }
 

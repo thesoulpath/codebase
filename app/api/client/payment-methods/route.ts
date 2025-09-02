@@ -1,26 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    let supabase;
-    
-    // Check if we have a token in the Authorization header
-    const authHeader = request.headers.get('authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      supabase = await createServerClient();
-      
-      // Set the session manually
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-      
-      if (authError || !user) {
-        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-      }
-    } else {
-      // No token provided, return public payment methods
-      supabase = await createServerClient();
-    }
+    // Use service role key for public payment methods access
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
     // Fetch active payment methods with currency information
     const { data: paymentMethods, error } = await supabase

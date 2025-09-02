@@ -1,17 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Save, RefreshCw, Globe } from 'lucide-react';
-import { BaseButton } from './ui/BaseButton';
-import { BaseInput } from './ui/BaseInput';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Settings, FileText, Globe, RefreshCw, Save, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { defaultTranslations, getNestedValue, setNestedValue } from '../lib/data/translations';
-
+import { defaultTranslations } from '../lib/data/translations';
+import { SectionConfig, DEFAULT_SECTIONS } from '@/lib/content-config';
+import { CMSTabs } from './cms/CMSTabs';
+import { ContentEditor } from './cms/ContentEditor';
+import { SectionManager } from './cms/SectionManager';
+import { TranslationManager } from './cms/TranslationManager';
+import { useToast, ToastContainer } from './cms/Toast';
+import { CMSButton } from './cms/CMSButton';
 
 interface ContentManagementProps {
   onClose?: () => void;
@@ -19,23 +18,34 @@ interface ContentManagementProps {
 
 export function ContentManagement({ }: ContentManagementProps) {
   const { user } = useAuth();
+  const { toasts, showSuccess, showError, showWarning } = useToast();
   const [content, setContent] = useState(defaultTranslations);
+  const [sections, setSections] = useState<SectionConfig[]>(DEFAULT_SECTIONS);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeLanguage, setActiveLanguage] = useState<'en' | 'es'>('en');
-  const [activeSection, setActiveSection] = useState('hero');
+  const [activeTab, setActiveTab] = useState<'content' | 'sections' | 'i18n'>('content');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
-    loadContent();
-  }, []);
+    if (user?.access_token) {
+      loadContent();
+      loadSections();
+    }
+  }, [user?.access_token]);
 
   const loadContent = async () => {
+    if (!user?.access_token) {
+      console.log('🔐 loadContent: No access token, skipping API call');
+      return;
+    }
+    
     try {
       setIsLoading(true);
       
       const response = await fetch(`/api/admin/content`, {
         headers: {
-          'Authorization': `Bearer ${user?.access_token}`,
+          'Authorization': `Bearer ${user.access_token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -44,17 +54,49 @@ export function ContentManagement({ }: ContentManagementProps) {
         const data = await response.json();
         if (data.content && Object.keys(data.content).length > 0) {
           setContent(data.content);
+          setHasUnsavedChanges(false);
         }
+      } else {
+        showError('Load Failed', 'Failed to load content from server. Using default content.', 6000);
       }
     } catch (error) {
       console.error('Error loading content:', error);
+      showError('Load Failed', 'Failed to load content. Using default content.', 6000);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const loadSections = async () => {
+    try {
+      const response = await fetch('/api/sections');
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.sections && Array.isArray(data.sections)) {
+          setSections(data.sections);
+          console.log('✅ Sections loaded from database:', data.sections.length);
+        } else {
+          console.warn('⚠️ No sections data, using defaults');
+          setSections(DEFAULT_SECTIONS);
+        }
+      } else {
+        console.warn('⚠️ Failed to load sections, using defaults');
+        setSections(DEFAULT_SECTIONS);
+        showWarning('Sections Load Warning', 'Using default section configuration.', 4000);
+      }
+    } catch (error) {
+      console.error('Error loading sections:', error);
+      setSections(DEFAULT_SECTIONS);
+      showWarning('Sections Load Warning', 'Using default section configuration.', 4000);
+    }
+  };
+
   const saveContent = async () => {
-    if (!user?.access_token) return;
+    if (!user?.access_token) {
+      showError('Authentication Error', 'Please log in to save content.', 6000);
+      return;
+    }
     
     try {
       setIsSaving(true);
@@ -69,210 +111,222 @@ export function ContentManagement({ }: ContentManagementProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save content');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save content');
       }
       
-      alert('Content saved successfully!');
+      const savedData = await response.json();
+      setContent(savedData.content);
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+      
+      showSuccess('Content Saved!', 'Your changes have been saved successfully and the page will be revalidated.', 4000);
+      
+      // Trigger revalidation of the front page
+      try {
+        await fetch('/api/revalidate?path=/', { method: 'POST' });
+        console.log('✅ Front page revalidation triggered');
+      } catch (revalError) {
+        console.warn('⚠️ Revalidation failed:', revalError);
+        showWarning('Revalidation Warning', 'Content saved but page revalidation failed. Changes may take time to appear.', 4000);
+      }
+      
     } catch (error) {
       console.error('Error saving content:', error);
-      alert('Failed to save content. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      showError('Save Failed', `Failed to save content: ${errorMessage}`, 6000);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const updateField = (path: string, value: string) => {
-    setContent(prev => setNestedValue(prev, path, value));
+  const handleContentChange = (newContent: any) => {
+    setContent(newContent);
+    setHasUnsavedChanges(true);
   };
 
-  const renderField = (path: string, label: string, type: 'input' | 'textarea' = 'input') => {
-    const value = getNestedValue(content[activeLanguage], path) || '';
+  const handleSectionsChange = (newSections: SectionConfig[]) => {
+    setSections(newSections);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleTabChange = (tabId: string) => {
+    if (hasUnsavedChanges) {
+      const confirmed = window.confirm(
+        'You have unsaved changes. Are you sure you want to switch tabs? Your changes will be lost.'
+      );
+      if (!confirmed) return;
+      setHasUnsavedChanges(false);
+    }
+    setActiveTab(tabId as 'content' | 'sections' | 'i18n');
+  };
+
+  const handleRefresh = async () => {
+    if (hasUnsavedChanges) {
+      const confirmed = window.confirm(
+        'You have unsaved changes. Refreshing will discard them. Continue?'
+      );
+      if (!confirmed) return;
+    }
     
-    return (
-      <div className="space-y-2">
-        <Label htmlFor={path} className="dashboard-label">
-          {label}
-        </Label>
-        {type === 'textarea' ? (
-          <Textarea
-            id={path}
-            value={value}
-            onChange={(e) => updateField(path, e.target.value)}
-            className="dashboard-input"
-            rows={3}
-          />
-        ) : (
-          <BaseInput
-            id={path}
-            value={value}
-            onChange={(e) => updateField(path, e.target.value)}
-            className="dashboard-input"
-          />
-        )}
-      </div>
-    );
+    await loadContent();
+    await loadSections();
+    setHasUnsavedChanges(false);
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-8 h-8 border-4 border-[#FFD700] border-t-transparent rounded-full"
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#9CA3AF]">Loading content management system...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const tabs = [
+    {
+      id: 'content',
+      label: 'Content Editor',
+      icon: <FileText size={16} />,
+      content: (
+        <ContentEditor
+          content={content}
+          onContentChange={handleContentChange}
+          onSave={saveContent}
+          onRefresh={loadContent}
+          isLoading={isLoading}
+          isSaving={isSaving}
         />
+      )
+    },
+    {
+      id: 'sections',
+      label: 'Section Management',
+      icon: <Settings size={16} />,
+      content: (
+        <SectionManager
+          sections={sections}
+          onSectionsChange={handleSectionsChange}
+        />
+      )
+    },
+    {
+      id: 'i18n',
+      label: 'Translation Manager',
+      icon: <Globe size={16} />,
+      content: (
+        <TranslationManager
+          content={content}
+          onContentChange={handleContentChange}
+          onSave={saveContent}
+          onRefresh={loadContent}
+          isLoading={isLoading}
+          isSaving={isSaving}
+        />
+      )
+    }
+  ];
+
+  // Show loading state while user is not authenticated
+  if (!user?.access_token) {
+    return (
+      <div className="min-h-screen bg-[#0A0A23] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#EAEAEA] mx-auto mb-4"></div>
+          <p className="text-[#EAEAEA] text-lg">Loading content management system...</p>
+          <p className="text-[#9CA3AF] text-sm mt-2">Please wait while we authenticate your session</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-container p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="dashboard-text-primary text-3xl font-bold">Content Management</h1>
-          <p className="dashboard-text-secondary">Manage website content and translations</p>
+    <div className="min-h-screen bg-[#0A0A23] p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-[#EAEAEA] mb-2">Content Management System</h1>
+              <p className="text-[#9CA3AF]">Manage your website content, sections, and translations with ISR support</p>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              {hasUnsavedChanges && (
+                <div className="flex items-center space-x-2 px-3 py-2 bg-[#FFD700]/20 border border-[#FFD700]/30 rounded-lg">
+                  <AlertCircle size={16} className="text-[#FFD700]" />
+                  <span className="text-[#FFD700] text-sm font-medium">Unsaved changes</span>
+                </div>
+              )}
+              
+              {lastSaved && (
+                <div className="text-right">
+                  <p className="text-[#9CA3AF] text-sm">Last saved</p>
+                  <p className="text-[#EAEAEA] text-sm font-medium">
+                    {lastSaved.toLocaleTimeString()}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Status Bar */}
+          <div className="bg-[#1A1A2E] p-4 rounded-lg border border-[#2D2D44]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-[#10B981] rounded-full"></div>
+                  <span className="text-[#EAEAEA] text-sm">ISR Enabled</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-[#3B82F6] rounded-full"></div>
+                  <span className="text-[#EAEAEA] text-sm">Auto-revalidation</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-[#8B5CF6] rounded-full"></div>
+                  <span className="text-[#EAEAEA] text-sm">Real-time updates</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <CMSButton
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                  variant="secondary"
+                  size="sm"
+                >
+                  <RefreshCw size={16} className="mr-2" />
+                  Refresh All
+                </CMSButton>
+                
+                {hasUnsavedChanges && (
+                  <CMSButton
+                    onClick={saveContent}
+                    disabled={isSaving}
+                    variant="primary"
+                    size="sm"
+                  >
+                    <Save size={16} className="mr-2" />
+                    {isSaving ? 'Saving...' : 'Save All Changes'}
+                  </CMSButton>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <BaseButton
-            onClick={loadContent}
-            className="dashboard-button-reload"
-          >
-            <RefreshCw size={16} className="mr-2" />
-            Reload
-          </BaseButton>
-          <BaseButton
-            onClick={saveContent}
-            disabled={isSaving}
-            className="dashboard-button-primary"
-          >
-            <Save size={16} className="mr-2" />
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </BaseButton>
-        </div>
+        
+        {/* Tabs */}
+        <CMSTabs
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
       </div>
-
-      <Card className="dashboard-card">
-        <CardContent className="p-6">
-        <div className="flex items-center space-x-4 mb-6">
-          <div className="flex items-center space-x-2">
-            <Globe className="w-5 h-5 text-[#FFD700]" />
-            <span className="text-[#EAEAEA] font-medium">Language:</span>
-          </div>
-          <div className="dashboard-language-tabs">
-            <button
-              onClick={() => setActiveLanguage('en')}
-              className={`dashboard-language-tab ${
-                activeLanguage === 'en'
-                  ? 'dashboard-language-tab-active'
-                  : 'dashboard-language-tab-inactive'
-              }`}
-            >
-              English
-            </button>
-            <button
-              onClick={() => setActiveLanguage('es')}
-              className={`dashboard-language-tab ${
-                activeLanguage === 'es'
-                  ? 'dashboard-language-tab-active'
-                  : 'dashboard-language-tab-inactive'
-              }`}
-            >
-              Español
-            </button>
-          </div>
-        </div>
-
-        <Tabs value={activeSection} onValueChange={setActiveSection} className="w-full">
-          <TabsList className="dashboard-tabs">
-            <TabsTrigger value="hero" className="dashboard-tab">
-              Hero
-            </TabsTrigger>
-            <TabsTrigger value="approach" className="dashboard-tab">
-              Approach
-            </TabsTrigger>
-            <TabsTrigger value="session" className="dashboard-tab">
-              Session
-            </TabsTrigger>
-            <TabsTrigger value="about" className="dashboard-tab">
-              About
-            </TabsTrigger>
-            <TabsTrigger value="booking" className="dashboard-tab">
-              Booking
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="mt-6">
-            <TabsContent value="hero" className="space-y-4">
-              <Card className="dashboard-card">
-                <CardHeader>
-                  <CardTitle className="dashboard-card-title">Hero Section</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {renderField('hero.title', 'Hero Title')}
-                  {renderField('hero.subtitle', 'Hero Subtitle')}
-                  {renderField('hero.description', 'Hero Description', 'textarea')}
-                  {renderField('hero.ctaText', 'Call to Action Text')}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="approach" className="space-y-4">
-              <Card className="dashboard-card">
-                <CardHeader>
-                  <CardTitle className="dashboard-card-title">Approach Section</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {renderField('approach.title', 'Approach Title')}
-                  {renderField('approach.subtitle', 'Approach Subtitle')}
-                  {renderField('approach.description', 'Approach Description', 'textarea')}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="session" className="space-y-4">
-              <Card className="dashboard-card">
-                <CardHeader>
-                  <CardTitle className="dashboard-card-title">Session Section</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {renderField('session.title', 'Session Title')}
-                  {renderField('session.subtitle', 'Session Subtitle')}
-                  {renderField('session.description', 'Session Description', 'textarea')}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="about" className="space-y-4">
-              <Card className="dashboard-card">
-                <CardHeader>
-                  <CardTitle className="dashboard-card-title">About Section</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {renderField('about.title', 'About Title')}
-                  {renderField('about.subtitle', 'About Subtitle')}
-                  {renderField('about.description', 'About Description', 'textarea')}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="booking" className="space-y-4">
-              <Card className="dashboard-card">
-                <CardHeader>
-                  <CardTitle className="dashboard-card-title">Booking Section</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {renderField('booking.title', 'Booking Title')}
-                  {renderField('booking.subtitle', 'Booking Subtitle')}
-                  {renderField('booking.description', 'Booking Description', 'textarea')}
-                  {renderField('booking.form.title', 'Form Title')}
-                  {renderField('booking.form.subtitle', 'Form Subtitle')}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </div>
-        </Tabs>
-        </CardContent>
-      </Card>
+      
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemove={(_id) => {}} />
     </div>
   );
 }

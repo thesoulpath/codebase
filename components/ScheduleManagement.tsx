@@ -70,17 +70,17 @@ const ScheduleManagement: React.FC = () => {
   
   // Filters
   const [templateFilters, setTemplateFilters] = useState({
-    day_of_week: 'all',
-    is_available: 'all',
-    session_duration_id: 'all'
+    dayOfWeek: 'all',
+    isAvailable: 'all',
+    sessionDurationId: 'all'
   });
 
   const [slotFilters, setSlotFilters] = useState({
-    schedule_template_id: 'all',
-    start_date: '',
-    end_date: '',
-    is_available: 'all',
-    has_capacity: 'all'
+    scheduleTemplateId: 'all',
+    dateFrom: '',
+    dateTo: '',
+    isAvailable: 'all',
+    hasCapacity: 'all'
   });
 
   // Modal states
@@ -424,8 +424,8 @@ const ScheduleManagement: React.FC = () => {
                 <div className="flex-1">
                   <Label className="dashboard-label">Day of Week</Label>
                   <Select 
-                    value={templateFilters.day_of_week} 
-                    onValueChange={(value) => setTemplateFilters(prev => ({ ...prev, day_of_week: value }))}
+                    value={templateFilters.dayOfWeek} 
+                    onValueChange={(value) => setTemplateFilters(prev => ({ ...prev, dayOfWeek: value }))}
                   >
                     <SelectTrigger className="dashboard-select">
                       <SelectValue />
@@ -445,8 +445,8 @@ const ScheduleManagement: React.FC = () => {
                 <div className="flex-1">
                   <Label className="dashboard-label">Session Duration</Label>
                   <Select 
-                    value={templateFilters.session_duration_id} 
-                    onValueChange={(value) => setTemplateFilters(prev => ({ ...prev, session_duration_id: value }))}
+                    value={templateFilters.sessionDurationId} 
+                    onValueChange={(value) => setTemplateFilters(prev => ({ ...prev, sessionDurationId: value }))}
                   >
                     <SelectTrigger className="dashboard-select">
                       <SelectValue />
@@ -464,8 +464,8 @@ const ScheduleManagement: React.FC = () => {
                 <div className="flex-1">
                   <Label className="dashboard-label">Status</Label>
                   <Select 
-                    value={templateFilters.is_available} 
-                    onValueChange={(value) => setTemplateFilters(prev => ({ ...prev, is_available: value }))}
+                    value={templateFilters.isAvailable} 
+                    onValueChange={(value) => setTemplateFilters(prev => ({ ...prev, isAvailable: value }))}
                   >
                     <SelectTrigger className="dashboard-select">
                       <SelectValue />
@@ -645,8 +645,8 @@ const ScheduleManagement: React.FC = () => {
                 <div className="flex-1">
                   <Label className="dashboard-label">Template</Label>
                   <Select 
-                    value={slotFilters.schedule_template_id} 
-                    onValueChange={(value) => setSlotFilters(prev => ({ ...prev, schedule_template_id: value }))}
+                    value={slotFilters.scheduleTemplateId} 
+                    onValueChange={(value) => setSlotFilters(prev => ({ ...prev, scheduleTemplateId: value }))}
                   >
                     <SelectTrigger className="dashboard-select">
                       <SelectValue />
@@ -666,8 +666,8 @@ const ScheduleManagement: React.FC = () => {
                   <BaseInput
                     type="date"
                     className="dashboard-input"
-                    value={slotFilters.start_date}
-                    onChange={(e) => setSlotFilters(prev => ({ ...prev, start_date: e.target.value }))}
+                    value={slotFilters.dateFrom}
+                    onChange={(e) => setSlotFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
                   />
                 </div>
                 <div className="flex-1">
@@ -675,8 +675,8 @@ const ScheduleManagement: React.FC = () => {
                   <BaseInput
                     type="date"
                     className="dashboard-input"
-                    value={slotFilters.end_date}
-                    onChange={(e) => setSlotFilters(prev => ({ ...prev, end_date: e.target.value }))}
+                    value={slotFilters.dateTo}
+                    onChange={(e) => setSlotFilters(prev => ({ ...prev, dateTo: e.target.value }))}
                   />
                 </div>
                 <BaseButton 

@@ -8,6 +8,7 @@ import { useTranslations, useLanguage } from '@/hooks/useTranslations';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminDashboard } from '@/components/AdminDashboard';
 import LoginModal from '@/components/LoginModal';
+import { BookingSection } from '@/components/BookingSection';
 
 interface MainPageClientProps {
   content: Record<string, string>;
@@ -276,7 +277,7 @@ export default function MainPageClient({
   initialLogoSettings, 
   initialProfileImage
 }: MainPageClientProps) {
-  const { setLanguage } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const { t, isLoading: isLoadingTranslations } = useTranslations(initialContent);
   const { } = useProfileImage(initialProfileImage);
   const { logoSettings: _ } = useLogo(initialLogoSettings);
@@ -406,12 +407,7 @@ export default function MainPageClient({
           <AboutSection t={t} />
         </section>
         <section id="apply">
-          <div className="h-screen flex items-center justify-center">
-            <div className="text-center">
-              <h2 className="text-4xl font-heading text-[#FFD700] mb-4">Book Your Session</h2>
-              <p className="text-[#C0C0C0]">Contact us to schedule your spiritual guidance session.</p>
-            </div>
-          </div>
+          <BookingSection t={t} language={language} />
         </section>
       </div>
       

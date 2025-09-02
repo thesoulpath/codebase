@@ -1,43 +1,74 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 
 export function ConstellationBackground() {
-  // Seeded random number generator for consistent star positions
-  const seededRandom = (seed: number) => {
-    const x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
-  };
-
-  // Helper function to format numbers consistently
-  const formatNumber = (num: number, precision: number = 4) => {
-    return Number(num.toFixed(precision));
-  };
-
-  // Generate star data with different properties
+  // Generate star data with consistent positioning
   const generateStars = (count: number, type: 'small' | 'medium' | 'large' | 'cosmic') => {
     return [...Array(count)].map((_, i) => {
-      const seed = i * 1000 + (type === 'small' ? 1 : type === 'medium' ? 2 : type === 'large' ? 3 : 4);
-      const x = seededRandom(seed) * 100;
-      const y = seededRandom(seed + 1) * 100;
-      const brightness = seededRandom(seed + 2) * 0.8 + 0.2;
-      const speed = seededRandom(seed + 3) * 0.5 + 0.1;
-      const direction = seededRandom(seed + 4) * 360;
-      const pulseDuration = type === 'cosmic' ? 4 + seededRandom(seed + 5) * 3 : 2 + seededRandom(seed + 5) * 3;
-      const delay = seededRandom(seed + 6) * 4;
-      
+      const seed = i * 1000 + (type === 'small' ? 0 : type === 'medium' ? 100 : type === 'large' ? 200 : 250);
+      const random = (min: number, max: number) => {
+        const x = Math.sin(seed) * 10000;
+        return min + (x - Math.floor(x)) * (max - min);
+      };
+
       return {
         id: i,
-        x: formatNumber(x, 4),
-        y: formatNumber(y, 4),
-        size: type === 'small' ? 1 : type === 'medium' ? 1.5 : type === 'large' ? 2 : 3,
-        brightness: formatNumber(brightness, 4),
-        speed: formatNumber(speed, 4),
-        direction: formatNumber(direction, 4),
-        pulseDuration: formatNumber(pulseDuration, 4),
-        delay: formatNumber(delay, 4),
+        x: random(0, 100),
+        y: random(0, 100),
+        size: type === 'small' ? random(1, 3) : type === 'medium' ? random(3, 6) : type === 'large' ? random(6, 10) : random(10, 15),
+        brightness: random(0.3, 1),
+        speed: random(0.5, 2),
+        direction: random(0, 360),
+        pulseDuration: random(2, 6),
+        delay: random(0, 5),
         type
+      };
+    });
+  };
+
+  // Generate orbital particles
+  const generateOrbitals = (count: number) => {
+    return [...Array(count)].map((_, i) => {
+      const seed = i * 1000 + 100;
+      const random = (min: number, max: number) => {
+        const x = Math.sin(seed) * 10000;
+        return min + (x - Math.floor(x)) * (max - min);
+      };
+
+      return {
+        id: i,
+        centerX: random(20, 80),
+        centerY: random(20, 80),
+        radius: random(15, 40),
+        speed: random(0.5, 2),
+        startAngle: random(0, 360),
+        size: random(2, 6),
+        opacity: random(0.3, 0.8),
+        color: `hsl(${random(200, 280)}, 70%, 60%)`
+      };
+    });
+  };
+
+  // Generate shooting stars
+  const generateShootingStars = (count: number) => {
+    return [...Array(count)].map((_, i) => {
+      const seed = i * 1000 + 200;
+      const random = (min: number, max: number) => {
+        const x = Math.sin(seed) * 10000;
+        return min + (x - Math.floor(x)) * (max - min);
+      };
+
+      return {
+        id: i,
+        startX: random(0, 100),
+        startY: random(0, 100),
+        endX: random(0, 100),
+        endY: random(0, 100),
+        duration: random(3, 8),
+        delay: random(0, 10),
+        size: random(2, 5)
       };
     });
   };
@@ -48,79 +79,25 @@ export function ConstellationBackground() {
   const largeStars = useMemo(() => generateStars(12, 'large'), []);
   const cosmicStars = useMemo(() => generateStars(8, 'cosmic'), []);
 
-  // Floating particles with orbital motion
-  const generateOrbitals = (count: number) => {
-    return [...Array(count)].map((_, i) => {
-      const seed = i * 2000 + 1000;
-      const centerX = 20 + seededRandom(seed) * 60;
-      const centerY = 20 + seededRandom(seed + 1) * 60;
-      const radius = 50 + seededRandom(seed + 2) * 100;
-      const speed = 0.3 + seededRandom(seed + 3) * 0.7;
-      const startAngle = seededRandom(seed + 4) * 360;
-      const size = 1 + seededRandom(seed + 5) * 2;
-      const opacity = 0.3 + seededRandom(seed + 6) * 0.4;
-      const color = seededRandom(seed + 7) > 0.7 ? '#FFD700' : '#C0C0C0';
-      
-      return {
-        id: i,
-        centerX: formatNumber(centerX, 4),
-        centerY: formatNumber(centerY, 4),
-        radius: formatNumber(radius, 4),
-        speed: formatNumber(speed, 4),
-        startAngle: formatNumber(startAngle, 4),
-        size: formatNumber(size, 4),
-        opacity: formatNumber(opacity, 4),
-        color
-      };
-    });
-  };
-
   const orbitals = useMemo(() => generateOrbitals(15), []);
-
-  // Shooting stars
-  const generateShootingStars = (count: number) => {
-    return [...Array(count)].map((_, i) => {
-      const seed = i * 3000 + 2000;
-      const startX = seededRandom(seed) * 120 - 10;
-      const startY = seededRandom(seed + 1) * 120 - 10;
-      const endX = seededRandom(seed + 2) * 120 - 10;
-      const endY = seededRandom(seed + 3) * 120 - 10;
-      const duration = 2 + seededRandom(seed + 4) * 3;
-      const delay = seededRandom(seed + 5) * 15;
-      const size = 1 + seededRandom(seed + 6);
-      
-      return {
-        id: i,
-        startX: formatNumber(startX, 4),
-        startY: formatNumber(startY, 4),
-        endX: formatNumber(endX, 4),
-        endY: formatNumber(endY, 4),
-        duration: formatNumber(duration, 4),
-        delay: formatNumber(delay, 4),
-        size: formatNumber(size, 4)
-      };
-    });
-  };
-
   const shootingStars = useMemo(() => generateShootingStars(6), []);
 
   // Pre-calculate nebula data
   const nebulaData = useMemo(() => {
     return [...Array(8)].map((_, i) => {
       const seed = i * 1000 + 300;
-      const x = seededRandom(seed) * 80 + 10;
-      const y = seededRandom(seed + 1) * 80 + 10;
-      const width = 50 + seededRandom(seed + 2) * 100;
-      const height = 50 + seededRandom(seed + 3) * 100;
-      const duration = 20 + seededRandom(seed + 4) * 15;
-      
+      const random = (min: number, max: number) => {
+        const x = Math.sin(seed) * 10000;
+        return min + (x - Math.floor(x)) * (max - min);
+      };
+
       return {
         id: i,
-        x: formatNumber(x, 4),
-        y: formatNumber(y, 4),
-        width: formatNumber(width, 4),
-        height: formatNumber(height, 4),
-        duration: formatNumber(duration, 4)
+        x: random(0, 100),
+        y: random(0, 100),
+        width: random(20, 60),
+        height: random(20, 60),
+        duration: random(8, 15)
       };
     });
   }, []);
@@ -129,15 +106,16 @@ export function ConstellationBackground() {
   const trailData = useMemo(() => {
     return [...Array(12)].map((_, i) => {
       const seed = i * 1000 + 400;
-      const x = seededRandom(seed) * 100;
-      const y = seededRandom(seed + 1) * 100;
-      const duration = 3 + seededRandom(seed + 2) * 2;
-      
+      const random = (min: number, max: number) => {
+        const x = Math.sin(seed) * 10000;
+        return min + (x - Math.floor(x)) * (max - min);
+      };
+
       return {
         id: i,
-        x: formatNumber(x, 4),
-        y: formatNumber(y, 4),
-        duration: formatNumber(duration, 4)
+        x: random(0, 100),
+        y: random(0, 100),
+        duration: random(5, 12)
       };
     });
   }, []);
@@ -146,21 +124,19 @@ export function ConstellationBackground() {
   const interactiveData = useMemo(() => {
     return [...Array(20)].map((_, i) => {
       const seed = i * 1000 + 500;
-      const x = seededRandom(seed) * 100;
-      const y = seededRandom(seed + 1) * 100;
-      const size = 1 + seededRandom(seed + 2);
-      const color = seededRandom(seed + 3) > 0.5 ? '#FFD700' : '#FFFFFF';
-      const shadowSize = 2 + seededRandom(seed + 4) * 3;
-      const duration = 8 + seededRandom(seed + 5) * 5;
-      
+      const random = (min: number, max: number) => {
+        const x = Math.sin(seed) * 10000;
+        return min + (x - Math.floor(x)) * (max - min);
+      };
+
       return {
         id: i,
-        x: formatNumber(x, 4),
-        y: formatNumber(y, 4),
-        size: formatNumber(size, 4),
-        color,
-        shadowSize: formatNumber(shadowSize, 4),
-        duration: formatNumber(duration, 4)
+        x: random(0, 100),
+        y: random(0, 100),
+        size: random(3, 8),
+        color: `hsl(${random(200, 280)}, 70%, 60%)`,
+        shadowSize: random(10, 25),
+        duration: random(3, 8)
       };
     });
   }, []);
@@ -227,7 +203,7 @@ export function ConstellationBackground() {
       {/* Layer 3: Large stars with golden glow */}
       <div className="absolute inset-0 opacity-35">
         {largeStars.map((star) => {
-          const isGolden = seededRandom(star.id * 1000 + 100) > 0.6;
+          const isGolden = Math.random() > 0.6; // Simplified golden star generation
           return (
             <motion.div
               key={`large-${star.id}`}
@@ -348,7 +324,7 @@ export function ConstellationBackground() {
               repeat: Infinity,
               delay: star.delay,
               ease: "easeOut",
-              repeatDelay: 10 + seededRandom(star.id * 1000 + 200) * 10,
+              repeatDelay: 10 + Math.random() * 10, // Simplified repeatDelay
             }}
           >
             <div

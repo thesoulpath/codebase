@@ -5,6 +5,9 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
+// Debug JWT_SECRET loading
+console.log('🔐 Auth: JWT_SECRET loaded:', JWT_SECRET ? 'YES' : 'NO', 'Length:', JWT_SECRET?.length || 0);
+
 export interface AuthenticatedUser {
   id: string;
   email: string;

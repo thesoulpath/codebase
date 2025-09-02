@@ -1,38 +1,34 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { ChevronRight, Star, Compass, Clock, User, Calendar, Circle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-import { BookingSection } from '@/components/BookingSection';
-import { AdminDashboard } from '@/components/AdminDashboard';
-import LoginModal from '@/components/LoginModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslations, useLanguage } from '@/hooks/useTranslations';
+import { useContentManagement } from '@/hooks/useContentManagement';
+import DynamicSectionRenderer from './DynamicSectionRenderer';
 
 import { Header } from './Header';
 import { ConstellationBackground } from './ConstellationBackground';
-import { HeroSection } from './HeroSection';
-import { ApproachSection } from './ApproachSection';
-import { SessionSection } from './SessionSection';
-import { AboutSection } from './AboutSection';
 import { MobileMenu } from './MobileMenu';
+import LoginModal from './LoginModal';
+import { AdminDashboard } from './AdminDashboard';
 
 export function App() {
   const { language, setLanguage } = useLanguage();
-  const { t, reloadTranslations } = useTranslations(undefined, language);
+  const { t } = useTranslations(undefined, language);
   const [currentSection, setCurrentSection] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [hasExplicitlyClosed, setHasExplicitlyClosed] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const { user, isAdmin, signIn } = useAuth();
+  const { sections } = useContentManagement();
 
   // Debug logging for language changes
   console.log('🌐 App Component - Current language:', language);
   console.log('🌐 App Component - Current translations:', t?.nav?.invitation);
-
-  const sections = ['invitation', 'approach', 'session', 'about', 'apply'];
 
   // Fullpage scroll functionality
   useEffect(() => {
@@ -98,8 +94,8 @@ export function App() {
     };
   }, [showAdmin, showLoginModal, isMenuOpen, sections.length]);
 
-  const scrollToSection = (sectionName: string) => {
-    const index = sections.indexOf(sectionName);
+  const scrollToSection = (sectionId: string) => {
+    const index = sections.findIndex(s => s.id === sectionId);
     if (index !== -1) {
       setCurrentSection(index);
     }
@@ -113,59 +109,30 @@ export function App() {
   const handleLoginClick = () => {
     if (user && isAdmin) {
       setShowAdmin(true);
-      setHasExplicitlyClosed(false); // Reset the flag when user wants to access admin again
+      setHasExplicitlyClosed(false);
     } else {
       setShowLoginModal(true);
     }
   };
 
-  // Handle successful authentication - automatically redirect to admin dashboard
+  // Handle successful authentication - don't auto-redirect, let user choose
   useEffect(() => {
     console.log('🔄 useEffect triggered:', { user: !!user, isAdmin, showAdmin, hasExplicitlyClosed, showLoginModal });
     
     if (user && isAdmin) {
-      // If user is authenticated and is admin, automatically show admin dashboard
+      // If user is authenticated and is admin, just close login modal
       if (showLoginModal) {
         setShowLoginModal(false);
       }
       
-      // Only auto-redirect if not explicitly closed
-      if (!hasExplicitlyClosed) {
-        console.log('🚀 Auto-redirecting to dashboard...');
-        // Small delay to ensure smooth transition and show loading state
-        const timer = setTimeout(() => {
-          console.log('⏰ Timer fired, setting showAdmin to true');
-          setShowAdmin(true);
-        }, 300);
-        
-        return () => clearTimeout(timer);
-      } else {
-        console.log('⛔ Auto-redirect blocked: hasExplicitlyClosed = true');
-      }
+      console.log('✅ Admin user authenticated, ready for admin dashboard');
     } else if (!user) {
       // If user logs out, return to main page
-      console.log('🚪 User logged out, hiding dashboard');
+      console.log('🚪 User logged out, hiding admin dashboard');
       setShowAdmin(false);
-      setHasExplicitlyClosed(false); // Reset the flag when user logs out
+      setHasExplicitlyClosed(false);
     }
-  }, [user, isAdmin, showLoginModal, hasExplicitlyClosed]); // Removed showAdmin dependency
-
-  // Show loading state while redirecting to admin dashboard
-  if (user && isAdmin && !showAdmin && !showLoginModal && !hasExplicitlyClosed) {
-    return (
-      <div className="min-h-screen bg-[#0A0A23] flex items-center justify-center">
-        <div className="text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full mx-auto mb-4"
-          />
-          <div className="text-[#FFD700] text-xl mb-2">Redirecting to Admin Dashboard...</div>
-          <div className="text-[#C0C0C0] text-sm">Please wait while we set up your workspace</div>
-        </div>
-      </div>
-    );
-  }
+  }, [user, isAdmin, showLoginModal, hasExplicitlyClosed]);
 
   // Don't render navigation elements until translations are loaded
   // Only check for essential translations to avoid endless loading
@@ -177,14 +144,18 @@ export function App() {
     );
   }
 
+  // Show admin dashboard when requested
   if (showAdmin) {
-    return <AdminDashboard onClose={() => {
-      console.log('🔴 Close button clicked, setting hasExplicitlyClosed to true');
-      setShowAdmin(false);
-      setHasExplicitlyClosed(true); // Mark that user explicitly closed the dashboard
-      // Reload translations when closing admin to pick up any content changes
-      reloadTranslations();
-    }} />;
+    return (
+      <AdminDashboard 
+        onClose={() => {
+          console.log('🔴 Close button clicked, setting hasExplicitlyClosed to true');
+          setShowAdmin(false);
+          setHasExplicitlyClosed(true);
+        }} 
+        isModal={false}
+      />
+    );
   }
 
   return (
@@ -207,7 +178,7 @@ export function App() {
       <MobileMenu
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
-        sections={sections}
+        sections={sections.map(s => s.id)}
         currentSection={currentSection}
         scrollToSection={scrollToSection}
         language={language}
@@ -234,42 +205,67 @@ export function App() {
             }}
             className="h-full"
           >
-            {currentSection === 0 && <HeroSection t={t} />}
-            {currentSection === 1 && <ApproachSection t={t} />}
-            {currentSection === 2 && <SessionSection t={t} scrollToSection={scrollToSection} />}
-            {currentSection === 3 && <AboutSection t={t} />}
-            {currentSection === 4 && <BookingSection t={t} language={language} />}
+            {sections[currentSection] && (
+              <DynamicSectionRenderer
+                section={sections[currentSection]}
+                t={t}
+                language={language}
+                scrollToSection={scrollToSection}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
       </main>
 
-      {/* Section Navigation Dots */}
-      <div className="fixed right-2 sm:right-3 lg:right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col space-y-3 sm:space-y-4 lg:space-y-5 navigation-dots">
-        {sections.map((section, index) => (
-          <motion.button
-            key={section}
-            onClick={() => scrollToSectionByIndex(index)}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 rounded-full border-2 transition-all duration-300 touch-manipulation relative ${
-              currentSection === index 
-                ? 'bg-[#FFD700] border-[#FFD700] cosmic-glow shadow-lg shadow-[#FFD700]/30' 
-                : 'bg-transparent border-[#C0C0C0]/50 hover:border-[#FFD700] hover:bg-[#FFD700]/10'
-            }`}
-            title={t.nav[section as keyof typeof t.nav]}
-            aria-label={`Go to ${t.nav[section as keyof typeof t.nav]} section`}
-          >
-            {/* Active indicator ring */}
-            {currentSection === index && (
-              <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1.5, opacity: 0.3 }}
-                exit={{ scale: 0, opacity: 0 }}
-                className="absolute inset-0 bg-[#FFD700] rounded-full -z-10"
-              />
-            )}
-          </motion.button>
-        ))}
+      {/* Section Navigation Icons */}
+      <div className="fixed right-2 sm:right-3 lg:right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col space-y-3 sm:space-y-4 lg:space-y-5 navigation-icons">
+        {sections.map((section, index) => {
+          // Get icon component based on section icon name
+          const getSectionIcon = (iconName: string) => {
+            switch (iconName) {
+              case 'Star':
+                return <Star size={20} className="sm:w-5 sm:h-5 lg:w-6 lg:h-6" />;
+              case 'Compass':
+                return <Compass size={20} className="sm:w-5 sm:h-5 lg:w-6 lg:h-6" />;
+              case 'Clock':
+                return <Clock size={20} className="sm:w-5 sm:h-5 lg:w-6 lg:h-6" />;
+              case 'User':
+                return <User size={20} className="sm:w-5 sm:h-5 lg:w-6 lg:h-6" />;
+              case 'Calendar':
+                return <Calendar size={20} className="sm:w-5 sm:h-5 lg:w-6 lg:h-6" />;
+              default:
+                return <Circle size={20} className="sm:w-5 sm:h-5 lg:w-6 lg:h-6" />;
+            }
+          };
+
+          return (
+            <motion.button
+              key={section.id}
+              onClick={() => scrollToSectionByIndex(index)}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              className={`w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full border-2 transition-all duration-300 touch-manipulation relative flex items-center justify-center ${
+                currentSection === index 
+                  ? 'bg-[#FFD700] border-[#FFD700] cosmic-glow shadow-lg shadow-[#FFD700]/30 text-[#0A0A23]' 
+                  : 'bg-transparent border-[#C0C0C0]/50 hover:border-[#FFD700] hover:bg-[#FFD700]/10 text-[#C0C0C0] hover:text-[#FFD700]'
+              }`}
+              title={section.title}
+              aria-label={`Go to ${section.title} section`}
+            >
+              {getSectionIcon(section.icon)}
+              
+              {/* Active indicator ring */}
+              {currentSection === index && (
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1.5, opacity: 0.3 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  className="absolute inset-0 bg-[#FFD700] rounded-full -z-10"
+                />
+              )}
+            </motion.button>
+          );
+        })}
       </div>
 
 
@@ -319,6 +315,8 @@ export function App() {
         )}
       </AnimatePresence>
 
+
+
       {/* Login Modal */}
       <LoginModal 
         isOpen={showLoginModal} 
@@ -341,6 +339,8 @@ export function App() {
           }
         }}
       />
+
+
     </div>
   );
 }

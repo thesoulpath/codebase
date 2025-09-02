@@ -15,21 +15,21 @@ interface SessionDuration {
   name: string;
   duration_minutes: number;
   description: string;
-  is_active: boolean;
+  isActive: boolean;
 }
 
 interface PackageDefinition {
   id: number;
   name: string;
   description: string;
-  sessions_count: number;
-  session_duration_id: number;
-  package_type: 'individual' | 'group' | 'mixed';
-  max_group_size: number | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  session_durations: SessionDuration;
+  sessionsCount: number;
+  sessionDurationId: number;
+  packageType: 'individual' | 'group' | 'mixed';
+  maxGroupSize: number | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  sessionDuration: SessionDuration;
 }
 
 interface PackageDefinitionModalProps {
@@ -52,11 +52,11 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    sessions_count: '',
-    session_duration_id: '',
-    package_type: 'individual' as 'individual' | 'group' | 'mixed',
-    max_group_size: '',
-    is_active: true
+    sessionsCount: '',
+    sessionDurationId: '',
+    packageType: 'individual' as 'individual' | 'group' | 'mixed',
+    maxGroupSize: '',
+    isActive: true
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -66,11 +66,11 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
       setFormData({
         name: packageDefinition.name,
         description: packageDefinition.description || '',
-        sessions_count: packageDefinition.sessions_count.toString(),
-        session_duration_id: packageDefinition.session_duration_id.toString(),
-        package_type: packageDefinition.package_type,
-        max_group_size: packageDefinition.max_group_size?.toString() || '',
-        is_active: packageDefinition.is_active
+        sessionsCount: packageDefinition.sessionsCount.toString(),
+        sessionDurationId: packageDefinition.sessionDurationId.toString(),
+        packageType: packageDefinition.packageType,
+        maxGroupSize: packageDefinition.maxGroupSize?.toString() || '',
+        isActive: packageDefinition.isActive
       });
     } else {
       resetForm();
@@ -81,11 +81,11 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
     setFormData({
       name: '',
       description: '',
-      sessions_count: '',
-      session_duration_id: '',
-      package_type: 'individual',
-      max_group_size: '',
-      is_active: true
+      sessionsCount: '',
+      sessionDurationId: '',
+      packageType: 'individual',
+      maxGroupSize: '',
+      isActive: true
     });
     setErrors({});
   };
@@ -97,20 +97,20 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
       newErrors.name = 'Package name is required';
     }
 
-    if (!formData.sessions_count || parseInt(formData.sessions_count) <= 0) {
-      newErrors.sessions_count = 'Sessions count must be a positive number';
+    if (!formData.sessionsCount || parseInt(formData.sessionsCount) <= 0) {
+      newErrors.sessionsCount = 'Sessions count must be a positive number';
     }
 
-    if (!formData.session_duration_id) {
-      newErrors.session_duration_id = 'Session duration is required';
+    if (!formData.sessionDurationId) {
+      newErrors.sessionDurationId = 'Session duration is required';
     }
 
-    if (formData.package_type === 'group' && (!formData.max_group_size || parseInt(formData.max_group_size) <= 1)) {
-      newErrors.max_group_size = 'Group size must be greater than 1 for group packages';
+    if (formData.packageType === 'group' && (!formData.maxGroupSize || parseInt(formData.maxGroupSize) <= 1)) {
+      newErrors.maxGroupSize = 'Group size must be greater than 1 for group packages';
     }
 
-    if (formData.package_type === 'mixed' && (!formData.max_group_size || parseInt(formData.max_group_size) <= 1)) {
-      newErrors.max_group_size = 'Group size must be greater than 1 for mixed packages';
+    if (formData.packageType === 'mixed' && (!formData.maxGroupSize || parseInt(formData.maxGroupSize) <= 1)) {
+      newErrors.maxGroupSize = 'Group size must be greater than 1 for mixed packages';
     }
 
     setErrors(newErrors);
@@ -123,9 +123,9 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
     if (validateForm()) {
       const submitData = {
         ...formData,
-        sessions_count: parseInt(formData.sessions_count),
-        session_duration_id: parseInt(formData.session_duration_id),
-        max_group_size: formData.max_group_size ? parseInt(formData.max_group_size) : null
+        sessionsCount: parseInt(formData.sessionsCount),
+        sessionDurationId: parseInt(formData.sessionDurationId),
+        maxGroupSize: formData.maxGroupSize ? parseInt(formData.maxGroupSize) : null
       };
       
       onSubmit(submitData);
@@ -177,9 +177,9 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
               Package Type
             </Label>
             <Select
-              value={formData.package_type}
+              value={formData.packageType}
               onValueChange={(value: 'individual' | 'group' | 'mixed') => 
-                setFormData({ ...formData, package_type: value })
+                setFormData({ ...formData, packageType: value })
               }
             >
               <SelectTrigger className="bg-[var(--color-surface-primary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]">
@@ -209,7 +209,7 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
           </div>
 
           {/* Max Group Size (conditional) */}
-          {(formData.package_type === 'group' || formData.package_type === 'mixed') && (
+          {(formData.packageType === 'group' || formData.packageType === 'mixed') && (
             <div className="space-y-2">
               <Label className="text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-secondary)]">
                 Maximum Group Size
@@ -217,14 +217,14 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
               <BaseInput
                 type="number"
                 min="2"
-                value={formData.max_group_size}
-                onChange={(e) => setFormData({ ...formData, max_group_size: e.target.value })}
+                value={formData.maxGroupSize}
+                onChange={(e) => setFormData({ ...formData, maxGroupSize: e.target.value })}
                 placeholder="Enter maximum group size"
                 required
               />
-              {errors.max_group_size && (
+              {errors.maxGroupSize && (
                 <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
-                  {errors.max_group_size}
+                  {errors.maxGroupSize}
                 </p>
               )}
             </div>
@@ -236,8 +236,8 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
               Session Duration
             </Label>
             <Select
-              value={formData.session_duration_id}
-              onValueChange={(value) => setFormData({ ...formData, session_duration_id: value })}
+              value={formData.sessionDurationId}
+              onValueChange={(value) => setFormData({ ...formData, sessionDurationId: value })}
             >
               <SelectTrigger className="bg-[var(--color-surface-primary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]">
                 <SelectValue placeholder="Select session duration" />
@@ -253,9 +253,9 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
                 ))}
               </SelectContent>
             </Select>
-            {errors.session_duration_id && (
+            {errors.sessionDurationId && (
               <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
-                {errors.session_duration_id}
+                {errors.sessionDurationId}
               </p>
             )}
           </div>
@@ -268,14 +268,14 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
             <BaseInput
               type="number"
               min="1"
-              value={formData.sessions_count}
-              onChange={(e) => setFormData({ ...formData, sessions_count: e.target.value })}
+              value={formData.sessionsCount}
+              onChange={(e) => setFormData({ ...formData, sessionsCount: e.target.value })}
               placeholder="Enter number of sessions"
               required
             />
-            {errors.sessions_count && (
+            {errors.sessionsCount && (
               <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
-                {errors.sessions_count}
+                {errors.sessionsCount}
               </p>
             )}
           </div>
@@ -296,11 +296,11 @@ const PackageDefinitionModal: React.FC<PackageDefinitionModalProps> = ({
           {/* Active Status */}
           <div className="flex items-center space-x-2">
             <Switch
-              id="is_active"
-              checked={formData.is_active}
-              onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+              id="isActive"
+              checked={formData.isActive}
+              onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
             />
-            <Label htmlFor="is_active" className="text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-secondary)]">
+            <Label htmlFor="isActive" className="text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-secondary)]">
               Active Package
             </Label>
           </div>

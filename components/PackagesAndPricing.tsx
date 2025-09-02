@@ -20,8 +20,8 @@ interface Currency {
   code: string;
   name: string;
   symbol: string;
-  is_default: boolean;
-  exchange_rate: number;
+  isDefault: boolean;
+  exchangeRate: number;
 }
 
 interface SessionDuration {
@@ -29,35 +29,35 @@ interface SessionDuration {
   name: string;
   duration_minutes: number;
   description: string;
-  is_active: boolean;
+  isActive: boolean;
 }
 
 interface PackageDefinition {
   id: number;
   name: string;
   description: string;
-  sessions_count: number;
-  session_duration_id: number;
-  package_type: 'individual' | 'group' | 'mixed';
-  max_group_size: number | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  session_durations: SessionDuration;
-  package_prices: PackagePrice[];
+  sessionsCount: number;
+  sessionDurationId: number;
+  packageType: 'individual' | 'group' | 'mixed';
+  maxGroupSize: number | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  sessionDuration: SessionDuration;
+  packagePrices: PackagePrice[];
 }
 
 interface PackagePrice {
   id: number;
-  package_definition_id: number;
-  currency_id: number;
+  packageDefinitionId: number;
+  currencyId: number;
   price: number;
-  pricing_mode: 'custom' | 'calculated';
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  package_definitions: PackageDefinition;
-  currencies: Currency;
+  pricingMode: 'custom' | 'calculated';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  packageDefinition: PackageDefinition;
+  currency: Currency;
 }
 
 const PackagesAndPricing: React.FC = () => {
@@ -71,16 +71,16 @@ const PackagesAndPricing: React.FC = () => {
   
   // Filters
   const [definitionFilters, setDefinitionFilters] = useState({
-    package_type: 'all',
-    is_active: 'all',
-    session_duration_id: 'all'
+    packageType: 'all',
+    isActive: 'all',
+    sessionDurationId: 'all'
   });
 
   const [priceFilters, setPriceFilters] = useState({
-    package_definition_id: 'all',
-    currency_id: 'all',
-    pricing_mode: 'all',
-    is_active: 'all'
+    packageDefinitionId: 'all',
+    currencyId: 'all',
+    pricingMode: 'all',
+    isActive: 'all'
   });
 
   // Modal states
@@ -96,19 +96,19 @@ const PackagesAndPricing: React.FC = () => {
   const [definitionFormData, setDefinitionFormData] = useState({
     name: '',
     description: '',
-    sessions_count: '',
-    session_duration_id: '',
-    package_type: 'individual' as const,
-    max_group_size: '',
-    is_active: true
+    sessionsCount: '',
+    sessionDurationId: '',
+    packageType: 'individual' as const,
+    maxGroupSize: '',
+    isActive: true
   });
 
   const [priceFormData, setPriceFormData] = useState({
-    package_definition_id: '',
-    currency_id: '',
+    packageDefinitionId: '',
+    currencyId: '',
     price: '',
-    pricing_mode: 'calculated' as const,
-    is_active: true
+    pricingMode: 'calculated' as const,
+    isActive: true
   });
 
   useEffect(() => {
@@ -227,10 +227,13 @@ const PackagesAndPricing: React.FC = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...definitionFormData,
-          sessions_count: parseInt(definitionFormData.sessions_count),
-          session_duration_id: parseInt(definitionFormData.session_duration_id),
-          max_group_size: definitionFormData.max_group_size ? parseInt(definitionFormData.max_group_size) : null
+          name: definitionFormData.name,
+          description: definitionFormData.description,
+          sessionsCount: parseInt(definitionFormData.sessionsCount),
+          sessionDurationId: parseInt(definitionFormData.sessionDurationId),
+          packageType: definitionFormData.packageType,
+          maxGroupSize: definitionFormData.maxGroupSize ? parseInt(definitionFormData.maxGroupSize) : null,
+          isActive: definitionFormData.isActive
         })
       });
 
@@ -259,10 +262,11 @@ const PackagesAndPricing: React.FC = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...priceFormData,
-          package_definition_id: parseInt(priceFormData.package_definition_id),
-          currency_id: parseInt(priceFormData.currency_id),
-          price: parseFloat(priceFormData.price)
+          packageDefinitionId: parseInt(priceFormData.packageDefinitionId),
+          currencyId: parseInt(priceFormData.currencyId),
+          price: parseFloat(priceFormData.price),
+          pricingMode: priceFormData.pricingMode,
+          isActive: priceFormData.isActive
         })
       });
 
@@ -375,25 +379,54 @@ const PackagesAndPricing: React.FC = () => {
     }
   };
 
+  const togglePackageStatus = async (packageId: number, isActive: boolean) => {
+    if (!user?.access_token) return;
+    
+    try {
+      const response = await fetch('/api/admin/package-definitions', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${user.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: packageId,
+          isActive: isActive
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(`Package ${isActive ? 'shown' : 'hidden'} on front page successfully`);
+        fetchPackageDefinitions();
+      } else {
+        toast.error(data.message || 'Failed to update package status');
+      }
+    } catch (error) {
+      toast.error('Error updating package status');
+    }
+  };
+
   const resetDefinitionForm = () => {
     setDefinitionFormData({
       name: '',
       description: '',
-      sessions_count: '',
-      session_duration_id: '',
-      package_type: 'individual',
-      max_group_size: '',
-      is_active: true
+      sessionsCount: '',
+      sessionDurationId: '',
+      packageType: 'individual',
+      maxGroupSize: '',
+      isActive: true
     });
   };
 
   const resetPriceForm = () => {
     setPriceFormData({
-      package_definition_id: '',
-      currency_id: '',
+      packageDefinitionId: '',
+      currencyId: '',
       price: '',
-      pricing_mode: 'calculated',
-      is_active: true
+      pricingMode: 'calculated',
+      isActive: true
     });
   };
 
@@ -477,8 +510,8 @@ const PackagesAndPricing: React.FC = () => {
                 <div className="flex-1">
                   <Label className="dashboard-label">Package Type</Label>
                   <Select 
-                    value={definitionFilters.package_type} 
-                    onValueChange={(value) => setDefinitionFilters(prev => ({ ...prev, package_type: value }))}
+                    value={definitionFilters.packageType} 
+                    onValueChange={(value) => setDefinitionFilters(prev => ({ ...prev, packageType: value }))}
                   >
                     <SelectTrigger className="dashboard-select">
                       <SelectValue />
@@ -494,8 +527,8 @@ const PackagesAndPricing: React.FC = () => {
                 <div className="flex-1">
                   <Label className="dashboard-label">Session Duration</Label>
                   <Select 
-                    value={definitionFilters.session_duration_id} 
-                    onValueChange={(value) => setDefinitionFilters(prev => ({ ...prev, session_duration_id: value }))}
+                    value={definitionFilters.sessionDurationId} 
+                    onValueChange={(value) => setDefinitionFilters(prev => ({ ...prev, sessionDurationId: value }))}
                   >
                     <SelectTrigger className="dashboard-select">
                       <SelectValue />
@@ -513,8 +546,8 @@ const PackagesAndPricing: React.FC = () => {
                 <div className="flex-1">
                   <Label className="dashboard-label">Status</Label>
                   <Select 
-                    value={definitionFilters.is_active} 
-                    onValueChange={(value) => setDefinitionFilters(prev => ({ ...prev, is_active: value }))}
+                    value={definitionFilters.isActive} 
+                    onValueChange={(value) => setDefinitionFilters(prev => ({ ...prev, isActive: value }))}
                   >
                     <SelectTrigger className="dashboard-select">
                       <SelectValue />
@@ -555,22 +588,30 @@ const PackagesAndPricing: React.FC = () => {
                     {packageDefinitions.map((pkg) => (
                       <tr key={pkg.id} className="dashboard-table-row">
                         <td className="font-medium">{pkg.name}</td>
-                        <td>{getPackageTypeBadge(pkg.package_type)}</td>
-                        <td>{pkg.sessions_count}</td>
-                        <td>{pkg.session_durations?.name || 'N/A'}</td>
-                        <td>{pkg.max_group_size || '-'}</td>
+                        <td>{getPackageTypeBadge(pkg.packageType)}</td>
+                        <td>{pkg.sessionsCount}</td>
+                        <td>{pkg.sessionDuration?.name || 'N/A'}</td>
+                        <td>{pkg.maxGroupSize || '-'}</td>
                         <td>
                           <Badge className="dashboard-badge">
-                            {pkg.package_prices?.length || 0} prices
+                            {pkg.packagePrices?.length || 0} prices
                           </Badge>
                         </td>
                         <td>
-                          <Badge className={pkg.is_active ? 'dashboard-badge-success' : 'dashboard-badge-error'}>
-                            {pkg.is_active ? 'Active' : 'Inactive'}
+                          <Badge className={pkg.isActive ? 'dashboard-badge-success' : 'dashboard-badge-error'}>
+                            {pkg.isActive ? 'Active' : 'Inactive'}
                           </Badge>
                         </td>
                         <td>
                           <div className="flex gap-2">
+                            <BaseButton
+                              size="sm"
+                              variant="outline"
+                              className={pkg.isActive ? "dashboard-button-warning" : "dashboard-button-success"}
+                              onClick={() => togglePackageStatus(pkg.id, !pkg.isActive)}
+                            >
+                              {pkg.isActive ? 'Hide' : 'Show'}
+                            </BaseButton>
                             <BaseButton
                               size="sm"
                               variant="outline"
@@ -620,8 +661,8 @@ const PackagesAndPricing: React.FC = () => {
                 <div className="flex-1">
                   <Label className="dashboard-label">Package</Label>
                   <Select 
-                    value={priceFilters.package_definition_id} 
-                    onValueChange={(value) => setPriceFilters(prev => ({ ...prev, package_definition_id: value }))}
+                    value={priceFilters.packageDefinitionId} 
+                    onValueChange={(value) => setPriceFilters(prev => ({ ...prev, packageDefinitionId: value }))}
                   >
                     <SelectTrigger className="dashboard-select">
                       <SelectValue />
@@ -639,8 +680,8 @@ const PackagesAndPricing: React.FC = () => {
                 <div className="flex-1">
                   <Label className="dashboard-label">Currency</Label>
                   <Select 
-                    value={priceFilters.currency_id} 
-                    onValueChange={(value) => setPriceFilters(prev => ({ ...prev, currency_id: value }))}
+                    value={priceFilters.currencyId} 
+                    onValueChange={(value) => setPriceFilters(prev => ({ ...prev, currencyId: value }))}
                   >
                     <SelectTrigger className="dashboard-select">
                       <SelectValue />
@@ -658,8 +699,8 @@ const PackagesAndPricing: React.FC = () => {
                 <div className="flex-1">
                   <Label className="dashboard-label">Pricing Mode</Label>
                   <Select 
-                    value={priceFilters.pricing_mode} 
-                    onValueChange={(value) => setPriceFilters(prev => ({ ...prev, pricing_mode: value }))}
+                    value={priceFilters.pricingMode} 
+                    onValueChange={(value) => setPriceFilters(prev => ({ ...prev, pricingMode: value }))}
                   >
                     <SelectTrigger className="dashboard-select">
                       <SelectValue />
@@ -697,19 +738,19 @@ const PackagesAndPricing: React.FC = () => {
                   <tbody>
                     {packagePrices.map((price) => (
                       <tr key={price.id} className="dashboard-table-row">
-                        <td className="font-medium">{price.package_definitions.name}</td>
+                        <td className="font-medium">{price.packageDefinition?.name || 'N/A'}</td>
                         <td>
                           <Badge className="dashboard-badge">
-                            {price.currencies.code} {price.currencies.symbol}
+                            {price.currency?.code || 'N/A'} {price.currency?.symbol || ''}
                           </Badge>
                         </td>
                         <td className="font-mono">
-                          {price.currencies.symbol}{price.price.toFixed(2)}
+                          {price.currency?.symbol || ''}{price.price.toFixed(2)}
                         </td>
-                        <td>{getPricingModeBadge(price.pricing_mode)}</td>
+                        <td>{getPricingModeBadge(price.pricingMode)}</td>
                         <td>
-                          <Badge className={price.is_active ? 'dashboard-badge-success' : 'dashboard-badge-error'}>
-                            {price.is_active ? 'Active' : 'Inactive'}
+                          <Badge className={price.isActive ? 'dashboard-badge-success' : 'dashboard-badge-error'}>
+                            {price.isActive ? 'Active' : 'Inactive'}
                           </Badge>
                         </td>
                         <td>
@@ -792,7 +833,7 @@ const PackagesAndPricing: React.FC = () => {
         onConfirm={handleDelete}
         title={`Delete ${deleteType === 'definition' ? 'Package Definition' : 'Package Price'}`}
         description={`Are you sure you want to delete this ${deleteType === 'definition' ? 'package definition' : 'package price'}?`}
-        itemName={selectedItem ? ('package_prices' in selectedItem ? (selectedItem as unknown as PackagePrice).package_definitions.name : (selectedItem as unknown as PackageDefinition).name) : undefined}
+        itemName={selectedItem ? ('packagePrices' in selectedItem ? (selectedItem as unknown as PackagePrice).packageDefinition?.name || 'N/A' : (selectedItem as unknown as PackageDefinition).name) : undefined}
         itemType={deleteType}
       />
     </div>

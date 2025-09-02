@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+// ISR Configuration - This route will be statically generated and revalidated
+export const revalidate = 3600; // Revalidate every hour
+
 
 interface NestedContent {
   [key: string]: any;

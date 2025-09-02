@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { useProfileImage } from '@/hooks/useProfileImage';
 
 interface AboutSectionProps {
@@ -12,7 +12,28 @@ export function AboutSection({ t }: AboutSectionProps) {
   const { profileImage, isLoading: isImageLoading } = useProfileImage();
   
   return (
-    <section className="h-full flex flex-col justify-center px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 overflow-y-auto sm:overflow-hidden safe-padding">
+    <>
+      <style jsx>{`
+        .image-container {
+          --mobile-scale: 0.92;
+          --desktop-scale: 1;
+        }
+        
+        @media (max-width: 639px) {
+          .image-container {
+            transform: scale(var(--mobile-scale));
+            transform-origin: center center;
+          }
+        }
+        
+        @media (min-width: 640px) {
+          .image-container {
+            transform: scale(var(--desktop-scale));
+            transform-origin: center center;
+          }
+        }
+      `}</style>
+    <section className="h-full flex flex-col justify-center px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 md:pt-16 lg:pt-20 pb-12 sm:pb-16 lg:pb-20 overflow-hidden safe-padding">
       <div className="container mx-auto max-w-6xl">
         <div className="grid gap-8 md:grid-cols-2 md:gap-10 lg:gap-16 items-center">
           <motion.div
@@ -63,11 +84,11 @@ export function AboutSection({ t }: AboutSectionProps) {
             initial={{ opacity: 0, x: 40 }}
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="order-1 md:order-2"
+            className="order-1 md:order-2 flex justify-center"
           >
-            <div className="relative max-w-sm mx-auto">
+            <div className="relative max-w-sm mx-auto flex justify-center">
               <motion.div 
-                className="w-48 h-48 xs:w-56 xs:h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 lg:w-80 lg:h-80 xl:w-96 xl:h-96 mx-auto bg-gradient-to-br from-[#191970]/30 to-[#0A0A23]/30 rounded-full border border-[#C0C0C0]/20 p-2 sm:p-3 cosmic-glow relative overflow-hidden"
+                className="w-40 h-40 xs:w-48 xs:h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-72 lg:h-72 xl:w-80 xl:h-80 bg-gradient-to-br from-[#191970]/30 to-[#0A0A23]/30 rounded-full border border-[#C0C0C0]/20 p-2 sm:p-3 cosmic-glow relative overflow-hidden flex items-center justify-center"
                 whileHover={{ scale: 1.02 }}
                 transition={{ duration: 0.3 }}
               >
@@ -78,7 +99,7 @@ export function AboutSection({ t }: AboutSectionProps) {
                   className="absolute inset-2 border border-[#FFD700]/10 rounded-full"
                 />
                 
-                <div className="w-full h-full rounded-full overflow-hidden border-2 border-[#FFD700]/30 relative z-10 flex items-center justify-center">
+                <div className="w-11/12 h-11/12 sm:w-full sm:h-full rounded-full overflow-hidden border-2 border-[#FFD700]/30 relative z-10 flex items-center justify-center image-container">
                   {isImageLoading ? (
                     <div className="w-full h-full bg-[#191970]/30 flex items-center justify-center">
                       <motion.div
@@ -93,10 +114,10 @@ export function AboutSection({ t }: AboutSectionProps) {
                       alt="José Garfias - Cosmic Navigator and Astrologer"
                       className="w-full h-full object-cover object-center rounded-full"
                       style={{
-                        minWidth: '100%',
-                        minHeight: '100%',
-                        maxWidth: '100%',
-                        maxHeight: '100%'
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'center center'
                       }}
                       onError={(e) => {
                         console.error('Profile image failed to load, using fallback');
@@ -157,5 +178,6 @@ export function AboutSection({ t }: AboutSectionProps) {
         </div>
       </div>
     </section>
+    </>
   );
 }

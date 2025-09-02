@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Sun, Circle, TrendingUp } from 'lucide-react';
-import { motion } from 'motion/react';
 
 interface ApproachSectionProps {
   t: any;
@@ -12,7 +12,7 @@ export function ApproachSection({ t }: ApproachSectionProps) {
   const icons = [Sun, Circle, TrendingUp];
   
   return (
-    <section className="h-full flex flex-col justify-center px-4 sm:px-6 lg:px-8 py-12 sm:py-16 relative overflow-hidden safe-padding">
+    <section className="h-full flex flex-col justify-start px-4 sm:px-6 lg:px-8 py-12 sm:py-16 relative overflow-hidden safe-padding pt-20 sm:pt-24 lg:pt-28">
       {/* Background cosmic elements */}
       <div className="absolute inset-0 opacity-10">
         <motion.div

@@ -17,27 +17,27 @@ interface Currency {
   code: string;
   name: string;
   symbol: string;
-  is_default: boolean;
-  exchange_rate: number;
+  isDefault: boolean;
+  exchangeRate: number;
 }
 
 interface PackageDefinition {
   id: number;
   name: string;
-  sessions_count: number;
-  package_type: 'individual' | 'group' | 'mixed';
-  max_group_size: number | null;
+  sessionsCount: number;
+  packageType: 'individual' | 'group' | 'mixed';
+  maxGroupSize: number | null;
 }
 
 interface PackagePrice {
   id: number;
-  package_definition_id: number;
-  currency_id: number;
+  packageDefinitionId: number;
+  currencyId: number;
   price: number;
-  pricing_mode: 'custom' | 'calculated';
-  is_active: boolean;
-  package_definitions: PackageDefinition;
-  currencies: Currency;
+  pricingMode: 'custom' | 'calculated';
+  isActive: boolean;
+  packageDefinition: PackageDefinition;
+  currency: Currency;
 }
 
 interface PackagePriceModalProps {
@@ -60,11 +60,11 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
   mode
 }) => {
   const [formData, setFormData] = useState({
-    package_definition_id: '',
-    currency_id: '',
+    packageDefinitionId: '',
+    currencyId: '',
     price: '',
-    pricing_mode: 'calculated' as 'custom' | 'calculated',
-    is_active: true
+    pricingMode: 'calculated' as 'custom' | 'calculated',
+    isActive: true
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -75,11 +75,11 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
   useEffect(() => {
     if (packagePrice && mode === 'edit') {
       setFormData({
-        package_definition_id: packagePrice.package_definition_id.toString(),
-        currency_id: packagePrice.currency_id.toString(),
+        packageDefinitionId: packagePrice.packageDefinitionId.toString(),
+        currencyId: packagePrice.currencyId.toString(),
         price: packagePrice.price.toString(),
-        pricing_mode: packagePrice.pricing_mode,
-        is_active: packagePrice.is_active
+        pricingMode: packagePrice.pricingMode,
+        isActive: packagePrice.isActive
       });
     } else {
       resetForm();
@@ -87,18 +87,18 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
   }, [packagePrice, mode]);
 
   useEffect(() => {
-    if (formData.package_definition_id && formData.currency_id && formData.pricing_mode === 'calculated') {
+    if (formData.packageDefinitionId && formData.currencyId && formData.pricingMode === 'calculated') {
       calculatePrice();
     }
-  }, [formData.package_definition_id, formData.currency_id, formData.pricing_mode]);
+  }, [formData.packageDefinitionId, formData.currencyId, formData.pricingMode]);
 
   const resetForm = () => {
     setFormData({
-      package_definition_id: '',
-      currency_id: '',
+      packageDefinitionId: '',
+      currencyId: '',
       price: '',
-      pricing_mode: 'calculated',
-      is_active: true
+      pricingMode: 'calculated',
+      isActive: true
     });
     setErrors({});
 
@@ -113,7 +113,7 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
   };
 
   const handlePricingModeChange = (mode: 'custom' | 'calculated') => {
-    setFormData(prev => ({ ...prev, pricing_mode: mode }));
+    setFormData(prev => ({ ...prev, pricingMode: mode }));
     if (mode === 'calculated') {
       setFormData(prev => ({ ...prev, price: '' }));
     }
@@ -122,15 +122,15 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.package_definition_id) {
-      newErrors.package_definition_id = 'Package definition is required';
+    if (!formData.packageDefinitionId) {
+      newErrors.packageDefinitionId = 'Package definition is required';
     }
 
-    if (!formData.currency_id) {
-      newErrors.currency_id = 'Currency is required';
+    if (!formData.currencyId) {
+      newErrors.currencyId = 'Currency is required';
     }
 
-    if (formData.pricing_mode === 'custom' && !formData.price) {
+    if (formData.pricingMode === 'custom' && !formData.price) {
       newErrors.price = 'Price is required for custom pricing';
     }
 
@@ -151,7 +151,7 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
 
     const submitData = {
       ...formData,
-      price: formData.pricing_mode === 'calculated' ? calculatedPrice : parseFloat(formData.price)
+      price: formData.pricingMode === 'calculated' ? calculatedPrice : parseFloat(formData.price)
     };
 
     onSubmit(submitData);
@@ -162,8 +162,8 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
     onClose();
   };
 
-  const selectedPackage = packageDefinitions.find(p => p.id.toString() === formData.package_definition_id);
-  const selectedCurrency = currencies.find(c => c.id.toString() === formData.currency_id);
+  const selectedPackage = packageDefinitions.find(p => p.id.toString() === formData.packageDefinitionId);
+  const selectedCurrency = currencies.find(c => c.id.toString() === formData.currencyId);
 
   return (
     <BaseModal
@@ -194,8 +194,8 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
                 Package Definition *
               </Label>
               <Select
-                value={formData.package_definition_id}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, package_definition_id: value }))}
+                value={formData.packageDefinitionId}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, packageDefinitionId: value }))}
               >
                 <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
                   <SelectValue placeholder="Select package" />
@@ -205,15 +205,15 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
                     <SelectItem key={pkg.id} value={pkg.id.toString()} className="text-white hover:bg-gray-600">
                       <div className="flex items-center gap-2">
                         <Package className="w-4 h-4" />
-                        {pkg.name} ({pkg.sessions_count} sessions)
+                        {pkg.name} ({pkg.sessionsCount} sessions)
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.package_definition_id && (
+              {errors.packageDefinitionId && (
                 <p className="text-red-500 text-sm">
-                  {errors.package_definition_id}
+                  {errors.packageDefinitionId}
                 </p>
               )}
             </div>
@@ -223,8 +223,8 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
                 Currency *
               </Label>
               <Select
-                value={formData.currency_id}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, currency_id: value }))}
+                value={formData.currencyId}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, currencyId: value }))}
               >
                 <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
                   <SelectValue placeholder="Select currency" />
@@ -235,7 +235,7 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
                       <div className="flex items-center gap-2">
                         <Globe className="w-4 h-4" />
                         {currency.code} - {currency.name}
-                        {currency.is_default && (
+                        {currency.isDefault && (
                           <Badge className="bg-blue-500 text-white">
                             Default
                           </Badge>
@@ -245,9 +245,9 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.currency_id && (
+              {errors.currencyId && (
                 <p className="text-red-500 text-sm">
-                  {errors.currency_id}
+                  {errors.currencyId}
                 </p>
               )}
             </div>
@@ -263,9 +263,9 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
                   <input
                     type="radio"
                     id="calculated"
-                    name="pricing_mode"
+                    name="pricingMode"
                     value="calculated"
-                    checked={formData.pricing_mode === 'calculated'}
+                    checked={formData.pricingMode === 'calculated'}
                     onChange={() => handlePricingModeChange('calculated')}
                     className="rounded-full border-gray-600 bg-gray-800"
                   />
@@ -280,9 +280,9 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
                   <input
                     type="radio"
                     id="custom"
-                    name="pricing_mode"
+                    name="pricingMode"
                     value="custom"
-                    checked={formData.pricing_mode === 'custom'}
+                    checked={formData.pricingMode === 'custom'}
                     onChange={() => handlePricingModeChange('custom')}
                     className="rounded-full border-gray-600 bg-gray-800"
                   />
@@ -296,7 +296,7 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
               </div>
             </div>
 
-            {formData.pricing_mode === 'custom' && (
+            {formData.pricingMode === 'custom' && (
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-300">
                   Custom Price *
@@ -314,7 +314,7 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
               </div>
             )}
 
-            {formData.pricing_mode === 'calculated' && calculatedPrice && (
+            {formData.pricingMode === 'calculated' && calculatedPrice && (
               <div className="p-4 bg-gray-800 rounded-md border border-gray-600">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-300">
@@ -335,11 +335,11 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
 
           <div className="flex items-center space-x-2">
             <Switch
-              id="is_active"
-              checked={formData.is_active}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+              id="isActive"
+              checked={formData.isActive}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
             />
-            <Label htmlFor="is_active" className="text-sm font-medium text-gray-300">
+            <Label htmlFor="isActive" className="text-sm font-medium text-gray-300">
               Active Price
             </Label>
           </div>
@@ -356,7 +356,7 @@ const PackagePriceModal: React.FC<PackagePriceModalProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <Calculator className="w-4 h-4" />
-                  <span>{selectedPackage.sessions_count} sessions</span>
+                  <span>{selectedPackage.sessionsCount} sessions</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4" />
