@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Calendar, 
-  Clock, 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
+import {
+  Calendar,
+  Clock,
+  User,
+  Mail,
+  Phone,
+  MapPin,
   CreditCard,
   CheckCircle,
   Star,
@@ -72,7 +73,7 @@ interface BookingData {
 }
 
 interface CalendlyBookingFlowProps {
-  t: any;
+  t: Record<string, string | Record<string, string>>;
   language: string;
 }
 
@@ -98,7 +99,23 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
-  
+
+  // Helper function to safely access nested translation properties
+  const getTranslation = (path: string, fallback: string = ''): string => {
+    const keys = path.split('.');
+    let current: Record<string, string | Record<string, string>> | string = t;
+
+    for (const key of keys) {
+      if (current && typeof current === 'object' && key in current) {
+        current = current[key];
+      } else {
+        return fallback;
+      }
+    }
+
+    return typeof current === 'string' ? current : fallback;
+  };
+
   const [bookingData, setBookingData] = useState<BookingData>({
     clientName: '',
     clientEmail: '',
@@ -213,7 +230,7 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
     }
   };
 
-  const handlePhoneVerificationSuccess = (userData: any, isExistingCustomer: boolean) => {
+  const handlePhoneVerificationSuccess = (userData: { fullName?: string; email?: string; phone?: string; birthDate?: string; birthTime?: string; birthPlace?: string }, isExistingCustomer: boolean) => {
     // Pre-fill the form with existing customer data
     setBookingData(prev => ({
       ...prev,
@@ -354,10 +371,10 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
         >
           <CheckCircle className="w-16 h-16 text-[#FFD700] mx-auto mb-6" />
           <h2 className="text-2xl font-heading text-[#EAEAEA] mb-4">
-            {t?.booking?.successTitle || 'Booking Confirmed!'}
+            {getTranslation('booking.successTitle', 'Booking Confirmed!')}
           </h2>
           <p className="text-[#EAEAEA]/80 mb-6">
-            {t?.booking?.successMessage || 'You will receive a confirmation email shortly.'}
+            {getTranslation('booking.successMessage', 'You will receive a confirmation email shortly.')}
           </p>
           <Button
             onClick={() => {
@@ -377,7 +394,7 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
             }}
             className="w-full bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90"
           >
-            {t?.booking?.bookAnother || 'Book Another Session'}
+            {getTranslation('booking.bookAnother', 'Book Another Session')}
           </Button>
         </motion.div>
       </div>
@@ -390,10 +407,10 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
         {/* Header */}
         <div className="text-center mb-4 sm:mb-6 pt-2 sm:pt-4">
           <h1 className="text-xl sm:text-2xl lg:text-4xl xl:text-5xl font-heading text-[#EAEAEA] mb-2">
-            {t?.booking?.title || 'Book Your Session'}
+            {getTranslation('booking.title', 'Book Your Session')}
           </h1>
           <p className="text-[#EAEAEA]/80 text-xs sm:text-sm lg:text-lg xl:text-xl px-4">
-            {t?.booking?.subtitle || 'Choose your cosmic journey'}
+            {getTranslation('booking.subtitle', 'Choose your cosmic journey')}
           </p>
         </div>
 
@@ -440,7 +457,7 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
               {currentStep === 1 && (
                 <div className="space-y-3 sm:space-y-4">
                   <h3 className={`font-heading text-[#EAEAEA] mb-3 sm:mb-4 ${isMobile ? 'text-base' : 'text-lg lg:text-2xl xl:text-3xl'}`}>
-                    {t?.booking?.selectPackage || 'Select a Package'}
+                    {getTranslation('booking.selectPackage', 'Select a Package')}
                   </h3>
                   
                   {/* Already a customer link */}
@@ -526,11 +543,11 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
                         {showAllPackages ? (
                           <>
                             <ChevronUp className="w-4 h-4" />
-                            {t?.booking?.showLess || 'Show Less'}
+                            {getTranslation('booking.showLess', 'Show Less')}
                           </>
                         ) : (
                           <>
-                            {t?.booking?.showMore || `Show More (${packages.length - 3} more)`}
+                            {getTranslation('booking.showMore', `Show More (${packages.length - 3} more)`)}
                             <ChevronDown className="w-4 h-4" />
                           </>
                         )}
@@ -544,49 +561,49 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
               {currentStep === 2 && (
                 <div className="space-y-3 sm:space-y-4">
                   <h3 className={`font-heading text-[#EAEAEA] mb-3 sm:mb-4 ${isMobile ? 'text-base' : 'text-lg lg:text-2xl xl:text-3xl'}`}>
-                    {t?.booking?.personalInfo || 'Personal Information'}
+                    {getTranslation('booking.personalInfo', 'Personal Information')}
                   </h3>
                   
                   <div className={`grid gap-3 sm:gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
                     <div>
                       <label className="block text-[#EAEAEA] font-medium mb-2 text-sm sm:text-base">
                         <User className="inline w-4 h-4 mr-2" />
-                        {t?.booking?.name || 'Full Name'} *
+                        {getTranslation('booking.name', 'Full Name')} *
                       </label>
                       <Input
                         type="text"
                         value={bookingData.clientName}
                         onChange={(e) => updateBookingData('clientName', e.target.value)}
-                        className="bg-[#191970]/10 border-[#C0C0C0]/20 text-[#EAEAEA] placeholder-[#C0C0C0]/50 h-10 sm:h-11"
-                        placeholder={t?.booking?.namePlaceholder || 'Enter your full name'}
+                        className="bg-[#191970]/10 border-[#C0C0C0]/20 text-[#EAEAEA] placeholder-[#C0C0C0]/60 h-10 sm:h-11"
+                        placeholder={getTranslation('booking.namePlaceholder', 'Enter your full name')}
                       />
                     </div>
 
                     <div>
                       <label className="block text-[#EAEAEA] font-medium mb-2 text-sm sm:text-base">
                         <Mail className="inline w-4 h-4 mr-2" />
-                        {t?.booking?.email || 'Email'} *
+                        {getTranslation('booking.email', 'Email')} *
                       </label>
                       <Input
                         type="email"
                         value={bookingData.clientEmail}
                         onChange={(e) => updateBookingData('clientEmail', e.target.value)}
-                        className="bg-[#191970]/10 border-[#C0C0C0]/20 text-[#EAEAEA] placeholder-[#C0C0C0]/50 h-10 sm:h-11"
-                        placeholder={t?.booking?.emailPlaceholder || 'Enter your email'}
+                        className="bg-[#191970]/10 border-[#C0C0C0]/20 text-[#EAEAEA] placeholder-[#C0C0C0]/60 h-10 sm:h-11"
+                        placeholder={getTranslation('booking.emailPlaceholder', 'Enter your email')}
                       />
                     </div>
 
                     <div className={isMobile ? '' : 'lg:col-span-2'}>
                       <label className="block text-[#EAEAEA] font-medium mb-2 text-sm sm:text-base">
                         <Phone className="inline w-4 h-4 mr-2" />
-                        {t?.booking?.phone || 'Phone Number'} *
+                        {getTranslation('booking.phone', 'Phone Number')} *
                       </label>
                       <Input
                         type="tel"
                         value={bookingData.clientPhone}
                         onChange={(e) => updateBookingData('clientPhone', e.target.value)}
-                        className="bg-[#191970]/10 border-[#C0C0C0]/20 text-[#EAEAEA] placeholder-[#C0C0C0]/50 h-10 sm:h-11"
-                        placeholder={t?.booking?.phonePlaceholder || 'Enter your phone number'}
+                        className="bg-[#191970]/10 border-[#C0C0C0]/20 text-[#EAEAEA] placeholder-[#C0C0C0]/60 h-10 sm:h-11"
+                        placeholder={getTranslation('booking.phonePlaceholder', 'Enter your phone number')}
                       />
                     </div>
                   </div>
@@ -598,7 +615,7 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
                 <div className="space-y-3 sm:space-y-4">
                   <div className="flex justify-between items-center mb-3 sm:mb-4">
                     <h3 className={`font-heading text-[#EAEAEA] ${isMobile ? 'text-base' : 'text-lg lg:text-xl'}`}>
-                      {t?.booking?.selectDate || 'Select Date'}
+                      {getTranslation('booking.selectDate', 'Select Date')}
                     </h3>
                     <div className="flex bg-[#191970]/10 rounded-lg p-1">
                       <button
@@ -662,7 +679,7 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
               {currentStep === 4 && (
                 <div className="space-y-3 sm:space-y-4">
                   <h3 className={`font-heading text-[#EAEAEA] mb-3 sm:mb-4 ${isMobile ? 'text-base' : 'text-lg lg:text-2xl xl:text-3xl'}`}>
-                    {t?.booking?.selectTime || 'Select Time'}
+                    {getTranslation('booking.selectTime', 'Select Time')}
                   </h3>
                   
                   {/* Selected Date Display */}
@@ -680,7 +697,7 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
                     <div>
                       <label className="block text-[#EAEAEA] font-medium mb-2 text-sm sm:text-base">
                         <Clock className="inline w-4 h-4 mr-2" />
-                        {t?.booking?.selectTime || 'Select Time'}
+                        {getTranslation('booking.selectTime', 'Select Time')}
                       </label>
                       <div className={`grid gap-2 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'}`}>
                         {availableTimes.map((time) => (
@@ -716,14 +733,14 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
               {currentStep === 5 && (
                 <div className="space-y-3 sm:space-y-4">
                   <h3 className={`font-heading text-[#EAEAEA] mb-3 sm:mb-4 ${isMobile ? 'text-base' : 'text-lg lg:text-2xl xl:text-3xl'}`}>
-                    {t?.booking?.birthInfo || 'Birth Information'}
+                    {getTranslation('booking.birthInfo', 'Birth Information')}
                   </h3>
                   
                   <div className={`grid gap-3 sm:gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
                     <div>
                       <label className="block text-[#EAEAEA] font-medium mb-2 text-sm sm:text-base">
                         <Calendar className="inline w-4 h-4 mr-2" />
-                        {t?.booking?.birthDate || 'Birth Date'} *
+                        {getTranslation('booking.birthDate', 'Birth Date')} *
                       </label>
                       <Input
                         type="date"
@@ -736,27 +753,27 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
                     <div>
                       <label className="block text-[#EAEAEA] font-medium mb-2 text-sm sm:text-base">
                         <MapPin className="inline w-4 h-4 mr-2" />
-                        {t?.booking?.birthCity || 'Birth City'} *
+                        {getTranslation('booking.birthCity', 'Birth City')} *
                       </label>
                       <Input
                         type="text"
                         value={bookingData.birthCity}
                         onChange={(e) => updateBookingData('birthCity', e.target.value)}
-                        className="bg-[#191970]/10 border-[#C0C0C0]/20 text-[#EAEAEA] placeholder-[#C0C0C0]/50 h-10 sm:h-11"
-                        placeholder={t?.booking?.birthCityPlaceholder || 'Enter your birth city'}
+                        className="bg-[#191970]/10 border-[#C0C0C0]/20 text-[#EAEAEA] placeholder-[#C0C0C0]/60 h-10 sm:h-11"
+                        placeholder={getTranslation('booking.birthCityPlaceholder', 'Enter your birth city')}
                       />
                     </div>
 
                     <div className={isMobile ? '' : 'lg:col-span-2'}>
                       <label className="block text-[#EAEAEA] font-medium mb-2 text-sm sm:text-base">
-                        {t?.booking?.message || 'Message (Optional)'}
+                        {getTranslation('booking.message', 'Message (Optional)')}
                       </label>
                       <Textarea
                         value={bookingData.message}
                         onChange={(e) => updateBookingData('message', e.target.value)}
                         rows={3}
-                        className="bg-[#191970]/10 border-[#C0C0C0]/20 text-[#EAEAEA] placeholder-[#C0C0C0]/50 resize-none"
-                        placeholder={t?.booking?.messagePlaceholder || 'Tell us about your intentions for this session...'}
+                        className="bg-[#191970]/10 border-[#C0C0C0]/20 text-[#EAEAEA] placeholder-[#C0C0C0]/60 resize-none"
+                        placeholder={getTranslation('booking.messagePlaceholder', 'Tell us about your intentions for this session...')}
                       />
                     </div>
                   </div>
@@ -767,7 +784,7 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
               {currentStep === 6 && (
                 <div className="space-y-3 sm:space-y-4">
                   <h3 className={`font-heading text-[#EAEAEA] mb-3 sm:mb-4 ${isMobile ? 'text-base' : 'text-lg lg:text-2xl xl:text-3xl'}`}>
-                    {t?.booking?.payment || 'Payment'}
+                    {getTranslation('booking.payment', 'Payment')}
                   </h3>
                   
                   {/* Booking Summary */}
@@ -803,23 +820,25 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
                   <div>
                     <label className="block text-[#EAEAEA] font-medium mb-2 text-sm sm:text-base">
                       <CreditCard className="inline w-4 h-4 mr-2" />
-                      {t?.booking?.paymentMethod || 'Payment Method'} *
+                      {getTranslation('booking.paymentMethod', 'Payment Method')} *
                     </label>
                     <Select 
                       value={bookingData.paymentMethodId?.toString()} 
                       onValueChange={(value) => updateBookingData('paymentMethodId', parseInt(value))}
                     >
                       <SelectTrigger className="bg-[#191970]/10 border-[#C0C0C0]/20 text-[#EAEAEA] h-10 sm:h-11">
-                        <SelectValue placeholder={t?.booking?.selectPaymentMethod || 'Select payment method'}>
+                        <SelectValue placeholder={getTranslation('booking.selectPaymentMethod', 'Select payment method')}>
                           {bookingData.paymentMethodId && (() => {
                             const selectedMethod = paymentMethods.find(m => m.id === bookingData.paymentMethodId);
                             return selectedMethod ? (
                               <div className="flex items-center space-x-2">
                                 <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
                                   {selectedMethod.icon ? (
-                                    <img 
-                                      src={selectedMethod.icon} 
+                                    <Image
+                                      src={selectedMethod.icon}
                                       alt={selectedMethod.name}
+                                      width={20}
+                                      height={20}
                                       className="w-5 h-5 object-contain"
                                     />
                                   ) : (
@@ -844,9 +863,11 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
                                 {/* Payment method icon */}
                                 <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
                                   {method.icon ? (
-                                    <img 
-                                      src={method.icon} 
+                                    <Image
+                                      src={method.icon}
                                       alt={method.name}
+                                      width={24}
+                                      height={24}
                                       className="w-6 h-6 object-contain"
                                       onError={(e) => {
                                         // Fallback to default icon if image fails to load
@@ -879,7 +900,7 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
                       className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 sm:p-4 text-center"
                     >
                       <p className="text-red-400 font-medium text-sm">
-                        {t?.booking?.errorMessage || 'There was an error with your booking. Please try again.'}
+                        {getTranslation('booking.errorMessage', 'There was an error with your booking. Please try again.')}
                       </p>
                     </motion.div>
                   )}
@@ -898,7 +919,7 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
               className={`border-[#C0C0C0]/20 text-[#EAEAEA] hover:bg-[#191970]/10 h-10 sm:h-11 ${isMobile ? 'w-full' : 'flex-1'}`}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              {t?.booking?.back || 'Back'}
+              {getTranslation('booking.back', 'Back')}
             </Button>
           )}
           
@@ -908,7 +929,7 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
               disabled={!canProceed()}
               className={`bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90 disabled:opacity-50 disabled:cursor-not-allowed h-10 sm:h-11 ${isMobile ? 'w-full' : 'flex-1'}`}
             >
-              {t?.booking?.next || 'Next'}
+              {getTranslation('booking.next', 'Next')}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           ) : (
@@ -925,7 +946,7 @@ export function CalendlyBookingFlow({ t, language }: CalendlyBookingFlowProps) {
                 />
               ) : (
                 <>
-                  {t?.booking?.confirmBooking || 'Confirm Booking'}
+                  {getTranslation('booking.confirmBooking', 'Confirm Booking')}
                   <CheckCircle className="w-4 h-4 ml-2" />
                 </>
               )}

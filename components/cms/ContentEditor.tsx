@@ -6,9 +6,13 @@ import { CMSInput } from './CMSInput';
 import { CMSButton } from './CMSButton';
 import { useToast } from './Toast';
 
+interface ContentStructure {
+  [key: string]: string | Record<string, string>;
+}
+
 interface ContentEditorProps {
-  content: any;
-  onContentChange: (content: any) => void;
+  content: ContentStructure;
+  onContentChange: (content: ContentStructure) => void;
   onSave: () => Promise<void>;
   onRefresh: () => Promise<void>;
   isLoading: boolean;
@@ -57,7 +61,7 @@ export function ContentEditor({
       await onSave();
       setHasChanges(false);
       showSuccess('Content Saved!', 'Your changes have been saved and the page will be revalidated.', 4000);
-    } catch (error) {
+    } catch {
       showError('Save Failed', 'Failed to save content. Please try again.', 6000);
     }
   };
@@ -67,7 +71,7 @@ export function ContentEditor({
       await onRefresh();
       setHasChanges(false);
       showSuccess('Content Refreshed!', 'Content has been refreshed from the server.', 3000);
-    } catch (error) {
+    } catch {
       showError('Refresh Failed', 'Failed to refresh content. Please try again.', 6000);
     }
   };
@@ -158,7 +162,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">English Title</label>
               <CMSInput
-                value={localContent.heroTitleEn || ''}
+                value={typeof localContent.heroTitleEn === 'string' ? localContent.heroTitleEn : ''}
                 onChange={(value) => handleFieldChange('heroTitle', value, 'en')}
                 placeholder="Welcome to SOULPATH"
               />
@@ -167,7 +171,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">Spanish Title</label>
               <CMSInput
-                value={localContent.heroTitleEs || ''}
+                value={typeof localContent.heroTitleEs === 'string' ? localContent.heroTitleEs : ''}
                 onChange={(value) => handleFieldChange('heroTitle', value, 'es')}
                 placeholder="Bienvenido a SOULPATH"
               />
@@ -176,7 +180,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">English Subtitle</label>
               <CMSInput
-                value={localContent.heroSubtitleEn || ''}
+                value={typeof localContent.heroSubtitleEn === 'string' ? localContent.heroSubtitleEn : ''}
                 onChange={(value) => handleFieldChange('heroSubtitle', value, 'en')}
                 placeholder="Your journey to wellness starts here"
               />
@@ -185,7 +189,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">Spanish Subtitle</label>
               <CMSInput
-                value={localContent.heroSubtitleEs || ''}
+                value={typeof localContent.heroSubtitleEs === 'string' ? localContent.heroSubtitleEs : ''}
                 onChange={(value) => handleFieldChange('heroSubtitle', value, 'es')}
                 placeholder="Tu camino al bienestar comienza aquí"
               />
@@ -204,7 +208,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">English Title</label>
               <CMSInput
-                value={localContent.aboutTitleEn || ''}
+                value={typeof localContent.aboutTitleEn === 'string' ? localContent.aboutTitleEn : ''}
                 onChange={(value) => handleFieldChange('aboutTitle', value, 'en')}
                 placeholder="About Us"
               />
@@ -213,7 +217,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">Spanish Title</label>
               <CMSInput
-                value={localContent.aboutTitleEs || ''}
+                value={typeof localContent.aboutTitleEs === 'string' ? localContent.aboutTitleEs : ''}
                 onChange={(value) => handleFieldChange('aboutTitle', value, 'es')}
                 placeholder="Sobre Nosotros"
               />
@@ -222,7 +226,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">English Content</label>
               <textarea
-                value={localContent.aboutContentEn || ''}
+                value={typeof localContent.aboutContentEn === 'string' ? localContent.aboutContentEn : ''}
                 onChange={(e) => handleFieldChange('aboutContent', e.target.value, 'en')}
                 placeholder="We are dedicated to helping you achieve your wellness goals."
                 className="w-full px-3 py-2 bg-[#2D2D44] border border-[#3D3D54] rounded-md text-[#EAEAEA] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent"
@@ -233,7 +237,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">Spanish Content</label>
               <textarea
-                value={localContent.aboutContentEs || ''}
+                value={typeof localContent.aboutContentEs === 'string' ? localContent.aboutContentEs : ''}
                 onChange={(e) => handleFieldChange('aboutContent', e.target.value, 'es')}
                 placeholder="Estamos dedicados a ayudarte a alcanzar tus metas de bienestar."
                 className="w-full px-3 py-2 bg-[#2D2D44] border border-[#3D3D54] rounded-md text-[#EAEAEA] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent"
@@ -254,7 +258,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">English Title</label>
               <CMSInput
-                value={localContent.approachTitleEn || ''}
+                value={typeof localContent.approachTitleEn === 'string' ? localContent.approachTitleEn : ''}
                 onChange={(value) => handleFieldChange('approachTitle', value, 'en')}
                 placeholder="Our Approach"
               />
@@ -263,7 +267,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">Spanish Title</label>
               <CMSInput
-                value={localContent.approachTitleEs || ''}
+                value={typeof localContent.approachTitleEs === 'string' ? localContent.approachTitleEs : ''}
                 onChange={(value) => handleFieldChange('approachTitle', value, 'es')}
                 placeholder="Nuestro Enfoque"
               />
@@ -272,7 +276,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">English Content</label>
               <textarea
-                value={localContent.approachContentEn || ''}
+                value={typeof localContent.approachContentEn === 'string' ? localContent.approachContentEn : ''}
                 onChange={(e) => handleFieldChange('approachContent', e.target.value, 'en')}
                 placeholder="We use a holistic approach to wellness."
                 className="w-full px-3 py-2 bg-[#2D2D44] border border-[#3D3D54] rounded-md text-[#EAEAEA] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent"
@@ -283,7 +287,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">Spanish Content</label>
               <textarea
-                value={localContent.approachContentEs || ''}
+                value={typeof localContent.approachContentEs === 'string' ? localContent.approachContentEs : ''}
                 onChange={(e) => handleFieldChange('approachContent', e.target.value, 'es')}
                 placeholder="Usamos un enfoque holístico para el bienestar."
                 className="w-full px-3 py-2 bg-[#2D2D44] border border-[#3D3D54] rounded-md text-[#EAEAEA] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent"
@@ -304,7 +308,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">English Title</label>
               <CMSInput
-                value={localContent.servicesTitleEn || ''}
+                value={typeof localContent.servicesTitleEn === 'string' ? localContent.servicesTitleEn : ''}
                 onChange={(value) => handleFieldChange('servicesTitle', value, 'en')}
                 placeholder="Our Services"
               />
@@ -313,7 +317,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">Spanish Title</label>
               <CMSInput
-                value={localContent.servicesTitleEs || ''}
+                value={typeof localContent.servicesTitleEs === 'string' ? localContent.servicesTitleEs : ''}
                 onChange={(value) => handleFieldChange('servicesTitle', value, 'es')}
                 placeholder="Nuestros Servicios"
               />
@@ -322,7 +326,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">English Content</label>
               <textarea
-                value={localContent.servicesContentEn || ''}
+                value={typeof localContent.servicesContentEn === 'string' ? localContent.servicesContentEn : ''}
                 onChange={(e) => handleFieldChange('servicesContent', e.target.value, 'en')}
                 placeholder="Professional wellness services in a peaceful environment."
                 className="w-full px-3 py-2 bg-[#2D2D44] border border-[#3D3D54] rounded-md text-[#EAEAEA] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent"
@@ -333,7 +337,7 @@ export function ContentEditor({
             <div>
               <label className="block text-sm font-medium text-[#EAEAEA] mb-2">Spanish Content</label>
               <textarea
-                value={localContent.servicesContentEs || ''}
+                value={typeof localContent.servicesContentEs === 'string' ? localContent.servicesContentEs : ''}
                 onChange={(e) => handleFieldChange('servicesContent', e.target.value, 'es')}
                 placeholder="Servicios profesionales de bienestar en un ambiente pacífico."
                 className="w-full px-3 py-2 bg-[#2D2D44] border border-[#3D3D54] rounded-md text-[#EAEAEA] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent"
@@ -352,21 +356,21 @@ export function ContentEditor({
             <div>
               <h4 className="text-md font-medium text-[#EAEAEA] mb-3">English Version</h4>
               <div className="space-y-2 text-sm">
-                <p><strong>Hero:</strong> {localContent.heroTitleEn || 'Welcome to SOULPATH'}</p>
-                <p><strong>Subtitle:</strong> {localContent.heroSubtitleEn || 'Your journey to wellness starts here'}</p>
-                <p><strong>About:</strong> {localContent.aboutTitleEn || 'About Us'}</p>
-                <p><strong>Approach:</strong> {localContent.approachTitleEn || 'Our Approach'}</p>
-                <p><strong>Services:</strong> {localContent.servicesTitleEn || 'Our Services'}</p>
+                <p><strong>Hero:</strong> {typeof localContent.heroTitleEn === 'string' ? localContent.heroTitleEn || 'Welcome to SOULPATH' : 'Welcome to SOULPATH'}</p>
+                <p><strong>Subtitle:</strong> {typeof localContent.heroSubtitleEn === 'string' ? localContent.heroSubtitleEn || 'Your journey to wellness starts here' : 'Your journey to wellness starts here'}</p>
+                <p><strong>About:</strong> {typeof localContent.aboutTitleEn === 'string' ? localContent.aboutTitleEn || 'About Us' : 'About Us'}</p>
+                <p><strong>Approach:</strong> {typeof localContent.approachTitleEn === 'string' ? localContent.approachTitleEn || 'Our Approach' : 'Our Approach'}</p>
+                <p><strong>Services:</strong> {typeof localContent.servicesTitleEn === 'string' ? localContent.servicesTitleEn || 'Our Services' : 'Our Services'}</p>
               </div>
             </div>
             <div>
               <h4 className="text-md font-medium text-[#EAEAEA] mb-3">Spanish Version</h4>
               <div className="space-y-2 text-sm">
-                <p><strong>Hero:</strong> {localContent.heroTitleEs || 'Bienvenido a SOULPATH'}</p>
-                <p><strong>Subtitle:</strong> {localContent.heroSubtitleEs || 'Tu camino al bienestar comienza aquí'}</p>
-                <p><strong>About:</strong> {localContent.aboutTitleEs || 'Sobre Nosotros'}</p>
-                <p><strong>Approach:</strong> {localContent.approachTitleEs || 'Nuestro Enfoque'}</p>
-                <p><strong>Services:</strong> {localContent.servicesTitleEs || 'Nuestros Servicios'}</p>
+                <p><strong>Hero:</strong> {typeof localContent.heroTitleEs === 'string' ? localContent.heroTitleEs || 'Bienvenido a SOULPATH' : 'Bienvenido a SOULPATH'}</p>
+                <p><strong>Subtitle:</strong> {typeof localContent.heroSubtitleEs === 'string' ? localContent.heroSubtitleEs || 'Tu camino al bienestar comienza aquí' : 'Tu camino al bienestar comienza aquí'}</p>
+                <p><strong>About:</strong> {typeof localContent.aboutTitleEs === 'string' ? localContent.aboutTitleEs || 'Sobre Nosotros' : 'Sobre Nosotros'}</p>
+                <p><strong>Approach:</strong> {typeof localContent.approachTitleEs === 'string' ? localContent.approachTitleEs || 'Nuestro Enfoque' : 'Nuestro Enfoque'}</p>
+                <p><strong>Services:</strong> {typeof localContent.servicesTitleEs === 'string' ? localContent.servicesTitleEs || 'Nuestros Servicios' : 'Nuestros Servicios'}</p>
               </div>
             </div>
           </div>

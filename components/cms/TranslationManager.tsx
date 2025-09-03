@@ -6,9 +6,13 @@ import { CMSInput } from './CMSInput';
 import { CMSButton } from './CMSButton';
 import { useToast } from './Toast';
 
+interface TranslationContent {
+  [key: string]: string | Record<string, string>;
+}
+
 interface TranslationManagerProps {
-  content: any;
-  onContentChange: (content: any) => void;
+  content: TranslationContent;
+  onContentChange: (content: TranslationContent) => void;
   onSave: () => Promise<void>;
   onRefresh: () => Promise<void>;
   isLoading: boolean;
@@ -87,8 +91,8 @@ export function TranslationManager({
     if (searchTerm) {
       return fields.filter(field => 
         field.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        field.en?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        field.es?.toLowerCase().includes(searchTerm.toLowerCase())
+        (typeof field.en === 'string' ? field.en.toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
+        (typeof field.es === 'string' ? field.es.toLowerCase().includes(searchTerm.toLowerCase()) : false)
       );
     }
 
@@ -97,7 +101,8 @@ export function TranslationManager({
 
   const getFieldValue = (fieldKey: string, language: 'en' | 'es') => {
     const fullKey = `${fieldKey}${language.charAt(0).toUpperCase() + language.slice(1)}`;
-    return localContent[fullKey] || '';
+    const value = localContent[fullKey];
+    return typeof value === 'string' ? value : '';
   };
 
   if (isLoading) {
@@ -285,21 +290,21 @@ export function TranslationManager({
             <div>
               <h4 className="text-md font-medium text-[#EAEAEA] mb-3">🇺🇸 English Version</h4>
               <div className="space-y-2 text-sm">
-                <p><strong>Hero:</strong> {localContent.heroTitleEn || 'Welcome to SOULPATH'}</p>
-                <p><strong>Subtitle:</strong> {localContent.heroSubtitleEn || 'Your journey to wellness starts here'}</p>
-                <p><strong>About:</strong> {localContent.aboutTitleEn || 'About Us'}</p>
-                <p><strong>Approach:</strong> {localContent.approachTitleEn || 'Our Approach'}</p>
-                <p><strong>Services:</strong> {localContent.servicesTitleEn || 'Our Services'}</p>
+                <p><strong>Hero:</strong> {typeof localContent.heroTitleEn === 'string' ? localContent.heroTitleEn || 'Welcome to SOULPATH' : 'Welcome to SOULPATH'}</p>
+                <p><strong>Subtitle:</strong> {typeof localContent.heroSubtitleEn === 'string' ? localContent.heroSubtitleEn || 'Your journey to wellness starts here' : 'Your journey to wellness starts here'}</p>
+                <p><strong>About:</strong> {typeof localContent.aboutTitleEn === 'string' ? localContent.aboutTitleEn || 'About Us' : 'About Us'}</p>
+                <p><strong>Approach:</strong> {typeof localContent.approachTitleEn === 'string' ? localContent.approachTitleEn || 'Our Approach' : 'Our Approach'}</p>
+                <p><strong>Services:</strong> {typeof localContent.servicesTitleEn === 'string' ? localContent.servicesTitleEn || 'Our Services' : 'Our Services'}</p>
               </div>
             </div>
             <div>
               <h4 className="text-md font-medium text-[#EAEAEA] mb-3">🇪🇸 Spanish Version</h4>
               <div className="space-y-2 text-sm">
-                <p><strong>Hero:</strong> {localContent.heroTitleEs || 'Bienvenido a SOULPATH'}</p>
-                <p><strong>Subtitle:</strong> {localContent.heroSubtitleEs || 'Tu camino al bienestar comienza aquí'}</p>
-                <p><strong>About:</strong> {localContent.aboutTitleEs || 'Sobre Nosotros'}</p>
-                <p><strong>Approach:</strong> {localContent.approachTitleEs || 'Nuestro Enfoque'}</p>
-                <p><strong>Services:</strong> {localContent.servicesTitleEs || 'Nuestros Servicios'}</p>
+                <p><strong>Hero:</strong> {typeof localContent.heroTitleEs === 'string' ? localContent.heroTitleEs || 'Bienvenido a SOULPATH' : 'Bienvenido a SOULPATH'}</p>
+                <p><strong>Subtitle:</strong> {typeof localContent.heroSubtitleEs === 'string' ? localContent.heroSubtitleEs || 'Tu camino al bienestar comienza aquí' : 'Tu camino al bienestar comienza aquí'}</p>
+                <p><strong>About:</strong> {typeof localContent.aboutTitleEs === 'string' ? localContent.aboutTitleEs || 'Sobre Nosotros' : 'Sobre Nosotros'}</p>
+                <p><strong>Approach:</strong> {typeof localContent.approachTitleEs === 'string' ? localContent.approachTitleEs || 'Nuestro Enfoque' : 'Nuestro Enfoque'}</p>
+                <p><strong>Services:</strong> {typeof localContent.servicesTitleEs === 'string' ? localContent.servicesTitleEs || 'Nuestros Servicios' : 'Nuestros Servicios'}</p>
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { BaseButton } from './ui/BaseButton';
@@ -112,7 +112,7 @@ export function EmailManagement() {
   const [showPlaceholderHelper, setShowPlaceholderHelper] = useState(false);
 
   // Default templates with enhanced video link support
-  const defaultTemplates: Record<string, EmailTemplate> = {
+  const defaultTemplates: Record<string, EmailTemplate> = useMemo(() => ({
     userBookingConfirmation: {
       en: {
         subject: 'Booking Confirmation - SoulPath Astrology Reading',
@@ -571,7 +571,74 @@ export function EmailManagement() {
         }
       }
     }
-  };
+  }), []);
+
+  const loadEmailConfig = useCallback(async () => {
+    try {
+      const authToken = user?.access_token;
+      if (!authToken) {
+        console.error('No auth token available for loading email config');
+        return;
+      }
+
+      console.log('Loading email config with auth token...');
+      const response = await fetch(`/api/admin/email/config`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Email config loaded successfully:', data);
+        setEmailConfig(data.config || emailConfig);
+      } else {
+        console.error('Failed to load email config:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('Error loading email config:', error);
+    }
+  }, [user?.access_token, emailConfig]);
+
+  const loadEmailTemplates = useCallback(async () => {
+    try {
+      const authToken = user?.access_token;
+      if (!authToken) {
+        console.error('No auth token available for loading email templates');
+        return;
+      }
+
+      console.log('Loading email templates with auth token...');
+      const response = await fetch(`/api/admin/email/templates`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Email templates loaded successfully:', data);
+
+        // Merge loaded templates with defaults, preferring loaded ones
+        const mergedTemplates = { ...defaultTemplates };
+        if (data.templates && Object.keys(data.templates).length > 0) {
+          Object.assign(mergedTemplates, data.templates);
+        }
+
+        setEmailTemplates(mergedTemplates);
+      } else {
+        console.error('Failed to load email templates:', response.status, response.statusText);
+        // Use default templates on error
+        setEmailTemplates(defaultTemplates);
+      }
+    } catch (error) {
+      console.error('Error loading email templates:', error);
+      // Use default templates on error
+      setEmailTemplates(defaultTemplates);
+    }
+  }, [user?.access_token, defaultTemplates]);
 
   // Load data on component mount - wait for user auth
   useEffect(() => {
@@ -600,74 +667,14 @@ export function EmailManagement() {
     };
 
     initializeEmailManagement();
-  }, [user?.access_token]);
+  }, [user?.access_token, loadEmailConfig, loadEmailTemplates, defaultTemplates]);
 
-  const loadEmailConfig = async () => {
-    try {
-      const authToken = user?.access_token;
-      if (!authToken) {
-        console.error('No auth token available for loading email config');
-        return;
-      }
 
-      console.log('Loading email config with auth token...');
-      const response = await fetch(`/api/admin/email/config`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Email config loaded successfully:', data);
-        setEmailConfig(data.config || emailConfig);
-      } else {
-        console.error('Failed to load email config:', response.status, response.statusText);
-      }
-    } catch (error) {
-      console.error('Error loading email config:', error);
-    }
-  };
 
-  const loadEmailTemplates = async () => {
-    try {
-      const authToken = user?.access_token;
-      if (!authToken) {
-        console.error('No auth token available for loading email templates');
-        return;
-      }
 
-      console.log('Loading email templates with auth token...');
-      const response = await fetch(`/api/admin/email/templates`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Email templates loaded successfully:', data);
-        
-        // Merge loaded templates with defaults, preferring loaded ones
-        const mergedTemplates = { ...defaultTemplates };
-        if (data.templates && Object.keys(data.templates).length > 0) {
-          Object.assign(mergedTemplates, data.templates);
-        }
-        
-        setEmailTemplates(mergedTemplates);
-      } else {
-        console.error('Failed to load email templates:', response.status, response.statusText);
-        // Use default templates on error
-        setEmailTemplates(defaultTemplates);
-      }
-    } catch (error) {
-      console.error('Error loading email templates:', error);
-      // Use default templates on error
-      setEmailTemplates(defaultTemplates);
-    }
-  };
+
 
   const saveEmailConfig = async () => {
     if (!user?.access_token) return;
@@ -824,7 +831,7 @@ export function EmailManagement() {
     }));
   };
 
-  const updateVideoLinkSettings = (field: string, value: any) => {
+  const updateVideoLinkSettings = (field: string, value: string | boolean) => {
     setEmailTemplates(prev => ({
       ...prev,
       [activeTemplate]: {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Settings, FileText, Globe, RefreshCw, Save, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { defaultTranslations } from '../lib/data/translations';
@@ -9,6 +9,15 @@ import { CMSTabs } from './cms/CMSTabs';
 import { ContentEditor } from './cms/ContentEditor';
 import { SectionManager } from './cms/SectionManager';
 import { TranslationManager } from './cms/TranslationManager';
+
+// Content types (matches ContentEditor/TranslationManager)
+interface ContentStructure {
+  [key: string]: string | Record<string, string>;
+}
+
+interface TranslationContent {
+  [key: string]: string | Record<string, string>;
+}
 import { useToast, ToastContainer } from './cms/Toast';
 import { CMSButton } from './cms/CMSButton';
 
@@ -16,10 +25,40 @@ interface ContentManagementProps {
   onClose?: () => void;
 }
 
+
+
 export function ContentManagement({ }: ContentManagementProps) {
   const { user } = useAuth();
   const { toasts, showSuccess, showError, showWarning } = useToast();
-  const [content, setContent] = useState(defaultTranslations);
+  // Transform nested defaultTranslations to flat structure expected by CMS components
+  const transformNestedToFlat = (nested: any): ContentStructure => {
+    const flat: ContentStructure = {};
+    if (nested.en) {
+      Object.entries(nested.en).forEach(([section, values]) => {
+        if (typeof values === 'object' && values !== null) {
+          Object.entries(values as Record<string, string>).forEach(([key, value]) => {
+            flat[`${section}${key.charAt(0).toUpperCase() + key.slice(1)}`] = value;
+          });
+        } else {
+          flat[section] = values as string;
+        }
+      });
+    }
+    if (nested.es) {
+      Object.entries(nested.es).forEach(([section, values]) => {
+        if (typeof values === 'object' && values !== null) {
+          Object.entries(values as Record<string, string>).forEach(([key, value]) => {
+            flat[`${section}${key.charAt(0).toUpperCase() + key.slice(1)}Es`] = value;
+          });
+        } else {
+          flat[`${section}Es`] = values as string;
+        }
+      });
+    }
+    return flat;
+  };
+
+  const [content, setContent] = useState<ContentStructure>(transformNestedToFlat(defaultTranslations));
   const [sections, setSections] = useState<SectionConfig[]>(DEFAULT_SECTIONS);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -27,14 +66,9 @@ export function ContentManagement({ }: ContentManagementProps) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  useEffect(() => {
-    if (user?.access_token) {
-      loadContent();
-      loadSections();
-    }
-  }, [user?.access_token]);
 
-  const loadContent = async () => {
+
+  const loadContent = useCallback(async () => {
     if (!user?.access_token) {
       console.log('🔐 loadContent: No access token, skipping API call');
       return;
@@ -65,9 +99,9 @@ export function ContentManagement({ }: ContentManagementProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.access_token, showError, setContent]);
 
-  const loadSections = async () => {
+  const loadSections = useCallback(async () => {
     try {
       const response = await fetch('/api/sections');
       
@@ -90,7 +124,14 @@ export function ContentManagement({ }: ContentManagementProps) {
       setSections(DEFAULT_SECTIONS);
       showWarning('Sections Load Warning', 'Using default section configuration.', 4000);
     }
-  };
+  }, [showWarning, setSections]);
+
+  useEffect(() => {
+    if (user?.access_token) {
+      loadContent();
+      loadSections();
+    }
+  }, [user?.access_token, loadContent, loadSections]);
 
   const saveContent = async () => {
     if (!user?.access_token) {
@@ -140,8 +181,8 @@ export function ContentManagement({ }: ContentManagementProps) {
     }
   };
 
-  const handleContentChange = (newContent: any) => {
-    setContent(newContent);
+  const handleContentChange = (newContent: ContentStructure | TranslationContent) => {
+    setContent(newContent as ContentStructure);
     setHasUnsavedChanges(true);
   };
 
@@ -326,7 +367,7 @@ export function ContentManagement({ }: ContentManagementProps) {
       </div>
       
       {/* Toast Notifications */}
-      <ToastContainer toasts={toasts} onRemove={(_id) => {}} />
+      <ToastContainer toasts={toasts} onRemove={() => {}} />
     </div>
   );
 }
