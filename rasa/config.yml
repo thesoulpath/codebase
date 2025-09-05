@@ -22,7 +22,7 @@ pipeline:
   intent_classification: true
   use_masked_language_model: false
   constrain_similarities: true
-  model_confidence: cosine
+  model_confidence: softmax
   random_seed: 42
 - name: EntitySynonymMapper
 - name: ResponseSelector
@@ -46,7 +46,7 @@ policies:
   epochs: 50  # Reduced from 100
   constrain_similarities: true
   use_gpu: false
-  model_confidence: cosine
+  model_confidence: softmax
   random_seed: 42
 
 assistant_id: 20250904-210916-dense-bumper
