@@ -1,0 +1,20 @@
+{
+  "0": "affirm",
+  "1": "ask_about_packages",
+  "2": "ask_about_pricing",
+  "3": "ask_about_services",
+  "4": "astrology_question",
+  "5": "birth_chart_question",
+  "6": "book_reading",
+  "7": "cancel_booking",
+  "8": "check_availability",
+  "9": "deny",
+  "10": "goodbye",
+  "11": "greet",
+  "12": "horoscope_question",
+  "13": "mood_great",
+  "14": "mood_unhappy",
+  "15": "planetary_question",
+  "16": "reschedule_booking",
+  "17": "zodiac_sign_question"
+}
