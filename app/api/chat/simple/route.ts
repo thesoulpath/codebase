@@ -16,6 +16,10 @@ function getRasaUrl(): string {
   if (process.env.RASA_URL) {
     return process.env.RASA_URL;
   }
+  // In production, use the Render.com Rasa server
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://soulpath-rasa-server.onrender.com';
+  }
   return 'http://localhost:5005';
 }
 
