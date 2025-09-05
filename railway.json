@@ -4,8 +4,8 @@
     "dockerfilePath": "Dockerfile.rasa"
   },
   "deploy": {
-    "startCommand": "rasa run --cors '*' --debug --enable-api",
-    "healthcheckPath": "/",
+    "startCommand": "/app/start-rasa.sh",
+    "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
@@ -15,7 +15,8 @@
       "variables": {
         "RASA_ENVIRONMENT": "production",
         "RASA_TELEMETRY_ENABLED": "false",
-        "RASA_CORS_ORIGIN": "*"
+        "RASA_CORS_ORIGIN": "*",
+        "PORT": "5005"
       }
     }
   }

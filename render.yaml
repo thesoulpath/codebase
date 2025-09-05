@@ -1,14 +1,14 @@
 services:
   - type: web
     name: soulpath-rasa-server
-    env: docker
-    dockerfilePath: ./Dockerfile
+    runtime: docker
+    dockerfilePath: ./Dockerfile.rasa
     plan: starter
     healthCheckPath: /health
     envVars:
-      - key: PORT
-        value: 5005
-      - key: RASA_PORT
-        value: 5005
-      - key: OPENROUTER_API_KEY
-        sync: false
+      - key: RASA_ENVIRONMENT
+        value: production
+      - key: RASA_TELEMETRY_ENABLED
+        value: false
+      - key: RASA_CORS_ORIGIN
+        value: "*"

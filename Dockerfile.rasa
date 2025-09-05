@@ -23,8 +23,12 @@ COPY rasa/ ./
 # Train Rasa model
 RUN rasa train
 
-# Expose port
+# Expose port (Railway will override with PORT env var)
 EXPOSE 5005
 
-# Start Rasa server
-CMD ["rasa", "run", "--enable-api", "--cors", "*", "--port", "5005"]
+# Copy startup script
+COPY start-rasa.sh /app/start-rasa.sh
+RUN chmod +x /app/start-rasa.sh
+
+# Start Rasa server using startup script
+CMD ["/app/start-rasa.sh"]
