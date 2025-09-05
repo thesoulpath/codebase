@@ -7,11 +7,12 @@ COPY package*.json ./
 COPY prisma/ ./prisma/
 RUN npm ci --only=production && npm cache clean --force
 
-FROM python:3.9-slim AS python-deps
+FROM python:3.10-slim AS python-deps
 
 WORKDIR /app
-# Cache busting - add timestamp to force fresh build
+# Aggressive cache busting - force complete rebuild
 RUN echo "Build timestamp: $(date)" > /tmp/build_info.txt
+RUN echo "Python version: $(python --version)" > /tmp/python_info.txt
 RUN apt-get update && apt-get install -y build-essential && \
     pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir rasa==3.6.21 && \
