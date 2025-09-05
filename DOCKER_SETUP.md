@@ -128,6 +128,8 @@ services:
     plan: starter
     healthCheckPath: /health
     envVars:
+      - key: PORT
+        value: 5005
       - key: RASA_PORT
         value: 5005
       - key: OPENROUTER_API_KEY
@@ -387,12 +389,218 @@ rasa shell
 3. **Monitor Performance**: Check logs and response times
 4. **Scale as Needed**: Upgrade Render plan if required
 
+## 🔐 Environment Variables Configuration
+
+### **🚀 Render.com (Rasa Server) - Docker Required:**
+```yaml
+envVars:
+  - key: PORT
+    value: 5005
+  - key: RASA_PORT
+    value: 5005
+  - key: OPENROUTER_API_KEY
+    sync: false  # Required
+  - key: NODE_ENV
+    value: production
+```
+
+### **⚡ Vercel (Next.js Frontend) - NO Docker Needed:**
+
+**Vercel is a serverless platform - just add these environment variables in your Vercel dashboard:**
+
+#### **🔴 CRITICAL - Must Set These:**
+```bash
+# Database
+DATABASE_URL=postgresql://...
+
+# Redis Cache
+REDIS_URL=redis://...
+
+# Authentication
+NEXTAUTH_SECRET=your-secret-key
+NEXTAUTH_URL=https://your-domain.vercel.app
+
+# AI Integration
+OPENROUTER_API_KEY=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
+
+# Rasa Server
+RASA_URL=https://codebase-x.onrender.com
+```
+
+#### **🔧 RECOMMENDED - For Full Features:**
+```bash
+# Email Service
+BREVO_API_KEY=your-brevo-api-key
+BREVO_SENDER_EMAIL=info@soulpath.com
+BREVO_SENDER_NAME=SoulPath
+
+# Payment Processing
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_SECRET_KEY=sk_live_...
+
+# Live Sessions
+ZOOM_API_KEY=your-zoom-api-key
+ZOOM_API_SECRET=your-zoom-secret
+LIVE_SESSION_PROVIDER=zoom
+
+# WhatsApp Integration
+TWILIO_ACCOUNT_SID=your-twilio-sid
+TWILIO_AUTH_TOKEN=your-twilio-token
+TWILIO_PHONE_NUMBER=+1234567890
+
+# App Configuration
+NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
+NEXT_PUBLIC_BASE_URL=https://your-domain.vercel.app
+API_BASE_URL=https://your-domain.vercel.app/api
+
+# Logging
+LOGGING_ENABLED=true
+LOGGING_LEVEL=info
+LOGGING_STORAGE=database
+
+# Supabase (if used)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+### Optional Environment Variables
+
+#### **Rasa Configuration:**
+```yaml
+# Rasa-specific settings
+RASA_MODEL=rasa
+RASA_CONFIDENCE_THRESHOLD=0.7
+```
+
+#### **OpenRouter Configuration:**
+```yaml
+# AI model settings
+OPENROUTER_MODEL=meta-llama/llama-3.3-8b-instruct:free
+OPENROUTER_TEMPERATURE=0.7
+OPENROUTER_MAX_TOKENS=1000
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+```
+
+#### **API Configuration:**
+```yaml
+# API settings
+API_TIMEOUT=10000
+API_RETRIES=3
+```
+
+## 📋 Environment Variables Checklist
+
+### **✅ Required for Production:**
+
+| Variable | Service | Purpose | Required |
+|----------|---------|---------|----------|
+| `PORT` | Render | Port binding | ✅ |
+| `DATABASE_URL` | Vercel | Database connection | ✅ |
+| `OPENROUTER_API_KEY` | Both | AI responses | ✅ |
+| `NEXTAUTH_SECRET` | Vercel | Authentication | ✅ |
+| `NEXTAUTH_URL` | Vercel | Auth callback URL | ✅ |
+| `REDIS_URL` | Vercel | Caching | ✅ |
+
+### **🔧 Recommended for Production:**
+
+| Variable | Service | Purpose | Required |
+|----------|---------|---------|----------|
+| `BREVO_API_KEY` | Vercel | Email service | 🔄 |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Vercel | Payment UI | 🔄 |
+| `STRIPE_SECRET_KEY` | Vercel | Payment processing | 🔄 |
+| `ZOOM_API_KEY` | Vercel | Live sessions | 🔄 |
+| `RASA_URL` | Vercel | Rasa server URL | 🔄 |
+
+### **📱 WhatsApp Integration (Optional):**
+
+| Variable | Service | Purpose |
+|----------|---------|---------|
+| `TWILIO_ACCOUNT_SID` | Vercel | WhatsApp account |
+| `TWILIO_AUTH_TOKEN` | Vercel | WhatsApp auth |
+| `TWILIO_PHONE_NUMBER` | Vercel | WhatsApp number |
+
+### **📊 Monitoring & Logging:**
+
+| Variable | Service | Purpose |
+|----------|---------|---------|
+| `LOGGING_ENABLED` | Vercel | Enable logging |
+| `LOGGING_LEVEL` | Vercel | Log level |
+| `LOGGING_STORAGE` | Vercel | Log storage |
+
+## 🚀 Deployment Checklist
+
+### **Before Deploying:**
+
+1. **✅ Set up database** (PostgreSQL)
+2. **✅ Configure Redis** for caching
+3. **✅ Get OpenRouter API key** ✅ DONE
+4. **✅ Set up authentication secrets**
+5. **✅ Configure payment processing**
+6. **✅ Set up email service**
+
+### **Environment Variables by Deployment:**
+
+#### **Render.com (Rasa Server) - Docker Required:**
+```yaml
+# Add these in Render.com dashboard → Environment tab
+PORT=5005
+OPENROUTER_API_KEY=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
+NODE_ENV=production
+```
+
+#### **Vercel (Next.js Frontend) - NO Docker:**
+```bash
+# Add these in Vercel dashboard → Settings → Environment Variables
+DATABASE_URL=postgresql://...
+REDIS_URL=redis://...
+OPENROUTER_API_KEY=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
+NEXTAUTH_SECRET=your-secret
+NEXTAUTH_URL=https://your-domain.vercel.app
+RASA_URL=https://codebase-x.onrender.com
+```
+
+## 📋 How to Add Environment Variables to Vercel:
+
+### **Step-by-Step Guide:**
+
+1. **Go to Vercel Dashboard**
+   - Visit [vercel.com/dashboard](https://vercel.com/dashboard)
+   - Select your SoulPath project
+
+2. **Navigate to Environment Variables**
+   - Click **Settings** tab
+   - Click **Environment Variables** in sidebar
+
+3. **Add Each Variable**
+   - Click **"Add New"** button
+   - Enter **Name** and **Value**
+   - Select **Environment** (Production, Preview, Development)
+   - Click **Save**
+
+4. **Redeploy**
+   - After adding variables, trigger a new deployment
+   - Your app will restart with new environment variables
+
+## 🔑 Getting API Keys
+
+### **Required:**
+- **OpenRouter**: [openrouter.ai](https://openrouter.ai) - AI responses
+- **Database**: Supabase, PlanetScale, or PostgreSQL provider
+- **Redis**: Upstash, Redis Cloud, or self-hosted
+
+### **Recommended:**
+- **Stripe**: [stripe.com](https://stripe.com) - Payment processing
+- **Brevo**: [brevo.com](https://brevo.com) - Email service
+- **Zoom**: [zoom.us](https://zoom.us) - Live sessions
+- **Twilio**: [twilio.com](https://twilio.com) - WhatsApp
+
 ## 📚 Additional Resources
 
 - [Rasa Documentation](https://rasa.com/docs/)
 - [Docker Documentation](https://docs.docker.com/)
 - [Render Documentation](https://render.com/docs)
 - [Next.js Documentation](https://nextjs.org/docs)
+- [Vercel Environment Variables](https://vercel.com/docs/environment-variables)
 
 ---
 
