@@ -7,15 +7,16 @@ COPY package*.json ./
 COPY prisma/ ./prisma/
 RUN npm ci --only=production && npm cache clean --force
 
-FROM python:3.8-alpine AS python-deps
+FROM python:3.8-slim AS python-deps
 
 WORKDIR /app
 COPY rasa/requirements.txt ./
-RUN apk add --no-cache build-base linux-headers && \
+RUN apt-get update && apt-get install -y build-essential && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir rasa==3.6.21 tensorflow==2.12.0 spacy==3.6.1 && \
+    pip install --no-cache-dir rasa==3.6.21 spacy==3.6.1 && \
+    pip install --no-cache-dir tensorflow-cpu==2.11.0 && \
     python -m spacy download en_core_web_sm && \
-    apk del build-base linux-headers
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 FROM node:18-alpine
 
