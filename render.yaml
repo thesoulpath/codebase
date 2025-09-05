@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: soulpath-rasa-server
+    runtime: docker
+    dockerfilePath: ./Dockerfile.rasa
+    plan: starter
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: RASA_ENVIRONMENT
+        value: production
+      - key: RASA_TELEMETRY_ENABLED
+        value: false
+      - key: RASA_CORS_ORIGIN
+        value: "*"
+      - key: TF_CPP_MIN_LOG_LEVEL
+        value: "2"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+      - key: BUILDKIT_INLINE_CACHE
+        value: "0"
+      - key: FORCE_REBUILD
+        value: "20241209003"
+      - key: DOCKER_BUILDKIT
+        value: "0"
+      - key: COMPOSE_DOCKER_CLI_BUILD
+        value: "0"
