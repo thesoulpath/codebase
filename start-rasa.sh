@@ -47,4 +47,4 @@ export NUMEXPR_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
 
 # Start Rasa with memory optimizations
-$RASA_CMD run --enable-api --cors "*" --port $PORT -i 0.0.0.0 --log-level WARNING
+$RASA_CMD run --enable-api --cors "*" --port $PORT --host 0.0.0.0
