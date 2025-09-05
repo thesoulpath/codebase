@@ -22,7 +22,7 @@ services:
       - key: BUILDKIT_INLINE_CACHE
         value: "0"
       - key: FORCE_REBUILD
-        value: "20241209003"
+        value: "20241209004"
       - key: DOCKER_BUILDKIT
         value: "0"
       - key: COMPOSE_DOCKER_CLI_BUILD

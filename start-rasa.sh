@@ -1,6 +1,7 @@
 #!/bin/bash
 
-echo "Starting Rasa server..."
+# Force cache invalidation - this file has been updated
+echo "Starting Rasa server - CACHE BUSTING VERSION $(date)..."
 
 # Get port from environment variable (Render requirement)
 PORT=${PORT:-5005}

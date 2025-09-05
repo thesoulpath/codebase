@@ -22,6 +22,7 @@ COPY rasa/ ./
 
 # Add cache-busting layer to force rebuild
 RUN echo "Cache busting layer - $(date)" > /tmp/cache_bust.txt
+RUN echo "FORCE_REBUILD_20241209004" > /tmp/force_rebuild.txt
 
 # Copy startup script
 COPY start-rasa.sh /app/start-rasa.sh
