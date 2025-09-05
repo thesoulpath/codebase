@@ -14,9 +14,9 @@ WORKDIR /app
 COPY --chown=1000:1000 rasa/requirements.txt ./
 RUN apt-get update && apt-get install -y build-essential && \
     pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir rasa==3.6.21 spacy==3.6.1 && \
+    pip install --no-cache-dir rasa==3.6.21 && \
     pip install --no-cache-dir tensorflow-cpu==2.11.0 && \
+    pip install --no-cache-dir spacy>=3.6.0,<4.0.0 && \
     python -m spacy download en_core_web_sm && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
