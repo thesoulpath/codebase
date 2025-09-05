@@ -62,10 +62,19 @@ if [ -z "$PORT" ]; then
 fi
 
 echo "Starting Rasa server..."
-# Debug: Show exact command being executed
+# Debug: Show exact command being executed and environment
+echo "RASA_CMD: $RASA_CMD"
+echo "PORT: $PORT"
 echo "Executing: $RASA_CMD run actions --enable-api --cors \"*\" --port $PORT -i 0.0.0.0 --quiet"
-echo "Note: Using Rasa 3.6.21 command structure - trying alternative format"
+echo "Environment WARNING: ${WARNING:-NOT_SET}"
+echo "Note: Using Rasa 3.6.21 command structure"
 
-# Try the correct Rasa 3.6.21 command structure
+# Ensure clean environment and explicit command execution
 echo "Starting Rasa server with actions..."
-exec $RASA_CMD run actions --enable-api --cors "*" --port $PORT -i 0.0.0.0 --quiet
+# Try alternative command structure for Rasa 3.6.21
+# Some versions might need different syntax
+echo "Trying alternative command structure..."
+"$RASA_CMD" run --enable-api --cors "*" --port "$PORT" -i 0.0.0.0 --quiet 2>/dev/null || {
+    echo "Primary command failed, trying with explicit actions..."
+    "$RASA_CMD" run actions --enable-api --cors "*" --port "$PORT" -i 0.0.0.0 --quiet
+}
