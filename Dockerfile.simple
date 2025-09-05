@@ -1,15 +1,18 @@
 # Use Node.js base image and install Python
 FROM node:18-alpine
 
-# Install Python and build dependencies
-RUN apk add --no-cache \
+# Install Python and build dependencies with retry logic
+RUN apk update && \
+    apk add --no-cache \
     python3 \
     py3-pip \
     build-base \
     python3-dev \
     gcc \
     musl-dev \
-    linux-headers
+    linux-headers \
+    curl \
+    bash
 
 # Create symlinks for python
 RUN ln -s /usr/bin/python3 /usr/bin/python
