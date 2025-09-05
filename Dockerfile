@@ -7,16 +7,14 @@ COPY package*.json ./
 COPY prisma/ ./prisma/
 RUN npm ci --only=production && npm cache clean --force
 
-FROM python:3.8-slim AS python-deps
+FROM python:3.9-slim AS python-deps
 
 WORKDIR /app
 # Cache busting - add timestamp to force fresh build
 RUN echo "Build timestamp: $(date)" > /tmp/build_info.txt
 RUN apt-get update && apt-get install -y build-essential && \
     pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir "spacy>=3.6.0,<4.0.0" && \
-    pip install --no-cache-dir "tensorflow-cpu==2.10.0" && \
-    pip install --no-cache-dir "rasa==3.6.21" && \
+    pip install --no-cache-dir rasa==3.6.21 && \
     python -m spacy download en_core_web_sm && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
