@@ -16,8 +16,14 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy Rasa project
 COPY rasa/ ./rasa/
 
+# Copy startup script
+COPY start-rasa.sh ./start-rasa.sh
+
 # Set working directory to rasa
 WORKDIR /app/rasa
+
+# Make startup script executable
+RUN chmod +x /app/start-rasa.sh
 
 # Train Rasa model
 RUN rasa train
@@ -29,5 +35,5 @@ EXPOSE 5005
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5005/health || exit 1
 
-# Start Rasa server
-CMD ["rasa", "run", "--enable-api", "--cors", "*", "--debug"]
+# Start Rasa server using startup script
+CMD ["/app/start-rasa.sh"]
