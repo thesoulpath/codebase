@@ -10,8 +10,8 @@ RUN npm ci --only=production && npm cache clean --force
 FROM python:3.8-slim AS python-deps
 
 WORKDIR /app
-# Force clean copy of requirements file
-COPY --chown=1000:1000 rasa/requirements.txt ./
+# Cache busting - add timestamp to force fresh build
+RUN echo "Build timestamp: $(date)" > /tmp/build_info.txt
 RUN apt-get update && apt-get install -y build-essential && \
     pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir rasa==3.6.21 && \
