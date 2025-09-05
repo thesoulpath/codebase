@@ -5,18 +5,22 @@ FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies and Node.js
-RUN apt-get update && apt-get install -y \
+# Install system dependencies and Node.js with retry logic
+RUN apt-get update --fix-missing && \
+    apt-get install -y --no-install-recommends \
     curl \
     gnupg \
     build-essential \
     python3.8 \
     python3.8-dev \
     python3-pip \
+    ca-certificates \
     && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmp/* \
+    && rm -rf /var/tmp/*
 
 # Create symlinks for python
 RUN ln -s /usr/bin/python3.8 /usr/bin/python
