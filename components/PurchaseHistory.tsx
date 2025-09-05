@@ -60,11 +60,7 @@ export function PurchaseHistory() {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatus | 'all'>('all');
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (user?.access_token) {
-      loadPurchaseHistory();
-    }
-  }, [user?.access_token]);
+
 
   const loadPurchaseHistory = async () => {
     if (!user?.access_token) return;
@@ -93,13 +89,19 @@ export function PurchaseHistory() {
               if (purchaseResponse.ok) {
           // Purchase data loaded successfully
         }
-    } catch (error) {
+    } catch {
       // Error loading purchase history
       toast.error('Failed to load purchase history');
     } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user?.access_token) {
+      loadPurchaseHistory();
+    }
+  }, [user?.access_token, loadPurchaseHistory]);
 
   const calculateStats = (): PurchaseStats => {
     const totalPackages = userPackages.length;

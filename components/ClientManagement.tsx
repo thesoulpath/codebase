@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, Plus, Edit, Clock, User, Search, Calendar, Grid, List, 
@@ -337,13 +337,7 @@ function BookingHistoryModal({ client, isOpen, onClose }: BookingHistoryModalPro
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (isOpen && client) {
-      loadBookingHistory();
-    }
-  }, [isOpen, client]);
-
-  const loadBookingHistory = async () => {
+  const loadBookingHistory = useCallback(async () => {
     if (!client || !user?.access_token) return;
     
     setIsLoading(true);
@@ -367,7 +361,13 @@ function BookingHistoryModal({ client, isOpen, onClose }: BookingHistoryModalPro
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [client, user?.access_token]);
+
+  useEffect(() => {
+    if (isOpen && client) {
+      loadBookingHistory();
+    }
+  }, [isOpen, client, loadBookingHistory]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -422,7 +422,7 @@ function BookingHistoryModal({ client, isOpen, onClose }: BookingHistoryModalPro
             <div className="text-center py-12">
               <Calendar size={48} className="mx-auto text-gray-400/50 mb-4" />
               <p className="text-gray-400 text-lg mb-2">No booking history</p>
-              <p className="text-gray-400/60 text-sm">This client hasn't made any bookings yet.</p>
+              <p className="text-gray-400/60 text-sm">This client hasn&apos;t made any bookings yet.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -490,7 +490,7 @@ function BookingHistoryModal({ client, isOpen, onClose }: BookingHistoryModalPro
                       {booking.feedback && (
                         <div className="mt-3 pt-3 border-t border-[#C0C0C0]/10">
                           <p className="text-xs text-[#C0C0C0] mb-1">Client Feedback:</p>
-                          <p className="text-sm text-[#EAEAEA]/80 italic">"{booking.feedback}"</p>
+                          <p className="text-sm text-[#EAEAEA]/80 italic">&quot;{booking.feedback}&quot;</p>
                         </div>
                       )}
                     </CardContent>
@@ -508,7 +508,7 @@ function BookingHistoryModal({ client, isOpen, onClose }: BookingHistoryModalPro
 export function ClientManagement() {
   const { user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
-  
+
   console.log('ClientManagement component rendered, user:', user?.email, 'clients count:', clients.length);
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -521,110 +521,25 @@ export function ClientManagement() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [lastLoaded, setLastLoaded] = useState<Date | null>(null);
-  const [modalState, setModalState] = useState<{ 
-    isOpen: boolean; 
-    mode: 'create' | 'edit' | 'view' | 'history'; 
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    mode: 'create' | 'edit' | 'view' | 'history';
   }>({ isOpen: false, mode: 'view' });
   const [showCreateBookingModal, setShowCreateBookingModal] = useState(false);
   const [selectedClientForBooking, setSelectedClientForBooking] = useState<Client | null>(null);
 
-  useEffect(() => {
-    if (user?.access_token) {
-      console.log('User authenticated, loading clients...');
-      loadClients();
-    } else {
-      console.log('User not authenticated, clearing clients...');
-      setClients([]);
-      setIsLoading(false);
-    }
-  }, [user?.access_token]);
-
-  // Refresh clients when component becomes visible
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && user?.access_token && clients.length === 0) {
-        console.log('Component became visible, refreshing clients...');
-        loadClients();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [user?.access_token, clients.length]);
-
-  // Refresh clients when component mounts or when user navigates to it
-  useEffect(() => {
-    if (user?.access_token && clients.length === 0) {
-      console.log('Component mounted or navigated to, loading clients...');
-      loadClients();
-    }
-  }, [user?.access_token, clients.length]);
-
-  // Add a manual refresh function that can be called from parent components
-  const refreshClients = () => {
-    if (user?.access_token) {
-      console.log('Manual refresh requested...');
-      loadClients();
-    }
-  };
-
-  // Expose refresh function to parent components if needed
-  useEffect(() => {
-    // @ts-ignore - Exposing refresh function globally for debugging
-    window.refreshClients = refreshClients;
-    
-    return () => {
-      // @ts-ignore - Clean up global function
-      delete window.refreshClients;
-    };
-  }, [user?.access_token]);
-
-  // Listen for navigation events and refresh clients when needed
-  useEffect(() => {
-    const handleNavigation = () => {
-      // Small delay to ensure the component is fully mounted
-      setTimeout(() => {
-        if (user?.access_token && clients.length === 0) {
-          console.log('Navigation detected, refreshing clients...');
-          loadClients();
-        }
-      }, 100);
-    };
-
-    // Listen for popstate (back/forward navigation)
-    window.addEventListener('popstate', handleNavigation);
-    
-    // Listen for pushstate (programmatic navigation)
-    const originalPushState = history.pushState;
-    history.pushState = function(...args) {
-      originalPushState.apply(history, args);
-      handleNavigation();
-    };
-
-    return () => {
-      window.removeEventListener('popstate', handleNavigation);
-      history.pushState = originalPushState;
-    };
-  }, [user?.access_token, clients.length]);
-
-  useEffect(() => {
-    filterAndSortClients();
-  }, [clients, searchQuery, statusFilter, languageFilter, dateFilter, sortBy, sortOrder]);
-
-
-
-  const loadClients = async () => {
+  const loadClients = useCallback(async () => {
     try {
       console.log('🔍 loadClients called, user:', user);
       console.log('🔍 access_token exists:', !!user?.access_token);
       console.log('🔍 access_token length:', user?.access_token?.length);
-      
+
       if (!user?.access_token) {
         console.log('❌ No access token, cannot load clients');
         toast.error('Please log in to access this feature');
         return;
       }
-      
+
       setIsLoading(true);
       console.log('Loading clients...');
 
@@ -646,10 +561,10 @@ export function ClientManagement() {
         console.log('API Response:', data);
         const loadedClients = data.data || [];
         console.log('Loaded clients:', loadedClients);
-        console.log('Client statuses:', loadedClients.map((c: any) => ({ name: c.name, status: c.status })));
+        console.log('Client statuses:', loadedClients.map((c: { name: string; status: string }) => ({ name: c.name, status: c.status })));
         setClients(loadedClients);
         setLastLoaded(new Date());
-        
+
         if (loadedClients.length > 0) {
           toast.success(`Loaded ${loadedClients.length} clients successfully`);
         } else {
@@ -667,9 +582,88 @@ export function ClientManagement() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
 
-  const filterAndSortClients = () => {
+  // Add a manual refresh function that can be called from parent components
+  const refreshClients = useCallback(() => {
+    if (user?.access_token) {
+      console.log('Manual refresh requested...');
+      loadClients();
+    }
+  }, [user?.access_token, loadClients]);
+
+  useEffect(() => {
+    if (user?.access_token) {
+      console.log('User authenticated, loading clients...');
+      loadClients();
+    } else {
+      console.log('User not authenticated, clearing clients...');
+      setClients([]);
+      setIsLoading(false);
+    }
+  }, [user?.access_token, loadClients]);
+
+  // Refresh clients when component becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user?.access_token && clients.length === 0) {
+        console.log('Component became visible, refreshing clients...');
+        loadClients();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user?.access_token, clients.length, loadClients]);
+
+  // Refresh clients when component mounts or when user navigates to it
+  useEffect(() => {
+    if (user?.access_token && clients.length === 0) {
+      console.log('Component mounted or navigated to, loading clients...');
+      loadClients();
+    }
+  }, [user?.access_token, clients.length, loadClients]);
+
+  // Expose refresh function to parent components if needed
+  useEffect(() => {
+    // @ts-expect-error - Exposing refresh function globally for debugging
+    window.refreshClients = refreshClients;
+
+    return () => {
+      // @ts-expect-error - Clean up global function
+      delete window.refreshClients;
+    };
+  }, [user?.access_token, refreshClients]);
+
+  // Listen for navigation events and refresh clients when needed
+  useEffect(() => {
+    const handleNavigation = () => {
+      // Small delay to ensure the component is fully mounted
+      setTimeout(() => {
+        if (user?.access_token && clients.length === 0) {
+          console.log('Navigation detected, refreshing clients...');
+          loadClients();
+        }
+      }, 100);
+    };
+
+    // Listen for popstate (back/forward navigation)
+    window.addEventListener('popstate', handleNavigation);
+
+    // Listen for pushstate (programmatic navigation)
+    const originalPushState = history.pushState;
+    history.pushState = function(...args) {
+      originalPushState.apply(history, args);
+      handleNavigation();
+    };
+
+    return () => {
+      window.removeEventListener('popstate', handleNavigation);
+      history.pushState = originalPushState;
+    };
+  }, [user?.access_token, clients.length, loadClients]);
+
+  const filterAndSortClients = useCallback(() => {
     let filtered = [...clients];
 
     // Search filter
@@ -695,7 +689,7 @@ export function ClientManagement() {
     if (dateFilter !== 'all') {
       const now = new Date();
       const filterDate = new Date();
-      
+
       switch (dateFilter) {
         case 'today':
           filterDate.setHours(0, 0, 0, 0);
@@ -723,8 +717,8 @@ export function ClientManagement() {
 
     // Sorting
     filtered.sort((a, b) => {
-      let aValue: any, bValue: any;
-      
+      let aValue: string | number | Date, bValue: string | number | Date;
+
       switch (sortBy) {
         case 'name':
           aValue = a.fullName.toLowerCase();
@@ -756,7 +750,11 @@ export function ClientManagement() {
     });
 
     setFilteredClients(filtered);
-  };
+  }, [clients, searchQuery, statusFilter, languageFilter, dateFilter, sortBy, sortOrder]);
+
+  useEffect(() => {
+    filterAndSortClients();
+  }, [clients, searchQuery, statusFilter, languageFilter, dateFilter, sortBy, sortOrder, filterAndSortClients]);
 
   const handleCreateClient = () => {
     setSelectedClient(null);
@@ -904,12 +902,11 @@ export function ClientManagement() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-8 h-8 border-4 border-[#FFD700] border-t-transparent rounded-full"
-        />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading client management...</p>
+        </div>
       </div>
     );
   }
@@ -1066,7 +1063,7 @@ export function ClientManagement() {
             {/* Sort By */}
             <div>
               <Label className="text-gray-400 text-sm">Sort By</Label>
-              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+              <Select value={sortBy} onValueChange={(value: 'date' | 'name' | 'status') => setSortBy(value)}>
                 <SelectTrigger className="bg-[#1a1a2e] border-[#16213e] text-white">
                   <SelectValue />
                 </SelectTrigger>

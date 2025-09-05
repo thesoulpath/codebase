@@ -56,7 +56,7 @@ export function TranslationManager({
       await onSave();
       setHasChanges(false);
       showSuccess('Translations Saved!', 'Your translation changes have been saved and the page will be revalidated.', 4000);
-    } catch (error) {
+    } catch (_error) {
       showError('Save Failed', 'Failed to save translations. Please try again.', 6000);
     }
   };
@@ -66,7 +66,7 @@ export function TranslationManager({
       await onRefresh();
       setHasChanges(false);
       showSuccess('Translations Refreshed!', 'Translations have been refreshed from the server.', 3000);
-    } catch (error) {
+    } catch (_error) {
       showError('Refresh Failed', 'Failed to refresh translations. Please try again.', 6000);
     }
   };

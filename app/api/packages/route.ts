@@ -1,45 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withCache } from '@/lib/cache';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 GET /api/packages - Fetching active packages...');
     console.log('🌍 Environment:', process.env.NODE_ENV);
     console.log('🔗 Database URL exists:', !!process.env.DATABASE_URL);
-    
+
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get('active') === 'true';
-    
-    // Fetch active package definitions with their prices
-    const packages = await prisma.packageDefinition.findMany({
-      where: {
-        isActive: activeOnly ? true : undefined
-      },
-      include: {
-        packagePrices: {
+    const cacheKey = `packages_${activeOnly ? 'active' : 'all'}`;
+
+    // Use caching for packages data
+    const packages = await withCache(
+      cacheKey,
+      async () => {
+        return await prisma.packageDefinition.findMany({
           where: {
-            isActive: true
+            isActive: activeOnly ? true : undefined
           },
-          include: {
-            currency: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            sessionsCount: true,
+            packageType: true,
+            maxGroupSize: true,
+            isPopular: true,
+            packagePrices: {
+              where: {
+                isActive: true
+              },
               select: {
-                code: true,
-                symbol: true
+                price: true,
+                currency: {
+                  select: {
+                    code: true,
+                    symbol: true
+                  }
+                }
+              },
+              orderBy: {
+                price: 'asc'
+              },
+              take: 1 // Get the cheapest price for display
+            },
+            sessionDuration: {
+              select: {
+                name: true,
+                duration_minutes: true
               }
             }
+          },
+          orderBy: {
+            displayOrder: 'asc'
           }
-        },
-        sessionDuration: {
-          select: {
-            name: true,
-            duration_minutes: true
-          }
-        }
+        });
       },
-      orderBy: {
-        id: 'asc'
-      }
-    });
+      5 * 60 * 1000 // Cache for 5 minutes (packages change occasionally)
+    );
 
     // Transform the data to match the expected format
     const transformedPackages = packages.map(pkg => {

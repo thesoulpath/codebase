@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 
+interface ImageData {
+  id: number;
+  name: string;
+  url: string;
+  altText?: string;
+  category?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 GET /api/admin/images - Starting request...');
@@ -26,7 +36,7 @@ export async function GET(request: NextRequest) {
       console.log('⚠️ images table might not exist, using empty array:', error.message);
       
       // Return empty images array if table doesn't exist
-      const defaultImages: any[] = [];
+      const defaultImages: ImageData[] = [];
       
       console.log('✅ Returning empty images array');
       return NextResponse.json({ images: defaultImages });

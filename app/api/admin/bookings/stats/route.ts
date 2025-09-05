@@ -102,8 +102,8 @@ export async function GET(request: NextRequest) {
       data: stats
     });
 
-  } catch (error) {
-    return NextResponse.json({ 
+  } catch {
+    return NextResponse.json({
       success: false,
       error: 'Internal server error',
       message: 'An unexpected error occurred'

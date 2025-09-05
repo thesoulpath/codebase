@@ -322,7 +322,7 @@ export const responsive = (base: string, _variants: Record<string, string>) => {
 };
 
 // Export all tokens
-export default {
+const designTokens = {
   colors,
   spacing,
   typography,
@@ -335,3 +335,5 @@ export default {
   withOpacity,
   responsive,
 };
+
+export default designTokens;

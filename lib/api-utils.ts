@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 
 // Generic API response handler
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
@@ -11,7 +11,7 @@ export interface ApiResponse<T = any> {
 }
 
 // Validation error handler
-export function handleValidationError(error: z.ZodError<any>): string[] {
+export function handleValidationError(error: z.ZodError): string[] {
   return (error as any).errors.map((err: any) => `${err.path.join('.')}: ${err.message}`);
 }
 
@@ -135,7 +135,7 @@ export function dismissLoadingToast(toastId: string | number) {
 }
 
 // Form validation helper
-export function validateForm<T>(schema: z.ZodSchema<T>, data: any): { success: true; data: T } | { success: false; errors: string[] } {
+export function validateForm<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; errors: string[] } {
   try {
     const validatedData = schema.parse(data);
     return { success: true, data: validatedData };
@@ -158,15 +158,15 @@ export function safeJsonParse<T>(json: string, fallback: T): T {
 }
 
 // Format error message for display
-export function formatErrorMessage(error: any): string {
+export function formatErrorMessage(error: unknown): string {
   if (typeof error === 'string') return error;
-  if (error?.message) return error.message;
-  if (error?.error) return error.error;
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') return error.message;
+  if (error && typeof error === 'object' && 'error' in error && typeof error.error === 'string') return error.error;
   return 'An unexpected error occurred';
 }
 
 // Debounce utility for search inputs
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -217,11 +217,11 @@ export function generateId(): string {
 }
 
 // Check if object is empty
-export function isEmpty(obj: any): boolean {
+export function isEmpty(obj: unknown): boolean {
   if (obj == null) return true;
   if (Array.isArray(obj) || typeof obj === 'string') return obj.length === 0;
   if (obj instanceof Map || obj instanceof Set) return obj.size === 0;
-  if (typeof obj === 'object') return Object.keys(obj).length === 0;
+  if (typeof obj === 'object') return Object.keys(obj as Record<string, unknown>).length === 0;
   return false;
 }
 

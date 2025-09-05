@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { AstralChart } from './AstralChart';
 
 interface SessionSectionProps {
-  t: any;
+  t: Record<string, string | Record<string, string>>;
   scrollToSection: (section: string) => void;
 }
 
@@ -25,19 +25,19 @@ export function SessionSection({ t, scrollToSection }: SessionSectionProps) {
             className="order-2 md:order-1"
           >
             <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-3xl lg:text-4xl xl:text-5xl font-heading text-[#EAEAEA] mb-4 sm:mb-6 leading-tight">
-              {t.session.title}
+              {typeof t.session === 'object' && t.session?.title || 'Book Your Session'}
             </h2>
-            
+
             <div className="text-3xl xs:text-4xl sm:text-5xl md:text-3xl lg:text-4xl font-heading text-[#FFD700] mb-4 sm:mb-6 cosmic-glow">
-              {t.session.price}
+              {typeof t.session === 'object' && t.session?.price || '$150'}
             </div>
-            
+
             <p className="text-sm sm:text-base md:text-sm lg:text-base text-[#EAEAEA]/80 leading-relaxed mb-6 sm:mb-8 max-w-2xl">
-              {t.session.description}
+              {typeof t.session === 'object' && t.session?.description || 'Ready to begin your spiritual journey?'}
             </p>
-            
+
             <div className="space-y-3 sm:space-y-4 mb-8 sm:mb-10">
-              {t.session.deliverables.map((item: string, index: number) => {
+              {(typeof t.session === 'object' && t.session?.deliverables && Array.isArray(t.session.deliverables) ? t.session.deliverables : ['Personalized Reading', 'Detailed Analysis', 'Follow-up Support']).map((item: string, index: number) => {
                 const Icon = deliverableIcons[index];
                 return (
                   <motion.div 
@@ -65,7 +65,7 @@ export function SessionSection({ t, scrollToSection }: SessionSectionProps) {
                 onClick={() => scrollToSection('apply')}
                 className="bg-[#FFD700] text-[#0A0A23] hover:bg-[#FFD700]/90 px-8 sm:px-10 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-lg shadow-lg shadow-[#FFD700]/20 cosmic-glow w-full sm:w-auto touch-manipulation"
               >
-                {t.session.cta}
+                {typeof t.session === 'object' && t.session?.cta || 'Get Started'}
               </Button>
             </motion.div>
           </motion.div>

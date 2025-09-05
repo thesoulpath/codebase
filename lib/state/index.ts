@@ -412,7 +412,7 @@ export function useCache() {
 // EXPORT ALL HOOKS
 // ============================================================================
 
-export default {
+const stateHooks = {
   // Generic
   useApi,
   
@@ -438,3 +438,5 @@ export default {
   useGlobalState,
   useCache,
 };
+
+export default stateHooks;

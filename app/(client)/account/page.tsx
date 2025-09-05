@@ -18,32 +18,36 @@ import { CustomerDashboard } from '@/components/CustomerDashboard';
 // }
 
 export default function AccountPage() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.access_token) {
-      setLoading(false);
+    if (!authLoading) {
+      if (user?.access_token) {
+        setLoading(false);
+      } else {
+        setLoading(false);
+      }
     }
-  }, [user]);
+  }, [user, authLoading]);
 
-  if (!user) {
+  if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ffd700] mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading user data...</p>
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading your account...</p>
         </div>
       </div>
     );
   }
 
-  if (loading) {
+  if (!user) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ffd700] mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading dashboard...</p>
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading user data...</p>
         </div>
       </div>
     );

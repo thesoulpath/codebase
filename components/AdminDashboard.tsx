@@ -1,25 +1,28 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Settings, 
-  X, 
-  LogOut, 
-  Users, 
-  Calendar, 
-  Clock, 
-  Package, 
-  FileText, 
-  Mail, 
-  ImageIcon, 
-  // Type, 
-  Search, 
-  CreditCard, 
-  Receipt, 
-  History, 
+import {
+  Settings,
+  X,
+  LogOut,
+  Users,
+  Calendar,
+  Clock,
+  Package,
+  FileText,
+  Mail,
+  ImageIcon,
+  // Type,
+  Search,
+  CreditCard,
+  Receipt,
+  History,
   Database,
   Bug,
   User,
-  Star
+  Star,
+  Video,
+  Zap,
+  Globe
 } from 'lucide-react';
 
 import { useAuth } from '../hooks/useAuth';
@@ -29,7 +32,7 @@ import BookingsManagement from './BookingsManagement';
 import ScheduleManagement from './ScheduleManagement';
 import PackagesAndPricing from './PackagesAndPricing';
 import { ContentManagement } from './ContentManagement';
-import { EmailManagement } from './EmailManagement';
+import { CommunicationSettings } from './communication/CommunicationSettings';
 import { ImageManagement } from './ImageManagement';
 // import { LogoManagement } from './LogoManagement';
 import { SeoManagement } from './SeoManagement';
@@ -41,14 +44,17 @@ import { BugReportManagement, BugReportManagementRef } from './BugReportManageme
 import { BugReportSystem } from './BugReportSystem';
 
 import { AstrologyManagement } from './AstrologyManagement';
+import { LiveSessionConfigManagement } from './LiveSessionConfigManagement';
+import { ExternalAPIManagement } from './ExternalAPIManagement';
 import Link from 'next/link';
 
 interface AdminDashboardProps {
   onClose?: () => void;
   isModal?: boolean;
+  children?: React.ReactNode;
 }
 
-export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps) {
+export function AdminDashboard({ onClose, isModal = true, children }: AdminDashboardProps) {
   const { user, signOut, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('clients');
   const bugReportManagementRef = useRef<BugReportManagementRef>(null);
@@ -152,8 +158,10 @@ export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps)
               { key: 'schedules', icon: Clock, label: 'Schedule Management' },
               { key: 'packages', icon: Package, label: 'Packages & Pricing' },
               { key: 'content', icon: FileText, label: 'Content Management' },
-              { key: 'email', icon: Mail, label: 'Email Management' },
+              { key: 'email', icon: Mail, label: 'Communication Settings' },
+              { key: 'live-session', icon: Video, label: 'Live Session Config' },
               { key: 'images', icon: ImageIcon, label: 'Image Management' },
+              { key: 'external-apis', icon: Zap, label: 'External APIs' },
               // { key: 'logo', icon: Type, label: 'Logo Management' },
               { key: 'seo', icon: Search, label: 'SEO Management' },
               { key: 'payment-methods', icon: CreditCard, label: 'Payment Methods' },
@@ -194,32 +202,38 @@ export function AdminDashboard({ onClose, isModal = true }: AdminDashboardProps)
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto bg-[var(--color-background-primary)]">
           <div className="p-6">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.2 }}
-              >
-                {activeTab === 'clients' && <ClientManagement />}
-                {activeTab === 'bookings' && <BookingsManagement />}
-                {activeTab === 'schedules' && <ScheduleManagement />}
-                {activeTab === 'packages' && <PackagesAndPricing />}
-                {activeTab === 'content' && <ContentManagement />}
-                {activeTab === 'email' && <EmailManagement />}
-                {activeTab === 'images' && <ImageManagement />}
-                {/* {activeTab === 'logo' && <LogoManagement />} */}
-                {activeTab === 'seo' && <SeoManagement />}
-                {activeTab === 'payment-methods' && <PaymentMethodManagement />}
-                {activeTab === 'payment-records' && <PaymentRecordsManagement />}
-                {activeTab === 'purchase-history' && <PurchaseHistoryManagement />}
-                {activeTab === 'settings' && <SettingsManagement />}
-                {activeTab === 'bug-reports' && <BugReportManagement ref={bugReportManagementRef} />}
+            {children ? (
+              children
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {activeTab === 'clients' && <ClientManagement />}
+                  {activeTab === 'bookings' && <BookingsManagement />}
+                  {activeTab === 'schedules' && <ScheduleManagement />}
+                  {activeTab === 'packages' && <PackagesAndPricing />}
+                  {activeTab === 'content' && <ContentManagement />}
+                  {activeTab === 'email' && <CommunicationSettings />}
+                  {activeTab === 'live-session' && <LiveSessionConfigManagement />}
+                  {activeTab === 'images' && <ImageManagement />}
+                  {activeTab === 'external-apis' && <ExternalAPIManagement />}
+                  {/* {activeTab === 'logo' && <LogoManagement />} */}
+                  {activeTab === 'seo' && <SeoManagement />}
+                  {activeTab === 'payment-methods' && <PaymentMethodManagement />}
+                  {activeTab === 'payment-records' && <PaymentRecordsManagement />}
+                  {activeTab === 'purchase-history' && <PurchaseHistoryManagement />}
+                  {activeTab === 'settings' && <SettingsManagement />}
+                  {activeTab === 'bug-reports' && <BugReportManagement ref={bugReportManagementRef} />}
 
-                {activeTab === 'astrology' && <AstrologyManagement />}
-              </motion.div>
-            </AnimatePresence>
+                  {activeTab === 'astrology' && <AstrologyManagement />}
+                </motion.div>
+              </AnimatePresence>
+            )}
           </div>
         </main>
       </div>

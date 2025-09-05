@@ -63,14 +63,14 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Query parameters:', { scheduleTemplateId, isAvailable, dateFrom, dateTo, hasCapacity, page, limit, enhanced });
 
     // Build the query with proper relationships
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     
     if (scheduleTemplateId) where.scheduleTemplateId = scheduleTemplateId;
     if (isAvailable !== undefined) where.isAvailable = isAvailable === 'true';
     if (dateFrom) where.startTime = { gte: new Date(dateFrom) };
     if (dateTo) {
       where.startTime = {
-        ...where.startTime,
+        ...(where.startTime || {}),
         lte: new Date(dateTo)
       };
     }
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Base select fields
-    const select: any = {
+    const select: Record<string, unknown> = {
       id: true,
       scheduleTemplateId: true,
       startTime: true,

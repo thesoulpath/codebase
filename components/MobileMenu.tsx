@@ -4,6 +4,15 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, LogIn, Settings } from 'lucide-react';
 
+interface User {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    full_name?: string;
+    avatar_url?: string;
+  };
+}
+
 interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
@@ -12,8 +21,8 @@ interface MobileMenuProps {
   scrollToSection: (section: string) => void;
   language: string;
   setLanguage: (lang: 'en' | 'es') => void;
-  t: any;
-  user: any;
+  t: Record<string, string | Record<string, string>>;
+  user: User | null;
   isAdmin: boolean;
   onLoginClick: () => void;
   onAdminClick: () => void;
@@ -77,7 +86,9 @@ export function MobileMenu({
                       <div className={`w-3 h-3 rounded-full ${
                         currentSection === index ? 'bg-[#FFD700] shadow-sm' : 'bg-[#C0C0C0]/50'
                       }`} />
-                      <span className="text-base font-medium">{t.nav[section as keyof typeof t.nav]}</span>
+                      <span className="text-base font-medium">
+                        {typeof t.nav === 'object' && t.nav ? t.nav[section as keyof typeof t.nav] || section : section}
+                      </span>
                     </button>
                   ))}
                 </nav>
@@ -114,7 +125,7 @@ export function MobileMenu({
                       className="w-full flex items-center justify-center space-x-3 text-[#C0C0C0] hover:text-[#FFD700] transition-all duration-200 px-6 py-4 rounded-xl hover:bg-[#FFD700]/10 border border-[#C0C0C0]/20 hover:border-[#FFD700]/30 touch-manipulation font-medium"
                     >
                       <LogIn size={18} />
-                      <span>{t.nav.login}</span>
+                      <span>{typeof t.nav === 'object' && t.nav?.login || 'Login'}</span>
                     </motion.button>
                   )}
                   

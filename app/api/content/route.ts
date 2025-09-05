@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withCache } from '@/lib/cache';
 
 // ISR Configuration - This route will be statically generated and revalidated
 export const revalidate = 3600; // Revalidate every hour
 
 
 interface NestedContent {
-  [key: string]: any;
+  [key: string]: string | NestedContent;
 }
 
 interface TransformedContent {
@@ -14,7 +15,7 @@ interface TransformedContent {
   es: NestedContent;
 }
 
-function transformFlatContentToNested(flatContent: any): TransformedContent {
+function transformFlatContentToNested(flatContent: Record<string, string>): TransformedContent {
   const nestedContent: TransformedContent = {
     en: {} as NestedContent,
     es: {} as NestedContent
@@ -95,7 +96,7 @@ function transformFlatContentToNested(flatContent: any): TransformedContent {
           title: 'Spiritual Awakening',
           text: 'Discover your spiritual path and deepen your connection to the divine through meditation and spiritual practices.'
         }
-      ]
+      ] as any
     };
     nestedContent.es.approach = {
       title: flatContent.approachTitleEs || 'Nuestro Enfoque',
@@ -113,7 +114,7 @@ function transformFlatContentToNested(flatContent: any): TransformedContent {
           title: 'Despertar Espiritual',
           text: 'Descubre tu camino espiritual y profundiza tu conexión con lo divino a través de la meditación y prácticas espirituales.'
         }
-      ]
+      ] as any
     };
 
     // Services section
@@ -156,42 +157,47 @@ function transformFlatContentToNested(flatContent: any): TransformedContent {
 
 export async function GET() {
   try {
-    // Get content from the Content table using Prisma
-    const content = await prisma.content.findFirst();
+    // Use caching for content data
+    const transformedContent = await withCache(
+      'content',
+      async () => {
+        // Get content from the Content table using Prisma
+        const content = await prisma.content.findFirst();
 
-    if (!content) {
-      console.log('No content found, creating default content');
-      // Create default content if none exists
-      const defaultContent = await prisma.content.create({
-        data: {
-          heroTitleEn: 'Welcome to SOULPATH',
-          heroTitleEs: 'Bienvenido a SOULPATH',
-          heroSubtitleEn: 'Your journey to wellness starts here',
-          heroSubtitleEs: 'Tu camino al bienestar comienza aquí',
-          aboutTitleEn: 'About Us',
-          aboutTitleEs: 'Sobre Nosotros',
-          aboutContentEn: 'We are dedicated to helping you achieve your wellness goals.',
-          aboutContentEs: 'Estamos dedicados a ayudarte a alcanzar tus metas de bienestar.',
-          approachTitleEn: 'Our Approach',
-          approachTitleEs: 'Nuestro Enfoque',
-          approachContentEn: 'We use a holistic approach to wellness.',
-          approachContentEs: 'Usamos un enfoque holístico para el bienestar.',
-          servicesTitleEn: 'Our Services',
-          servicesTitleEs: 'Nuestros Servicios',
-          servicesContentEn: 'Professional wellness services in a peaceful environment.',
-          servicesContentEs: 'Servicios profesionales de bienestar en un ambiente pacífico.'
+        if (!content) {
+          console.log('No content found, creating default content');
+          // Create default content if none exists
+          const defaultContent = await prisma.content.create({
+            data: {
+              heroTitleEn: 'Welcome to SOULPATH',
+              heroTitleEs: 'Bienvenido a SOULPATH',
+              heroSubtitleEn: 'Your journey to wellness starts here',
+              heroSubtitleEs: 'Tu camino al bienestar comienza aquí',
+              aboutTitleEn: 'About Us',
+              aboutTitleEs: 'Sobre Nosotros',
+              aboutContentEn: 'We are dedicated to helping you achieve your wellness goals.',
+              aboutContentEs: 'Estamos dedicados a ayudarte a alcanzar tus metas de bienestar.',
+              approachTitleEn: 'Our Approach',
+              approachTitleEs: 'Nuestro Enfoque',
+              approachContentEn: 'We use a holistic approach to wellness.',
+              approachContentEs: 'Usamos un enfoque holístico para el bienestar.',
+              servicesTitleEn: 'Our Services',
+              servicesTitleEs: 'Nuestros Servicios',
+              servicesContentEn: 'Professional wellness services in a peaceful environment.',
+              servicesContentEs: 'Servicios profesionales de bienestar en un ambiente pacífico.'
+            }
+          });
+
+          return transformFlatContentToNested(defaultContent as unknown as Record<string, string>);
         }
-      });
-      
-      const transformedContent = transformFlatContentToNested(defaultContent);
-      console.log('✅ Default content created and loaded');
-      return NextResponse.json({ content: transformedContent });
-    }
 
-    // Transform flat content to nested structure
-    const transformedContent = transformFlatContentToNested(content);
-    
-    console.log('✅ Content loaded from database and transformed');
+        // Transform flat content to nested structure
+        return transformFlatContentToNested(content as unknown as Record<string, string>);
+      },
+      15 * 60 * 1000 // Cache for 15 minutes (content changes less frequently)
+    );
+
+    console.log('✅ Content loaded from cache/database and transformed');
     return NextResponse.json({ content: transformedContent });
   } catch (error) {
     console.error('Error fetching content:', error);
@@ -253,7 +259,7 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    const transformedContent = transformFlatContentToNested(content);
+    const transformedContent = transformFlatContentToNested(content as unknown as Record<string, string>);
     return NextResponse.json({ content: transformedContent });
   } catch (error) {
     console.error('Error updating content:', error);

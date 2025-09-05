@@ -5,91 +5,200 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting comprehensive database seed...');
 
-  // 1. Create email configuration
-  console.log('📧 Creating email configuration...');
-  const emailConfig = await prisma.emailConfig.upsert({
+  // 1. Create communication configuration
+  console.log('📧 Creating communication configuration...');
+  const communicationConfig = await prisma.communicationConfig.upsert({
     where: { id: 1 },
     update: {},
     create: {
-      smtpHost: 'smtp.gmail.com',
-      smtpPort: 587,
-      smtpUser: '',
-      smtpPass: '',
-      fromEmail: 'noreply@soulpath.lat',
-      fromName: 'SOULPATH',
+      email_enabled: true,
       brevo_api_key: '',
       sender_email: 'noreply@soulpath.lat',
       sender_name: 'SOULPATH',
-      admin_email: 'admin@soulpath.lat'
+      admin_email: 'admin@soulpath.lat',
+      sms_enabled: false,
+      sms_provider: 'labsmobile',
+      labsmobile_username: '',
+      labsmobile_token: '',
+      sms_sender_name: 'SoulPath'
     }
   });
-  console.log('✅ Email config created:', emailConfig.id);
+  console.log('✅ Communication config created:', communicationConfig.id);
 
-  // 2. Create email templates
-  console.log('📝 Creating email templates...');
-  const emailTemplates = await Promise.all([
-    prisma.emailTemplate.upsert({
-      where: { templateKey: 'booking_confirmation_en' },
+  // 2. Create communication templates (email and SMS)
+  console.log('📝 Creating communication templates...');
+  const communicationTemplates = await Promise.all([
+    // Booking Confirmation Templates
+    prisma.communicationTemplate.upsert({
+      where: { templateKey: 'booking_confirmation' },
       update: {},
       create: {
-        templateKey: 'booking_confirmation_en',
-        subject: 'Booking Confirmation - SOULPATH',
-        body: 'Your session has been confirmed. We look forward to seeing you!',
-        language: 'en'
+        templateKey: 'booking_confirmation',
+        name: 'Booking Confirmation',
+        description: 'Sent when a booking is confirmed',
+        type: 'email',
+        category: 'booking',
+        isActive: true,
+        isDefault: true,
+        translations: {
+          create: [
+            {
+              language: 'en',
+              subject: 'Booking Confirmation - SOULPATH',
+              content: '<h1>Your session has been confirmed!</h1><p>Dear {{clientName}},</p><p>Your {{sessionType}} session is scheduled for {{sessionDate}} at {{sessionTime}}.</p><p>We look forward to seeing you at SOULPATH!</p><p>Best regards,<br>SOULPATH Team</p>'
+            },
+            {
+              language: 'es',
+              subject: 'Confirmación de Reserva - SOULPATH',
+              content: '<h1>¡Tu sesión ha sido confirmada!</h1><p>Estimado {{clientName}},</p><p>Tu sesión de {{sessionType}} está programada para el {{sessionDate}} a las {{sessionTime}}.</p><p>¡Esperamos verte en SOULPATH!</p><p>Atentamente,<br>Equipo SOULPATH</p>'
+            }
+          ]
+        }
       }
     }),
-    prisma.emailTemplate.upsert({
-      where: { templateKey: 'booking_confirmation_es' },
+
+    // Session Reminder Templates
+    prisma.communicationTemplate.upsert({
+      where: { templateKey: 'session_reminder' },
       update: {},
       create: {
-        templateKey: 'booking_confirmation_es',
-        subject: 'Confirmación de Reserva - SOULPATH',
-        body: 'Tu sesión ha sido confirmada. ¡Esperamos verte!',
-        language: 'es'
+        templateKey: 'session_reminder',
+        name: 'Session Reminder',
+        description: 'Sent before upcoming sessions',
+        type: 'email',
+        category: 'booking',
+        isActive: true,
+        isDefault: true,
+        translations: {
+          create: [
+            {
+              language: 'en',
+              subject: 'Session Reminder - SOULPATH',
+              content: '<h1>Session Reminder</h1><p>Dear {{clientName}},</p><p>This is a reminder for your {{sessionType}} session tomorrow at {{sessionTime}}.</p><p>Please arrive 10 minutes early for your appointment.</p><p>Best regards,<br>SOULPATH Team</p>'
+            },
+            {
+              language: 'es',
+              subject: 'Recordatorio de Sesión - SOULPATH',
+              content: '<h1>Recordatorio de Sesión</h1><p>Estimado {{clientName}},</p><p>Este es un recordatorio para tu sesión de {{sessionType}} mañana a las {{sessionTime}}.</p><p>Por favor llega 10 minutos antes a tu cita.</p><p>Atentamente,<br>Equipo SOULPATH</p>'
+            }
+          ]
+        }
       }
     }),
-    prisma.emailTemplate.upsert({
-      where: { templateKey: 'reminder_en' },
+
+    // Welcome Email Templates
+    prisma.communicationTemplate.upsert({
+      where: { templateKey: 'welcome_email' },
       update: {},
       create: {
-        templateKey: 'reminder_en',
-        subject: 'Session Reminder - SOULPATH',
-        body: 'This is a reminder for your upcoming session. Please arrive 10 minutes early.',
-        language: 'en'
+        templateKey: 'welcome_email',
+        name: 'Welcome Email',
+        description: 'Sent to new clients after registration',
+        type: 'email',
+        category: 'welcome',
+        isActive: true,
+        isDefault: true,
+        translations: {
+          create: [
+            {
+              language: 'en',
+              subject: 'Welcome to SOULPATH',
+              content: '<h1>Welcome to SOULPATH!</h1><p>Dear {{clientName}},</p><p>Thank you for choosing SOULPATH. We are excited to be part of your wellness journey.</p><p>Discover our services and book your first session today.</p><p>Best regards,<br>SOULPATH Team</p>'
+            },
+            {
+              language: 'es',
+              subject: 'Bienvenido a SOULPATH',
+              content: '<h1>¡Bienvenido a SOULPATH!</h1><p>Estimado {{clientName}},</p><p>Gracias por elegir SOULPATH. Estamos emocionados de ser parte de tu camino al bienestar.</p><p>Descubre nuestros servicios y reserva tu primera sesión hoy.</p><p>Atentamente,<br>Equipo SOULPATH</p>'
+            }
+          ]
+        }
       }
     }),
-    prisma.emailTemplate.upsert({
-      where: { templateKey: 'reminder_es' },
+
+    // OTP Verification SMS Templates
+    prisma.communicationTemplate.upsert({
+      where: { templateKey: 'otp_verification' },
       update: {},
       create: {
-        templateKey: 'reminder_es',
-        subject: 'Recordatorio de Sesión - SOULPATH',
-        body: 'Este es un recordatorio para tu próxima sesión. Por favor llega 10 minutos antes.',
-        language: 'es'
+        templateKey: 'otp_verification',
+        name: 'OTP Verification',
+        description: 'SMS sent for phone number verification',
+        type: 'sms',
+        category: 'verification',
+        isActive: true,
+        isDefault: true,
+        translations: {
+          create: [
+            {
+              language: 'en',
+              content: 'Your SOULPATH verification code is {{otpCode}}. This code expires in {{expiryTime}} minutes.'
+            },
+            {
+              language: 'es',
+              content: 'Tu código de verificación de SOULPATH es {{otpCode}}. Este código expira en {{expiryTime}} minutos.'
+            }
+          ]
+        }
       }
     }),
-    prisma.emailTemplate.upsert({
-      where: { templateKey: 'welcome_en' },
+
+    // Payment Confirmation SMS Templates
+    prisma.communicationTemplate.upsert({
+      where: { templateKey: 'payment_confirmation' },
       update: {},
       create: {
-        templateKey: 'welcome_en',
-        subject: 'Welcome to SOULPATH',
-        body: 'Welcome to SOULPATH! We are excited to be part of your wellness journey.',
-        language: 'en'
+        templateKey: 'payment_confirmation',
+        name: 'Payment Confirmation',
+        description: 'SMS sent after successful payment',
+        type: 'sms',
+        category: 'payment',
+        isActive: true,
+        isDefault: true,
+        translations: {
+          create: [
+            {
+              language: 'en',
+              content: 'Payment confirmed! Your {{packageName}} package has been activated. Amount: ${{amount}}. Thank you for choosing SOULPATH!'
+            },
+            {
+              language: 'es',
+              content: '¡Pago confirmado! Tu paquete {{packageName}} ha sido activado. Monto: ${{amount}}. ¡Gracias por elegir SOULPATH!'
+            }
+          ]
+        }
       }
     }),
-    prisma.emailTemplate.upsert({
-      where: { templateKey: 'welcome_es' },
+
+    // Appointment Cancellation Templates
+    prisma.communicationTemplate.upsert({
+      where: { templateKey: 'appointment_cancelled' },
       update: {},
       create: {
-        templateKey: 'welcome_es',
-        subject: 'Bienvenido a SOULPATH',
-        body: '¡Bienvenido a SOULPATH! Estamos emocionados de ser parte de tu camino al bienestar.',
-        language: 'es'
+        templateKey: 'appointment_cancelled',
+        name: 'Appointment Cancelled',
+        description: 'Sent when an appointment is cancelled',
+        type: 'email',
+        category: 'booking',
+        isActive: true,
+        isDefault: true,
+        translations: {
+          create: [
+            {
+              language: 'en',
+              subject: 'Appointment Cancelled - SOULPATH',
+              content: '<h1>Appointment Cancelled</h1><p>Dear {{clientName}},</p><p>Your {{sessionType}} session scheduled for {{sessionDate}} at {{sessionTime}} has been cancelled.</p><p>You can reschedule at any time through your dashboard.</p><p>Best regards,<br>SOULPATH Team</p>'
+            },
+            {
+              language: 'es',
+              subject: 'Cita Cancelada - SOULPATH',
+              content: '<h1>Cita Cancelada</h1><p>Estimado {{clientName}},</p><p>Tu sesión de {{sessionType}} programada para el {{sessionDate}} a las {{sessionTime}} ha sido cancelada.</p><p>Puedes reprogramar en cualquier momento a través de tu panel de control.</p><p>Atentamente,<br>Equipo SOULPATH</p>'
+            }
+          ]
+        }
       }
     })
   ]);
-  console.log('✅ Email templates created:', emailTemplates.length);
+  console.log('✅ Communication templates created:', communicationTemplates.length);
 
   // 3. Create content
   console.log('📄 Creating website content...');
@@ -472,31 +581,35 @@ async function main() {
   ]);
   console.log('✅ Schedule templates created:', scheduleTemplates.length);
 
-  // 12. Create legacy schedules (for backward compatibility)
-  console.log('📅 Creating legacy schedules...');
-  const schedules = await Promise.all([
-    prisma.schedule.upsert({
+  // 12. Create schedule slots (for backward compatibility)
+  console.log('📅 Creating schedule slots...');
+  const scheduleSlots = await Promise.all([
+    prisma.scheduleSlot.upsert({
       where: { id: 1 },
       update: {},
       create: {
-        day_of_week: 'Monday',
-        start_time: '09:00',
-        end_time: '17:00',
-        is_available: true
+        scheduleTemplateId: 1, // Monday template
+        startTime: new Date('2024-01-01T09:00:00Z'),
+        endTime: new Date('2024-01-01T17:00:00Z'),
+        capacity: 3,
+        bookedCount: 0,
+        isAvailable: true
       }
     }),
-    prisma.schedule.upsert({
+    prisma.scheduleSlot.upsert({
       where: { id: 2 },
       update: {},
       create: {
-        day_of_week: 'Tuesday',
-        start_time: '09:00',
-        end_time: '17:00',
-        is_available: true
+        scheduleTemplateId: 2, // Tuesday template
+        startTime: new Date('2024-01-02T09:00:00Z'),
+        endTime: new Date('2024-01-02T17:00:00Z'),
+        capacity: 3,
+        bookedCount: 0,
+        isAvailable: true
       }
     })
   ]);
-  console.log('✅ Legacy schedules created:', schedules.length);
+  console.log('✅ Schedule slots created:', scheduleSlots.length);
 
   // 13. Create payment method configurations
   console.log('💳 Creating payment method configurations...');
@@ -643,94 +756,55 @@ async function main() {
 
   // 15. Create legacy soul packages (for backward compatibility)
   console.log('📦 Creating legacy soul packages...');
-  const soulPackages = await Promise.all([
-    prisma.soulPackage.upsert({
-      where: { id: 1 },
-      update: {},
-      create: {
-        name: 'Starter Package',
-        sessionsCount: 3,
-        sessionDurationId: 2, // 60 minutes
-        currencyId: 1, // USD
-        packagePrice: 200.00,
-        discountPercent: 0.00,
-        description: 'Perfect for beginners',
-        isActive: true,
-        packageType: 'individual',
-        maxGroupSize: 1
-      }
-    }),
-    prisma.soulPackage.upsert({
-      where: { id: 2 },
-      update: {},
-      create: {
-        name: 'Wellness Package',
-        sessionsCount: 6,
-        sessionDurationId: 2, // 60 minutes
-        currencyId: 1, // USD
-        packagePrice: 400.00,
-        discountPercent: 10.00,
-        description: 'Comprehensive wellness program',
-        isActive: true,
-        packageType: 'individual',
-        maxGroupSize: 1
-      }
-    })
-  ]);
-  console.log('✅ Legacy soul packages created:', soulPackages.length);
+  // Legacy soul packages are now handled by PackageDefinition and PackagePrice models
+  console.log('✅ Legacy soul packages are handled by PackageDefinition and PackagePrice models');
 
   // 16. Create test clients
   console.log('👥 Creating test clients...');
   const clients = await Promise.all([
-    prisma.client.upsert({
+    prisma.user.upsert({
       where: { email: 'john.doe@example.com' },
       update: {},
       create: {
         email: 'john.doe@example.com',
-        name: 'John Doe',
+        fullName: 'John Doe',
         phone: '+1234567890',
         status: 'active',
-        notes: 'Test client for development',
         birthDate: new Date('1990-01-15'),
         birthTime: new Date('1990-01-15T10:30:00'),
         birthPlace: 'New York, USA',
         question: 'How can I improve my overall wellness?',
-        language: 'en',
-        adminNotes: 'Interested in individual sessions'
+        language: 'en'
       }
     }),
-    prisma.client.upsert({
+    prisma.user.upsert({
       where: { email: 'maria.garcia@example.com' },
       update: {},
       create: {
         email: 'maria.garcia@example.com',
-        name: 'Maria Garcia',
+        fullName: 'Maria Garcia',
         phone: '+1234567891',
         status: 'active',
-        notes: 'Spanish-speaking client',
         birthDate: new Date('1985-06-20'),
         birthTime: new Date('1985-06-20T14:15:00'),
         birthPlace: 'Madrid, Spain',
         question: '¿Cómo puedo manejar mejor el estrés?',
-        language: 'es',
-        adminNotes: 'Prefiere sesiones en español'
+        language: 'es'
       }
     }),
-    prisma.client.upsert({
+    prisma.user.upsert({
       where: { email: 'test@example.com' },
       update: {},
       create: {
         email: 'test@example.com',
-        name: 'Test Client',
+        fullName: 'Test Client',
         phone: '+1234567892',
         status: 'active',
-        notes: 'Test client for development',
         birthDate: new Date('1995-03-10'),
         birthTime: new Date('1995-03-10T09:00:00'),
         birthPlace: 'Toronto, Canada',
         question: 'What wellness services do you offer?',
-        language: 'en',
-        adminNotes: 'New client, needs consultation'
+        language: 'en'
       }
     })
   ]);
@@ -738,108 +812,116 @@ async function main() {
 
   // 16.5. Create admin client profile
   console.log('👤 Creating admin client profile...');
-  const adminClient = await prisma.client.upsert({
+  const adminClient = await prisma.user.upsert({
     where: { email: 'coco@soulpath.lat' },
     update: {},
     create: {
       email: 'coco@soulpath.lat',
-      name: 'Coco Admin',
+      fullName: 'Coco Admin',
       phone: '+1234567890',
       status: 'active',
-      notes: 'Primary system administrator for SOULPATH',
       birthDate: new Date('1990-01-15'),
       birthTime: new Date('1990-01-15T10:30:00'),
       birthPlace: 'New York, USA',
       question: 'How can I help manage the SOULPATH wellness system?',
-      language: 'en',
-      adminNotes: 'Primary system administrator for SOULPATH'
+      language: 'en'
     }
   });
   console.log('✅ Admin client profile created:', adminClient.id);
 
-  // 17. Create test user packages (FIXED: using correct field names)
+  // 17. Create test purchases first
+  console.log('💳 Creating test purchases...');
+  const purchases = await Promise.all([
+    prisma.purchase.upsert({
+      where: { id: 1 },
+      update: {},
+      create: {
+        userId: clients[0].id,
+        totalAmount: 200.00,
+        currencyCode: 'USD',
+        paymentMethod: 'stripe',
+        paymentStatus: 'confirmed',
+        transactionId: 'txn_test_123',
+        notes: 'Test purchase for John Doe',
+        purchasedAt: new Date(),
+        confirmedAt: new Date()
+      }
+    }),
+    prisma.purchase.upsert({
+      where: { id: 2 },
+      update: {},
+      create: {
+        userId: clients[1].id,
+        totalAmount: 360.00,
+        currencyCode: 'USD',
+        paymentMethod: 'cash',
+        paymentStatus: 'confirmed',
+        transactionId: 'txn_test_456',
+        notes: 'Test purchase for Maria Garcia',
+        purchasedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        confirmedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      }
+    })
+  ]);
+  console.log('✅ Test purchases created:', purchases.length);
+
+  // 18. Create test user packages
   console.log('📦 Creating test user packages...');
   const userPackages = await Promise.all([
     prisma.userPackage.upsert({
       where: { id: 1 },
       update: {},
       create: {
-        user_email: 'john.doe@example.com',
-        package_id: 1, // Legacy SoulPackage reference
-        sessions_remaining: 3,
+        userId: clients[0].id,
+        purchaseId: 1,
+        packagePriceId: 1,
+        quantity: 1,
         sessionsUsed: 0,
-        purchasedAt: new Date(),
-        expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days from now
         isActive: true,
-        group_sessions_remaining: 0,
-        group_sessions_used: 0,
-        purchase_price: 200.00,
-        original_price: 200.00,
-        discount_applied: 0.00,
-        payment_method: 'stripe',
-        paymentStatus: 'confirmed',
-        payment_confirmed_at: new Date(),
-        clientId: 1,
-        packagePriceId: 1 // NEW: Reference to PackagePrice
+        expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) // 90 days from now
       }
     }),
     prisma.userPackage.upsert({
       where: { id: 2 },
       update: {},
       create: {
-        user_email: 'maria.garcia@example.com',
-        package_id: 2, // Legacy SoulPackage reference
-        sessions_remaining: 6,
+        userId: clients[1].id,
+        purchaseId: 2,
+        packagePriceId: 2,
+        quantity: 1,
         sessionsUsed: 1,
-        purchasedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-        expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
         isActive: true,
-        group_sessions_remaining: 0,
-        group_sessions_used: 0,
-        purchase_price: 360.00,
-        original_price: 400.00,
-        discount_applied: 40.00,
-        payment_method: 'cash',
-        paymentStatus: 'confirmed',
-        payment_confirmed_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        clientId: 2,
-        packagePriceId: 2 // NEW: Reference to PackagePrice
+        expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // 60 days from now
       }
     })
   ]);
   console.log('✅ Test user packages created:', userPackages.length);
 
-  // 18. Create test bookings (simplified to avoid schema conflicts)
+  // 19. Create test bookings
   console.log('📋 Creating test bookings...');
   const bookings = await Promise.all([
     prisma.booking.upsert({
       where: { id: 1 },
       update: {},
       create: {
-        clientEmail: 'john.doe@example.com',
-        session_date: new Date('2024-12-25'),
-        sessionTime: new Date('2024-12-25T10:00:00'),
+        userId: clients[0].id,
+        userPackageId: 1,
+        scheduleSlotId: 1,
         sessionType: 'Wellness Session',
         status: 'confirmed',
-        notes: 'Test booking for development',
-        client_id: 1,
-        user_package_id: 1,
-        booking_type: 'individual'
+        notes: 'Test booking for development'
       }
     }),
     prisma.booking.upsert({
       where: { id: 2 },
       update: {},
       create: {
-        clientEmail: 'maria.garcia@example.com',
-        session_date: new Date('2024-12-26'),
-        sessionTime: new Date('2024-12-26T14:00:00'),
+        userId: clients[1].id,
+        userPackageId: 2,
+        scheduleSlotId: 2,
         sessionType: 'Wellness Session',
         status: 'confirmed',
-        notes: 'Sesión en español',
-        client_id: 2,
-        user_package_id: 2,
-        booking_type: 'individual'
+        notes: 'Sesión en español'
       }
     })
   ]);
@@ -853,8 +935,8 @@ async function main() {
       where: { id: 1 },
       update: {},
       create: {
-        clientEmail: 'john.doe@example.com',
-        userPackageId: 1,
+        userId: clients[0].id,
+        purchaseId: 1,
         amount: 200.00,
         currencyCode: 'USD',
         paymentMethod: 'stripe',
@@ -862,36 +944,16 @@ async function main() {
         transactionId: 'txn_123456789',
         notes: 'Starter package payment - Credit card',
         paymentDate: new Date(),
-        confirmedAt: new Date(),
-        clientId: 1
-      }
-    }),
-    prisma.paymentRecord.upsert({
-      where: { id: 2 },
-      update: {},
-      create: {
-        clientEmail: 'john.doe@example.com',
-        userPackageId: null,
-        groupBookingId: null,
-        sessionUsageId: null,
-        amount: 80.00,
-        currencyCode: 'USD',
-        paymentMethod: 'cash',
-        paymentStatus: 'confirmed',
-        transactionId: null,
-        notes: 'Individual session payment - Cash',
-        paymentDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        confirmedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        clientId: 1
+        confirmedAt: new Date()
       }
     }),
     // Maria Garcia's payment history
     prisma.paymentRecord.upsert({
-      where: { id: 3 },
+      where: { id: 2 },
       update: {},
       create: {
-        clientEmail: 'maria.garcia@example.com',
-        userPackageId: 2,
+        userId: clients[1].id,
+        purchaseId: 2,
         amount: 360.00,
         currencyCode: 'USD',
         paymentMethod: 'cash',
@@ -899,117 +961,14 @@ async function main() {
         transactionId: null,
         notes: 'Wellness package payment - Cash',
         paymentDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        confirmedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        clientId: 2
-      }
-    }),
-    prisma.paymentRecord.upsert({
-      where: { id: 4 },
-      update: {},
-      create: {
-        clientEmail: 'maria.garcia@example.com',
-        userPackageId: null,
-        groupBookingId: null,
-        sessionUsageId: null,
-        amount: 120.00,
-        currencyCode: 'USD',
-        paymentMethod: 'paypal',
-        paymentStatus: 'confirmed',
-        transactionId: 'paypal_txn_987654321',
-        notes: 'Extended session payment - PayPal',
-        paymentDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-        confirmedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-        clientId: 2
-      }
-    }),
-    // Test client's payment history
-    prisma.paymentRecord.upsert({
-      where: { id: 5 },
-      update: {},
-      create: {
-        clientEmail: 'test@example.com',
-        userPackageId: null,
-        groupBookingId: null,
-        sessionUsageId: null,
-        amount: 50.00,
-        currencyCode: 'USD',
-        paymentMethod: 'stripe',
-        paymentStatus: 'pending',
-        transactionId: 'txn_pending_555666777',
-        notes: 'Consultation session - Pending confirmation',
-        paymentDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        confirmedAt: null,
-        clientId: 3
-      }
-    }),
-    prisma.paymentRecord.upsert({
-      where: { id: 6 },
-      update: {},
-      create: {
-        clientEmail: 'test@example.com',
-        userPackageId: null,
-        groupBookingId: null,
-        sessionUsageId: null,
-        amount: 180.00,
-        currencyCode: 'MXN',
-        paymentMethod: 'cash',
-        paymentStatus: 'confirmed',
-        transactionId: null,
-        notes: 'Group session payment - Mexican Peso',
-        paymentDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-        confirmedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-        clientId: 3
-      }
-    }),
-    // Admin user's payment history (for testing)
-    prisma.paymentRecord.upsert({
-      where: { id: 7 },
-      update: {},
-      create: {
-        clientEmail: 'coco@soulpath.lat',
-        userPackageId: null,
-        groupBookingId: null,
-        sessionUsageId: null,
-        amount: 400.00,
-        currencyCode: 'USD',
-        paymentMethod: 'bank_transfer',
-        paymentStatus: 'confirmed',
-        transactionId: 'bank_txn_admin_001',
-        notes: 'Premium package payment - Bank transfer',
-        paymentDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
-        confirmedAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
-        clientId: 6 // Admin client ID
+        confirmedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       }
     })
   ]);
-  console.log('✅ Comprehensive payment records created:', paymentRecords.length);
+  console.log('✅ Payment records created:', paymentRecords.length);
 
-  // 20. Create admin profiles
-  console.log('👤 Creating admin profiles...');
-  const profiles = await Promise.all([
-    prisma.profile.upsert({
-      where: { id: 'admin-profile' },
-      update: {},
-      create: {
-        id: 'admin-profile',
-        email: 'admin@soulpath.lat',
-        fullName: 'Admin User',
-        avatarUrl: null,
-        role: 'admin'
-      }
-    }),
-    prisma.profile.upsert({
-      where: { email: 'coco@soulpath.lat' },
-      update: {},
-      create: {
-        email: 'coco@soulpath.lat',
-        fullName: 'Coco Admin',
-        avatarUrl: null,
-        role: 'admin'
-      }
-    })
-  ]);
-  console.log('✅ Admin profiles created:', profiles.length);
+  // 20. Profile model doesn't exist - skipping
+  console.log('👤 Profile model doesn\'t exist - skipping');
 
   // 21. Create profile image
   console.log('🖼️ Creating profile image...');
@@ -1074,7 +1033,7 @@ async function main() {
         status: 'OPEN',
         priority: 'HIGH',
         category: 'Payment System',
-        reporterId: 'admin-profile',
+        reporterId: clients[0].id,
         assignedTo: null
       }
     }),
@@ -1089,8 +1048,8 @@ async function main() {
         status: 'IN_PROGRESS',
         priority: 'MEDIUM',
         category: 'Email System',
-        reporterId: 'admin-profile',
-        assignedTo: 'admin-profile'
+        reporterId: clients[1].id,
+        assignedTo: adminClient.id
       }
     })
   ]);
@@ -1105,7 +1064,7 @@ async function main() {
       create: {
         id: 'comment-001',
         content: 'This issue has been reported by multiple users. Need to investigate the mobile payment flow.',
-        authorId: 'admin-profile',
+        authorId: adminClient.id,
         bugReportId: 'bug-001'
       }
     }),
@@ -1115,7 +1074,7 @@ async function main() {
       create: {
         id: 'comment-002',
         content: 'Working on fixing the email configuration. Should be resolved by tomorrow.',
-        authorId: 'admin-profile',
+        authorId: adminClient.id,
         bugReportId: 'bug-002'
       }
     })
@@ -1126,8 +1085,8 @@ async function main() {
   console.log('🎉 Comprehensive database seeding completed successfully!');
   console.log('');
   console.log('📊 Created:');
-  console.log(`   📧 Email config: ${emailConfig.id}`);
-  console.log(`   📝 Email templates: ${emailTemplates.length}`);
+  console.log(`   📧 Communication config: ${communicationConfig.id}`);
+  console.log(`   📝 Communication templates: ${communicationTemplates.length}`);
   console.log(`   📄 Content: ${content.id}`);
   console.log(`   🎨 Logo settings: ${logoSettings.id}`);
   console.log(`   🔍 SEO settings: ${seo.id}`);
@@ -1137,16 +1096,16 @@ async function main() {
   console.log(`   📦 Package definitions: ${packageDefinitions.length}`);
   console.log(`   💲 Package prices: ${packagePrices.length}`);
   console.log(`   📅 Schedule templates: ${scheduleTemplates.length}`);
-  console.log(`   📅 Legacy schedules: ${schedules.length}`);
+  console.log(`   📅 Schedule slots: ${scheduleSlots.length}`);
   console.log(`   💳 Payment methods: ${paymentMethods.length}`);
   console.log(`   💳 Payment methods data: ${paymentMethodsData.length}`);
   console.log(`   👥 Group booking tiers: ${groupBookingTiers.length}`);
-  console.log(`   📦 Legacy soul packages: ${soulPackages.length}`);
+  console.log(`   📦 Legacy soul packages: handled by PackageDefinition and PackagePrice`);
   console.log(`   👥 Test clients: ${clients.length}`);
   console.log(`   📦 Test user packages: ${userPackages.length}`);
   console.log(`   📋 Test bookings: ${bookings.length}`);
   console.log(`   💳 Test payment records: ${paymentRecords.length}`);
-  console.log(`   👤 Admin profiles: ${profiles.length}`);
+  console.log(`   👤 Admin profiles: skipped (model doesn't exist)`);
   console.log(`   👤 Admin client profile: ${adminClient.id}`);
   console.log(`   🖼️ Profile image: ${profileImage.id}`);
   console.log(`   🖼️ Test images: ${images.length}`);

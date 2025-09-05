@@ -1,28 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import jwt from 'jsonwebtoken';
+import { prisma } from '@/lib/prisma';
+
+
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerClient();
-    
-    // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
+    // Extract JWT token from Authorization header
+    const authHeader = request.headers.get('authorization');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - No token provided' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    // Verify JWT token
+    let decoded: { userId: string };
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    } catch {
+      return NextResponse.json(
+        { error: 'Unauthorized - Invalid token' },
+        { status: 401 }
+      );
+    }
+
+    // Get user from database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId }
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - User not found' },
         { status: 401 }
       );
     }
 
     // Check if user is admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (profile?.role !== 'admin') {
+    if (user.role !== 'admin') {
       return NextResponse.json(
         { error: 'Admin access required' },
         { status: 403 }
@@ -36,57 +58,67 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const search = searchParams.get('search');
 
-    // Build query
-    let query = supabase
-      .from('bug_reports')
-      .select(`
-        *,
-        reporter:profiles!bug_reports_reporter_id_fkey(id, fullName, email),
-        assignee:profiles!bug_reports_assignee_id_fkey(id, fullName, email),
-        comments:bug_comments(
-          id,
-          content,
-          authorId,
-          createdAt,
-          author:profiles!bug_comments_author_id_fkey(id, fullName, email)
-        )
-      `)
-      .order('createdAt', { ascending: false });
-
-    // Apply filters
-    if (status) {
-      query = query.eq('status', status);
-    }
-    if (priority) {
-      query = query.eq('priority', priority);
-    }
-    if (category) {
-      query = query.eq('category', category);
-    }
+    // Build Prisma query
+    const where: Record<string, unknown> = {};
+    if (status) where.status = status;
+    if (priority) where.priority = priority;
+    if (category) where.category = category;
     if (search) {
-      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' as const } },
+        { description: { contains: search, mode: 'insensitive' as const } }
+      ];
     }
 
-    const { data: bugReports, error } = await query;
-
-    if (error) {
-      console.error('Error fetching bug reports:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch bug reports' },
-        { status: 500 }
-      );
-    }
+    const bugReports = await prisma.bugReport.findMany({
+      where,
+      include: {
+        reporter: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true
+          }
+        },
+        assignee: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true
+          }
+        },
+        comments: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
 
     return NextResponse.json({
       success: true,
-      bugReports: bugReports || []
+      bugReports
     });
 
   } catch (error) {
     console.error('Error in admin bug reports API:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error: ' + (error instanceof Error ? error.message : 'Unknown error') },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

@@ -32,6 +32,7 @@ export default function SessionsPage() {
 
   const fetchSessions = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/client/my-bookings');
       const result = await response.json();
       
@@ -62,8 +63,11 @@ export default function SessionsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ffd700]"></div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading your sessions...</p>
+        </div>
       </div>
     );
   }
@@ -82,7 +86,7 @@ export default function SessionsPage() {
               <CalendarIcon className="w-16 h-16 text-gray-500 mx-auto" />
               <h3 className="text-xl font-semibold text-gray-300">No Sessions Yet</h3>
               <p className="text-gray-400">
-                You haven't booked any sessions yet. Start your spiritual journey today!
+                You haven&apos;t booked any sessions yet. Start your spiritual journey today!
               </p>
               <Button className="bg-[#ffd700] text-black hover:bg-[#ffd700]/90">
                 <ShoppingCart className="w-4 h-4 mr-2" />

@@ -2,6 +2,43 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth';
 
+interface EmailTemplateData {
+  id: number;
+  templateKey: string;
+  language?: string;
+  subject: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface TransformedTemplates {
+  [language: string]: {
+    [templateKey: string]: {
+      id: number;
+      subject: string;
+      body: string;
+      createdAt: string;
+      updatedAt: string;
+      videoConferenceLink?: {
+        isActive: boolean;
+        url: string;
+        includeInTemplate: boolean;
+      };
+    };
+  };
+}
+
+interface TemplateInput {
+  [language: string]: {
+    [templateKey: string]: {
+      subject?: string;
+      body?: string;
+      videoConferenceLink?: unknown;
+    };
+  };
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -25,10 +62,10 @@ export async function GET(request: NextRequest) {
 
     // Transform the data to match the expected format
     // Group templates by language and template key
-    const transformedData: any = {};
-    
+    const transformedData: TransformedTemplates = {};
+
     if (data && data.length > 0) {
-      data.forEach((template: any) => {
+      data.forEach((template: EmailTemplateData) => {
         const lang = template.language || 'en';
         const key = template.templateKey;
         
@@ -37,8 +74,11 @@ export async function GET(request: NextRequest) {
         }
         
         transformedData[lang][key] = {
+          id: template.id,
           subject: template.subject || '',
-          html: template.body || '',
+          body: template.body || '',
+          createdAt: template.createdAt,
+          updatedAt: template.updatedAt,
           videoConferenceLink: {
             isActive: false,
             url: '',
@@ -77,13 +117,13 @@ export async function PUT(request: NextRequest) {
       body: string;
     }> = [];
     
-    Object.entries(templates).forEach(([lang, langTemplates]: [string, any]) => {
-      Object.entries(langTemplates).forEach(([key, template]: [string, any]) => {
+    Object.entries(templates as TemplateInput).forEach(([lang, langTemplates]) => {
+      Object.entries(langTemplates).forEach(([key, template]) => {
         templateRows.push({
           template_key: key,
           language: lang,
           subject: template.subject || '',
-          body: template.html || ''
+          body: template.body || ''
         });
       });
     });

@@ -52,6 +52,10 @@ model User {
 
   @@index([email], map: "idx_users_email")
   @@index([status], map: "idx_users_status")
+  @@index([createdAt], map: "idx_users_created_at")
+  @@index([role], map: "idx_users_role")
+  @@index([phone], map: "idx_users_phone")
+  @@index([language], map: "idx_users_language")
   @@map("users")
 }
 
@@ -145,6 +149,10 @@ model ScheduleSlot {
   scheduleTemplate   ScheduleTemplate @relation(fields: [scheduleTemplateId], references: [id], onDelete: Cascade, onUpdate: Restrict)
 
   @@index([startTime], map: "idx_schedule_slots_start_time")
+  @@index([isAvailable, startTime], map: "idx_schedule_slots_available_start_time")
+  @@index([endTime], map: "idx_schedule_slots_end_time")
+  @@index([isAvailable], map: "idx_schedule_slots_available")
+  @@index([bookedCount], map: "idx_schedule_slots_booked_count")
   @@map("schedule_slots")
 }
 
@@ -174,6 +182,8 @@ model Purchase {
   @@index([userId], map: "idx_purchases_user_id")
   @@index([paymentStatus], map: "idx_purchases_payment_status")
   @@index([purchasedAt], map: "idx_purchases_purchased_at")
+  @@index([userId, paymentStatus], map: "idx_purchases_user_status")
+  @@index([userId, purchasedAt], map: "idx_purchases_user_date")
   @@map("purchases")
 }
 
@@ -198,6 +208,8 @@ model UserPackage {
   @@index([userId], map: "idx_user_packages_user_id")
   @@index([purchaseId], map: "idx_user_packages_purchase_id")
   @@index([isActive], map: "idx_user_packages_active")
+  @@index([userId, isActive], map: "idx_user_packages_user_active")
+  @@index([expiresAt], map: "idx_user_packages_expires")
   @@map("user_packages")
 }
 
@@ -229,6 +241,9 @@ model Booking {
   @@index([userPackageId], map: "idx_bookings_user_package_id")
   @@index([scheduleSlotId], map: "idx_bookings_schedule_slot_id")
   @@index([status], map: "idx_bookings_status")
+  @@index([createdAt], map: "idx_bookings_created_at")
+  @@index([userId, status], map: "idx_bookings_user_status")
+  @@index([userId, createdAt], map: "idx_bookings_user_created")
   @@map("bookings")
 }
 
@@ -443,25 +458,72 @@ model Section {
   createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  @@index([enabled, order], map: "idx_sections_enabled_order")
   @@map("sections")
 }
 
-model EmailConfig {
+// ============================================================================
+// COMMUNICATION CONFIGURATION AND TEMPLATES
+// ============================================================================
+
+model CommunicationConfig {
   id            Int       @id @default(autoincrement())
-  smtpHost      String?   @default("smtp.gmail.com") @map("smtp_host")
-  smtpPort      Int?      @default(587) @map("smtp_port")
-  smtpUser      String?   @default("") @map("smtp_user")
-  smtpPass      String?   @default("") @map("smtp_pass")
-  fromEmail     String?   @default("noreply@soulpath.lat") @map("from_email")
-  fromName      String?   @default("SOULPATH") @map("from_name")
   createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  brevo_api_key String?   @default("")
-  sender_email  String?   @default("noreply@soulpath.lat")
-  sender_name   String?   @default("SOULPATH")
-  admin_email   String?   @default("admin@soulpath.lat")
+  
+  // Email Configuration
+  email_enabled         Boolean?  @default(true) @map("email_enabled")
+  brevo_api_key         String?   @default("") @map("brevo_api_key")
+  sender_email          String?   @default("noreply@soulpath.lat") @map("sender_email")
+  sender_name           String?   @default("SOULPATH") @map("sender_name")
+  admin_email           String?   @default("admin@soulpath.lat") @map("admin_email")
+  
+  // SMS Configuration
+  sms_enabled           Boolean?  @default(false) @map("sms_enabled")
+  sms_provider          String?   @default("labsmobile") @map("sms_provider")
+  labsmobile_username   String?   @default("") @map("labsmobile_username")
+  labsmobile_token      String?   @default("") @map("labsmobile_token")
+  sms_sender_name       String?   @default("SoulPath") @map("sms_sender_name")
 
-  @@map("email_config")
+  @@map("communication_config")
+}
+
+model CommunicationTemplate {
+  id            Int       @id @default(autoincrement())
+  templateKey   String    @unique @map("template_key") // e.g., "booking_confirmation", "otp_verification"
+  name          String    // Display name for the template
+  description   String?   // Description of when this template is used
+  type          String    // "email" or "sms"
+  category      String?   // "booking", "verification", "reminder", etc.
+  isActive      Boolean   @default(true) @map("is_active")
+  isDefault     Boolean   @default(false) @map("is_default")
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Relationships
+  translations  CommunicationTemplateTranslation[]
+
+  @@index([type], map: "idx_communication_templates_type")
+  @@index([category], map: "idx_communication_templates_category")
+  @@index([isActive], map: "idx_communication_templates_active")
+  @@map("communication_templates")
+}
+
+model CommunicationTemplateTranslation {
+  id            Int       @id @default(autoincrement())
+  templateId    Int       @map("template_id")
+  language      String    // "en", "es"
+  subject       String?   // For email templates
+  content       String    // HTML for email, plain text for SMS
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Relationships
+  template      CommunicationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, language], map: "idx_template_translations_unique")
+  @@index([language], map: "idx_template_translations_language")
+  @@map("communication_template_translations")
 }
 
 // ============================================================================
@@ -619,4 +681,66 @@ model OtpVerification {
   @@index([userId], map: "idx_otp_verifications_user")
   @@index([expiresAt], map: "idx_otp_verifications_expires")
   @@map("otp_verifications")
+}
+
+// ============================================================================
+// EXTERNAL API CONFIGURATIONS
+// ============================================================================
+
+model ExternalAPIConfig {
+  id                String   @id @default(cuid())
+  name              String   @unique // e.g., "openrouter", "twilio", "telegram"
+  provider          String   // e.g., "OpenRouter", "Twilio", "Telegram"
+  category          String   // e.g., "ai", "communication", "payment"
+
+  // API Credentials
+  apiKey            String?  @map("api_key")
+  apiSecret         String?  @map("api_secret")
+  apiUrl            String?  @map("api_url")
+  webhookUrl        String?  @map("webhook_url")
+  webhookSecret     String?  @map("webhook_secret")
+
+  // Configuration
+  config            Json?    // Additional configuration as JSON
+  isActive          Boolean  @default(false) @map("is_active")
+  testMode          Boolean  @default(true) @map("test_mode")
+
+  // Metadata
+  description       String?
+  version           String?
+  rateLimit         Int?     @map("rate_limit")
+  timeout           Int?     @default(30000) // milliseconds
+
+  // Status and Monitoring
+  lastTestedAt      DateTime? @map("last_tested_at") @db.Timestamptz(6)
+  lastTestResult    String?   @map("last_test_result")
+  healthStatus      String?   @map("health_status") @default("unknown")
+
+  // Audit
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy         String?  @map("created_by")
+  updatedBy         String?  @map("updated_by")
+
+  @@index([name], map: "idx_external_api_configs_name")
+  @@index([category], map: "idx_external_api_configs_category")
+  @@index([isActive], map: "idx_external_api_configs_active")
+  @@map("external_api_configs")
+}
+
+model APIConfigAudit {
+  id                String   @id @default(cuid())
+  configId          String   @map("config_id")
+  action            String   // "create", "update", "delete", "test"
+  oldValues         Json?    @map("old_values")
+  newValues         Json?    @map("new_values")
+  performedBy       String   @map("performed_by")
+  ipAddress         String?  @map("ip_address")
+  userAgent         String?  @map("user_agent")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([configId], map: "idx_api_config_audit_config_id")
+  @@index([performedBy], map: "idx_api_config_audit_performed_by")
+  @@index([createdAt], map: "idx_api_config_audit_created_at")
+  @@map("api_config_audits")
 }

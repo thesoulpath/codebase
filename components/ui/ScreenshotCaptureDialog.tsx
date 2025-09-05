@@ -161,7 +161,7 @@ export function ScreenshotCaptureDialog({
           {/* Instructions */}
           <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
             <p className="text-blue-400 text-sm">
-              <strong>Tip:</strong> Choose the option that best shows the issue you're reporting. 
+              <strong>Tip:</strong> Choose the option that best shows the issue you&apos;re reporting. 
               The modal will be hidden during capture.
             </p>
           </div>

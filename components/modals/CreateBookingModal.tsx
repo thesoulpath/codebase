@@ -222,7 +222,7 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
       toast.success('Booking created successfully!');
       onSuccess();
       handleClose();
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to create booking');
     } finally {
       setLoading(false);

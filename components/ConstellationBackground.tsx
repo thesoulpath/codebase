@@ -10,7 +10,9 @@ export function ConstellationBackground() {
       const seed = i * 1000 + (type === 'small' ? 0 : type === 'medium' ? 100 : type === 'large' ? 200 : 250);
       const random = (min: number, max: number) => {
         const x = Math.sin(seed) * 10000;
-        return min + (x - Math.floor(x)) * (max - min);
+        const result = min + (x - Math.floor(x)) * (max - min);
+        // Round to 4 decimal places to ensure consistency between server and client
+        return Math.round(result * 10000) / 10000;
       };
 
       return {
@@ -34,7 +36,9 @@ export function ConstellationBackground() {
       const seed = i * 1000 + 100;
       const random = (min: number, max: number) => {
         const x = Math.sin(seed) * 10000;
-        return min + (x - Math.floor(x)) * (max - min);
+        const result = min + (x - Math.floor(x)) * (max - min);
+        // Round to 4 decimal places to ensure consistency between server and client
+        return Math.round(result * 10000) / 10000;
       };
 
       return {
@@ -57,7 +61,9 @@ export function ConstellationBackground() {
       const seed = i * 1000 + 200;
       const random = (min: number, max: number) => {
         const x = Math.sin(seed) * 10000;
-        return min + (x - Math.floor(x)) * (max - min);
+        const result = min + (x - Math.floor(x)) * (max - min);
+        // Round to 4 decimal places to ensure consistency between server and client
+        return Math.round(result * 10000) / 10000;
       };
 
       return {
@@ -88,7 +94,9 @@ export function ConstellationBackground() {
       const seed = i * 1000 + 300;
       const random = (min: number, max: number) => {
         const x = Math.sin(seed) * 10000;
-        return min + (x - Math.floor(x)) * (max - min);
+        const result = min + (x - Math.floor(x)) * (max - min);
+        // Round to 4 decimal places to ensure consistency between server and client
+        return Math.round(result * 10000) / 10000;
       };
 
       return {
@@ -108,7 +116,9 @@ export function ConstellationBackground() {
       const seed = i * 1000 + 400;
       const random = (min: number, max: number) => {
         const x = Math.sin(seed) * 10000;
-        return min + (x - Math.floor(x)) * (max - min);
+        const result = min + (x - Math.floor(x)) * (max - min);
+        // Round to 4 decimal places to ensure consistency between server and client
+        return Math.round(result * 10000) / 10000;
       };
 
       return {
@@ -126,7 +136,9 @@ export function ConstellationBackground() {
       const seed = i * 1000 + 500;
       const random = (min: number, max: number) => {
         const x = Math.sin(seed) * 10000;
-        return min + (x - Math.floor(x)) * (max - min);
+        const result = min + (x - Math.floor(x)) * (max - min);
+        // Round to 4 decimal places to ensure consistency between server and client
+        return Math.round(result * 10000) / 10000;
       };
 
       return {
@@ -150,10 +162,10 @@ export function ConstellationBackground() {
             key={`small-${star.id}`}
             className="absolute bg-white rounded-full"
             style={{
-              left: `${star.x}%`,
-              top: `${star.y}%`,
-              width: `${star.size}px`,
-              height: `${star.size}px`,
+              left: `${Math.round(star.x * 100) / 100}%`,
+              top: `${Math.round(star.y * 100) / 100}%`,
+              width: `${Math.round(star.size * 100) / 100}px`,
+              height: `${Math.round(star.size * 100) / 100}px`,
             }}
             animate={{
               opacity: [star.brightness * 0.3, star.brightness, star.brightness * 0.3],
@@ -178,10 +190,10 @@ export function ConstellationBackground() {
             key={`medium-${star.id}`}
             className="absolute bg-white rounded-full shadow-sm"
             style={{
-              left: `${star.x}%`,
-              top: `${star.y}%`,
-              width: `${star.size}px`,
-              height: `${star.size}px`,
+              left: `${Math.round(star.x * 100) / 100}%`,
+              top: `${Math.round(star.y * 100) / 100}%`,
+              width: `${Math.round(star.size * 100) / 100}px`,
+              height: `${Math.round(star.size * 100) / 100}px`,
               filter: 'blur(0.5px)',
             }}
             animate={{
@@ -203,18 +215,18 @@ export function ConstellationBackground() {
       {/* Layer 3: Large stars with golden glow */}
       <div className="absolute inset-0 opacity-35">
         {largeStars.map((star) => {
-          const isGolden = Math.random() > 0.6; // Simplified golden star generation
+          const isGolden = (star.id % 5) === 0; // Deterministic golden star generation
           return (
             <motion.div
               key={`large-${star.id}`}
               className="absolute rounded-full"
               style={{
-                left: `${star.x}%`,
-                top: `${star.y}%`,
-                width: `${star.size}px`,
-                height: `${star.size}px`,
+                left: `${Math.round(star.x * 100) / 100}%`,
+                top: `${Math.round(star.y * 100) / 100}%`,
+                width: `${Math.round(star.size * 100) / 100}px`,
+                height: `${Math.round(star.size * 100) / 100}px`,
                 background: isGolden ? '#FFD700' : '#FFFFFF',
-                boxShadow: `0 0 ${star.size * 2}px rgba(255, 215, 0, 0.3)`,
+                boxShadow: `0 0 ${Math.round(star.size * 2 * 100) / 100}px rgba(255, 215, 0, 0.3)`,
                 filter: 'blur(0.5px)',
               }}
               animate={{
@@ -242,10 +254,10 @@ export function ConstellationBackground() {
             key={`cosmic-${star.id}`}
             className="absolute rounded-full"
             style={{
-              left: `${star.x}%`,
-              top: `${star.y}%`,
-              width: `${star.size}px`,
-              height: `${star.size}px`,
+              left: `${Math.round(star.x * 100) / 100}%`,
+              top: `${Math.round(star.y * 100) / 100}%`,
+              width: `${Math.round(star.size * 100) / 100}px`,
+              height: `${Math.round(star.size * 100) / 100}px`,
               background: 'radial-gradient(circle, #FFD700 0%, rgba(255, 215, 0, 0.3) 70%, transparent 100%)',
               filter: 'blur(1px)',
             }}
@@ -272,25 +284,25 @@ export function ConstellationBackground() {
             key={`orbital-${orbital.id}`}
             className="absolute rounded-full"
             style={{
-              width: `${orbital.size}px`,
-              height: `${orbital.size}px`,
+              width: `${Math.round(orbital.size * 100) / 100}px`,
+              height: `${Math.round(orbital.size * 100) / 100}px`,
               background: orbital.color,
-              boxShadow: `0 0 ${orbital.size * 2}px ${orbital.color}`,
+              boxShadow: `0 0 ${Math.round(orbital.size * 2 * 100) / 100}px ${orbital.color}`,
             }}
             animate={{
               x: [
-                orbital.centerX + orbital.radius * Math.cos((orbital.startAngle * Math.PI) / 180),
-                orbital.centerX + orbital.radius * Math.cos(((orbital.startAngle + 90) * Math.PI) / 180),
-                orbital.centerX + orbital.radius * Math.cos(((orbital.startAngle + 180) * Math.PI) / 180),
-                orbital.centerX + orbital.radius * Math.cos(((orbital.startAngle + 270) * Math.PI) / 180),
-                orbital.centerX + orbital.radius * Math.cos((orbital.startAngle * Math.PI) / 180),
+                Math.round((orbital.centerX + orbital.radius * Math.cos((orbital.startAngle * Math.PI) / 180)) * 100) / 100,
+                Math.round((orbital.centerX + orbital.radius * Math.cos(((orbital.startAngle + 90) * Math.PI) / 180)) * 100) / 100,
+                Math.round((orbital.centerX + orbital.radius * Math.cos(((orbital.startAngle + 180) * Math.PI) / 180)) * 100) / 100,
+                Math.round((orbital.centerX + orbital.radius * Math.cos(((orbital.startAngle + 270) * Math.PI) / 180)) * 100) / 100,
+                Math.round((orbital.centerX + orbital.radius * Math.cos((orbital.startAngle * Math.PI) / 180)) * 100) / 100,
               ],
               y: [
-                orbital.centerY + orbital.radius * Math.sin((orbital.startAngle * Math.PI) / 180),
-                orbital.centerY + orbital.radius * Math.sin(((orbital.startAngle + 90) * Math.PI) / 180),
-                orbital.centerY + orbital.radius * Math.sin(((orbital.startAngle + 180) * Math.PI) / 180),
-                orbital.centerY + orbital.radius * Math.sin(((orbital.startAngle + 270) * Math.PI) / 180),
-                orbital.centerY + orbital.radius * Math.sin((orbital.startAngle * Math.PI) / 180),
+                Math.round((orbital.centerY + orbital.radius * Math.sin((orbital.startAngle * Math.PI) / 180)) * 100) / 100,
+                Math.round((orbital.centerY + orbital.radius * Math.sin(((orbital.startAngle + 90) * Math.PI) / 180)) * 100) / 100,
+                Math.round((orbital.centerY + orbital.radius * Math.sin(((orbital.startAngle + 180) * Math.PI) / 180)) * 100) / 100,
+                Math.round((orbital.centerY + orbital.radius * Math.sin(((orbital.startAngle + 270) * Math.PI) / 180)) * 100) / 100,
+                Math.round((orbital.centerY + orbital.radius * Math.sin((orbital.startAngle * Math.PI) / 180)) * 100) / 100,
               ],
               opacity: [orbital.opacity * 0.3, orbital.opacity, orbital.opacity * 0.3],
             }}
@@ -324,15 +336,15 @@ export function ConstellationBackground() {
               repeat: Infinity,
               delay: star.delay,
               ease: "easeOut",
-              repeatDelay: 10 + Math.random() * 10, // Simplified repeatDelay
+              repeatDelay: 10 + (star.id % 10), // Deterministic repeatDelay
             }}
           >
             <div
               className="w-1 h-1 bg-gradient-to-r from-transparent via-white to-transparent rounded-full"
               style={{
-                width: `${20 + star.size * 10}px`,
-                height: `${star.size}px`,
-                boxShadow: `0 0 ${star.size * 3}px rgba(255, 255, 255, 0.6)`,
+                width: `${Math.round((20 + star.size * 10) * 100) / 100}px`,
+                height: `${Math.round(star.size * 100) / 100}px`,
+                boxShadow: `0 0 ${Math.round(star.size * 3 * 100) / 100}px rgba(255, 255, 255, 0.6)`,
                 filter: 'blur(0.5px)',
               }}
             />

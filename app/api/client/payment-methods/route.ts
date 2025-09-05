@@ -1,45 +1,56 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    // Use service role key for public payment methods access
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    console.log('🔍 GET /api/client/payment-methods - Starting request...');
 
-    // Fetch active payment methods with currency information
-    const { data: paymentMethods, error } = await supabase
-      .from('payment_methods')
-      .select(`
-        id,
-        name,
-        description,
-        is_active,
-        currency_id,
-        currencies:currency_id(
-          id,
-          code,
-          symbol,
-          name
-        )
-      `)
-      .eq('is_active', true)
-      .order('name');
+    // Fetch active payment method configs with currency information
+    const paymentMethods = await prisma.paymentMethodConfig.findMany({
+      where: {
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        description: true,
+        icon: true,
+        requiresConfirmation: true,
+        autoAssignPackage: true,
+        isActive: true
+      },
+      orderBy: { name: 'asc' }
+    });
 
-    if (error) {
-      console.error('Error fetching payment methods:', error);
-      return NextResponse.json({ error: 'Failed to fetch payment methods' }, { status: 500 });
-    }
+    console.log('✅ Database query successful, found', paymentMethods.length, 'payment methods');
+
+    // Transform the data to match the expected format
+    const transformedMethods = paymentMethods.map(method => ({
+      id: method.id,
+      name: method.name,
+      type: method.type || 'custom',
+      description: method.description || '',
+      icon: method.icon || 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/credit-card/credit-card-original.svg',
+      requiresConfirmation: method.requiresConfirmation || false,
+      autoAssignPackage: method.autoAssignPackage || true,
+      isActive: method.isActive || true
+    }));
 
     return NextResponse.json({
       success: true,
-      data: paymentMethods
+      data: transformedMethods
     });
 
   } catch (error) {
-    console.error('Error in GET /api/client/payment-methods:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('❌ Error in GET /api/client/payment-methods:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to fetch payment methods',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }

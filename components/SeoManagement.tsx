@@ -228,12 +228,11 @@ export function SeoManagement() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-8 h-8 border-4 border-[#FFD700] border-t-transparent rounded-full"
-        />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading SEO settings...</p>
+        </div>
       </div>
     );
   }

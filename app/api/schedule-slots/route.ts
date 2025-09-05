@@ -1,61 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withCache } from '@/lib/cache';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 GET /api/schedule-slots - Fetching available schedule slots...');
-    
+
     const { searchParams } = new URL(request.url);
     const availableOnly = searchParams.get('available') === 'true';
     const date = searchParams.get('date');
-    
-    // Build where clause
-    const whereClause: any = {};
-    
-    if (availableOnly) {
-      whereClause.isAvailable = true;
-      // Only show slots that haven't reached capacity
-      whereClause.OR = [
-        { capacity: null }, // No capacity limit
-        { 
-          AND: [
-            { capacity: { not: null } },
-            { bookedCount: { lt: prisma.scheduleSlot.fields.capacity } }
-          ]
-        }
-      ];
-    }
-    
-    if (date) {
-      const startOfDay = new Date(date);
-      const endOfDay = new Date(date);
-      endOfDay.setDate(endOfDay.getDate() + 1);
-      
-      whereClause.startTime = {
-        gte: startOfDay,
-        lt: endOfDay
-      };
-    }
 
-    // Fetch schedule slots
-    const slots = await prisma.scheduleSlot.findMany({
-      where: whereClause,
-      include: {
-        scheduleTemplate: {
-          include: {
-            sessionDuration: {
+    // Build cache key based on parameters
+    const cacheKey = `schedule_slots_${availableOnly}_${date || 'all'}`;
+
+    // Use caching for schedule slots (shorter TTL since availability changes)
+    const slots = await withCache(
+      cacheKey,
+      async () => {
+        // Build where clause
+        const whereClause: Record<string, unknown> = {};
+
+        if (availableOnly) {
+          whereClause.isAvailable = true;
+          // Only show slots that haven't reached capacity
+          whereClause.OR = [
+            { capacity: null }, // No capacity limit
+            {
+              AND: [
+                { capacity: { not: null } },
+                { bookedCount: { lt: prisma.scheduleSlot.fields.capacity } }
+              ]
+            }
+          ];
+        }
+
+        if (date) {
+          const startOfDay = new Date(date);
+          const endOfDay = new Date(date);
+          endOfDay.setDate(endOfDay.getDate() + 1);
+
+          whereClause.startTime = {
+            gte: startOfDay,
+            lt: endOfDay
+          };
+        }
+
+        // Fetch schedule slots with optimized query
+        return await prisma.scheduleSlot.findMany({
+          where: whereClause,
+          select: {
+            id: true,
+            startTime: true,
+            endTime: true,
+            capacity: true,
+            bookedCount: true,
+            isAvailable: true,
+            scheduleTemplate: {
               select: {
-                name: true,
-                duration_minutes: true
+                sessionDuration: {
+                  select: {
+                    name: true,
+                    duration_minutes: true
+                  }
+                }
               }
             }
-          }
-        }
+          },
+          orderBy: [
+            { startTime: 'asc' }
+          ]
+        });
       },
-      orderBy: [
-        { startTime: 'asc' }
-      ]
-    });
+      2 * 60 * 1000 // Cache for 2 minutes (availability changes frequently)
+    );
 
     // Transform the data to match the expected format
     const transformedSlots = slots.map(slot => ({

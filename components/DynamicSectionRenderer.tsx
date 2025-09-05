@@ -9,7 +9,7 @@ import { BookingSection } from './BookingSection';
 
 interface DynamicSectionRendererProps {
   section: SectionConfig;
-  t: any;
+  t: Record<string, string | Record<string, string>>;
   language: string;
   scrollToSection: (section: string) => void;
 }

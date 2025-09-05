@@ -11,7 +11,7 @@ export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const [loading, setLoading] = useState(true);
-  const [_paymentDetails] = useState<any>(null);
+
 
   useEffect(() => {
     if (sessionId) {

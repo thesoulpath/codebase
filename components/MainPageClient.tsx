@@ -10,31 +10,37 @@ import { AdminDashboard } from '@/components/AdminDashboard';
 import LoginModal from '@/components/LoginModal';
 import { BookingSection } from '@/components/BookingSection';
 
+
+
+interface TranslationProps {
+  t: Record<string, string | Record<string, string>>;
+}
+
+interface SessionSectionProps extends TranslationProps {
+  scrollToSection: (sectionId: string) => void;
+}
+
+interface HeaderProps extends TranslationProps {
+  language: string;
+  setLanguage: (lang: 'en' | 'es') => void;
+  onLoginClick: () => void;
+}
+
 interface MainPageClientProps {
   content: Record<string, string>;
-  initialContent: Record<string, any>;
-  initialLogoSettings: Record<string, any>;
+  initialContent: Record<string, unknown>;
   initialProfileImage: string | undefined;
 }
 
-// useLogo Hook
-function useLogo(initialLogoSettings: any) {
-  const [logoSettings] = useState(initialLogoSettings);
-  
-  const reloadLogo = () => {
-    // This would re-fetch logo settings in a full implementation
-  };
-  
-  return { logoSettings, reloadLogo };
-}
+
 
 // Header Component
-function Header({ 
-  language, 
-  setLanguage, 
-  t, 
-  onLoginClick 
-}: any) {
+function Header({
+  language,
+  setLanguage,
+  t,
+  onLoginClick
+}: HeaderProps) {
   return (
     <motion.header 
       initial={{ y: -100 }}
@@ -82,7 +88,7 @@ function Header({
               onClick={onLoginClick}
               className="px-4 py-2 bg-[#FFD700] text-[#0A0A23] rounded-lg font-medium hover:bg-[#FFD700]/90 transition-all duration-300 shadow-lg hover:shadow-xl"
             >
-              {t?.admin?.login || 'Login'}
+              {typeof t?.admin === 'object' && t.admin?.login || 'Login'}
             </button>
           </div>
         </div>
@@ -92,7 +98,7 @@ function Header({
 }
 
 // HeroSection Component
-function HeroSection({ t }: any) {
+function HeroSection({ t }: TranslationProps) {
   return (
     <motion.section
       initial={{ opacity: 0 }}
@@ -107,7 +113,7 @@ function HeroSection({ t }: any) {
           transition={{ delay: 0.3, duration: 0.8 }}
           className="text-5xl sm:text-6xl md:text-7xl font-heading text-[#EAEAEA] mb-6 leading-tight"
         >
-          {t?.hero?.title || 'SOULPATH'}
+          {typeof t?.hero === 'object' && t.hero?.title || 'SOULPATH'}
         </motion.h1>
         
         <motion.p
@@ -116,7 +122,7 @@ function HeroSection({ t }: any) {
           transition={{ delay: 0.5, duration: 0.8 }}
           className="text-xl sm:text-2xl text-[#C0C0C0] mb-8 max-w-2xl mx-auto leading-relaxed"
         >
-          {t?.hero?.subtitle || 'Transform your life through spiritual guidance and healing'}
+          {typeof t?.hero === 'object' && t.hero?.subtitle || 'Transform your life through spiritual guidance and healing'}
         </motion.p>
         
         <motion.div
@@ -125,7 +131,7 @@ function HeroSection({ t }: any) {
           transition={{ delay: 0.7, duration: 0.8 }}
           className="text-sm text-[#C0C0C0]/70"
         >
-          {t?.hero?.scrollHint || 'Scroll to explore'}
+          {typeof t?.hero === 'object' && t.hero?.scrollHint || 'Scroll to explore'}
         </motion.div>
       </div>
     </motion.section>
@@ -133,7 +139,7 @@ function HeroSection({ t }: any) {
 }
 
 // ApproachSection Component
-function ApproachSection({ t }: any) {
+function ApproachSection({ t }: TranslationProps) {
   return (
     <motion.section
       initial={{ opacity: 0 }}
@@ -148,7 +154,7 @@ function ApproachSection({ t }: any) {
           transition={{ delay: 0.3, duration: 0.8 }}
           className="text-4xl sm:text-5xl font-heading text-[#FFD700] mb-12"
         >
-          {t?.approach?.title || 'Our Approach'}
+          {typeof t?.approach === 'object' && t.approach?.title || 'Our Approach'}
         </motion.h2>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -161,10 +167,10 @@ function ApproachSection({ t }: any) {
               className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10"
             >
               <h3 className="text-xl font-heading text-[#EAEAEA] mb-4">
-                {t?.approach?.[`step${i}Title`] || `Step ${i}`}
+                {typeof t?.approach === 'object' && t.approach?.[`step${i}Title`] || `Step ${i}`}
               </h3>
               <p className="text-[#C0C0C0] leading-relaxed">
-                {t?.approach?.[`step${i}Description`] || `Description for step ${i}`}
+                {typeof t?.approach === 'object' && t.approach?.[`step${i}Description`] || `Description for step ${i}`}
               </p>
             </motion.div>
           ))}
@@ -175,7 +181,7 @@ function ApproachSection({ t }: any) {
 }
 
 // SessionSection Component
-function SessionSection({ t, scrollToSection }: any) {
+function SessionSection({ t, scrollToSection }: SessionSectionProps) {
   return (
     <motion.section
       initial={{ opacity: 0 }}
@@ -190,7 +196,7 @@ function SessionSection({ t, scrollToSection }: any) {
           transition={{ delay: 0.3, duration: 0.8 }}
           className="text-4xl sm:text-5xl font-heading text-[#FFD700] mb-8"
         >
-          {t?.session?.title || 'Book Your Session'}
+          {typeof t?.session === 'object' && t.session?.title || 'Book Your Session'}
         </motion.h2>
         
         <motion.p
@@ -199,7 +205,7 @@ function SessionSection({ t, scrollToSection }: any) {
           transition={{ delay: 0.5, duration: 0.8 }}
           className="text-xl text-[#C0C0C0] mb-8 leading-relaxed"
         >
-          {t?.session?.description || 'Ready to begin your spiritual journey?'}
+          {typeof t?.session === 'object' && t.session?.description || 'Ready to begin your spiritual journey?'}
         </motion.p>
         
         <motion.button
@@ -209,7 +215,7 @@ function SessionSection({ t, scrollToSection }: any) {
           onClick={() => scrollToSection('apply')}
           className="px-8 py-4 bg-[#FFD700] text-[#0A0A23] rounded-lg font-medium hover:bg-[#FFD700]/90 transition-all duration-300 shadow-lg hover:shadow-xl text-lg"
         >
-          {t?.session?.cta || 'Get Started'}
+          {typeof t?.session === 'object' && t.session?.cta || 'Get Started'}
         </motion.button>
       </div>
     </motion.section>
@@ -217,7 +223,7 @@ function SessionSection({ t, scrollToSection }: any) {
 }
 
 // AboutSection Component
-function AboutSection({ t }: any) {
+function AboutSection({ t }: TranslationProps) {
   return (
     <motion.section
       initial={{ opacity: 0 }}
@@ -232,7 +238,7 @@ function AboutSection({ t }: any) {
           transition={{ delay: 0.3, duration: 0.8 }}
           className="text-4xl sm:text-5xl font-heading text-[#FFD700] mb-8"
         >
-          {t?.about?.title || 'About Us'}
+          {typeof t?.about === 'object' && t.about?.title || 'About Us'}
         </motion.h2>
         
         <motion.p
@@ -241,7 +247,7 @@ function AboutSection({ t }: any) {
           transition={{ delay: 0.5, duration: 0.8 }}
           className="text-xl text-[#C0C0C0] mb-8 leading-relaxed"
         >
-          {t?.about?.description || 'Learn more about our mission and approach to spiritual healing.'}
+          {typeof t?.about === 'object' && t.about?.description || 'Learn more about our mission and approach to spiritual healing.'}
         </motion.p>
       </div>
     </motion.section>
@@ -272,15 +278,14 @@ function ConstellationBackground() {
 }
 
 // Main Page Component
-export default function MainPageClient({ 
-  initialContent, 
-  initialLogoSettings, 
+export default function MainPageClient({
+  initialContent,
   initialProfileImage
 }: MainPageClientProps) {
   const { language, setLanguage } = useLanguage();
   const { t, isLoading: isLoadingTranslations } = useTranslations(initialContent);
   const { } = useProfileImage(initialProfileImage);
-  const { logoSettings: _ } = useLogo(initialLogoSettings);
+
   const { signIn } = useAuth();
   
   const [currentSection, setCurrentSection] = useState(0);

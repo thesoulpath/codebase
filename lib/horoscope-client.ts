@@ -21,12 +21,12 @@ export const useHoroscope = () => {
         }
 
         // Dynamic import with error handling
-        const module = await import('ephemeris').catch((err) => {
+        const ephemerisModule = await import('ephemeris').catch((err) => {
           console.error('Failed to import ephemeris:', err);
           throw new Error('Failed to load Ephemeris library');
         });
 
-        Ephemeris = module.default || module;
+        Ephemeris = ephemerisModule.default || ephemerisModule;
         isInitialized = true;
         setIsLoading(false);
       } catch (err) {

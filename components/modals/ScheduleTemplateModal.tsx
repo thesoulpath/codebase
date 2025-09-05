@@ -14,20 +14,21 @@ interface SessionDuration {
   name: string;
   duration_minutes: number;
   description: string;
-  is_active: boolean;
+  isActive: boolean;
 }
 
 interface ScheduleTemplate {
   id: number;
-  day_of_week: string;
-  start_time: string;
-  end_time: string;
-  session_duration_id: number;
-  max_capacity: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  session_durations: SessionDuration;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  sessionDurationId: number;
+  capacity: number;
+  isAvailable: boolean;
+  autoAvailable: boolean;
+  createdAt: string;
+  updatedAt: string;
+  sessionDuration: SessionDuration;
 }
 
 interface ScheduleTemplateModalProps {
@@ -48,12 +49,13 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
   mode
 }) => {
   const [formData, setFormData] = useState({
-    day_of_week: '',
-    start_time: '',
-    end_time: '',
-    session_duration_id: '',
-    max_capacity: '',
-    is_active: true
+    dayOfWeek: '',
+    startTime: '',
+    endTime: '',
+    sessionDurationId: '',
+    capacity: '',
+    isAvailable: true,
+    autoAvailable: true
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -61,12 +63,13 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
   useEffect(() => {
     if (scheduleTemplate && mode === 'edit') {
       setFormData({
-        day_of_week: scheduleTemplate.day_of_week,
-        start_time: scheduleTemplate.start_time,
-        end_time: scheduleTemplate.end_time,
-        session_duration_id: scheduleTemplate.session_duration_id.toString(),
-        max_capacity: scheduleTemplate.max_capacity.toString(),
-        is_active: scheduleTemplate.is_active
+        dayOfWeek: scheduleTemplate.dayOfWeek,
+        startTime: scheduleTemplate.startTime,
+        endTime: scheduleTemplate.endTime,
+        sessionDurationId: scheduleTemplate.sessionDurationId.toString(),
+        capacity: scheduleTemplate.capacity.toString(),
+        isAvailable: scheduleTemplate.isAvailable,
+        autoAvailable: scheduleTemplate.autoAvailable
       });
     } else {
       resetForm();
@@ -75,12 +78,13 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
 
   const resetForm = () => {
     setFormData({
-      day_of_week: '',
-      start_time: '',
-      end_time: '',
-      session_duration_id: '',
-      max_capacity: '',
-      is_active: true
+      dayOfWeek: '',
+      startTime: '',
+      endTime: '',
+      sessionDurationId: '',
+      capacity: '',
+      isAvailable: true,
+      autoAvailable: true
     });
     setErrors({});
   };
@@ -88,32 +92,32 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.day_of_week) {
-      newErrors.day_of_week = 'Day of week is required';
+    if (!formData.dayOfWeek) {
+      newErrors.dayOfWeek = 'Day of week is required';
     }
 
-    if (!formData.start_time) {
-      newErrors.start_time = 'Start time is required';
+    if (!formData.startTime) {
+      newErrors.startTime = 'Start time is required';
     }
 
-    if (!formData.end_time) {
-      newErrors.end_time = 'End time is required';
+    if (!formData.endTime) {
+      newErrors.endTime = 'End time is required';
     }
 
-    if (!formData.session_duration_id) {
-      newErrors.session_duration_id = 'Session duration is required';
+    if (!formData.sessionDurationId) {
+      newErrors.sessionDurationId = 'Session duration is required';
     }
 
-    if (!formData.max_capacity) {
-      newErrors.max_capacity = 'Max capacity is required';
+    if (!formData.capacity) {
+      newErrors.capacity = 'Capacity is required';
     }
 
-    if (formData.start_time && formData.end_time) {
-      const start = new Date(`2000-01-01T${formData.start_time}`);
-      const end = new Date(`2000-01-01T${formData.end_time}`);
+    if (formData.startTime && formData.endTime) {
+      const start = new Date(`2000-01-01T${formData.startTime}`);
+      const end = new Date(`2000-01-01T${formData.endTime}`);
       
       if (start >= end) {
-        newErrors.end_time = 'End time must be after start time';
+        newErrors.endTime = 'End time must be after start time';
       }
     }
 
@@ -127,8 +131,8 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
     if (validateForm()) {
       onSubmit({
         ...formData,
-        max_capacity: parseInt(formData.max_capacity),
-        session_duration_id: parseInt(formData.session_duration_id)
+        capacity: parseInt(formData.capacity),
+        sessionDurationId: parseInt(formData.sessionDurationId)
       });
     }
   };
@@ -157,10 +161,10 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Day of Week */}
           <div className="space-y-2">
-            <Label htmlFor="day_of_week">Day of Week</Label>
+            <Label htmlFor="dayOfWeek">Day of Week</Label>
             <Select
-              value={formData.day_of_week}
-              onValueChange={(value) => setFormData({ ...formData, day_of_week: value })}
+              value={formData.dayOfWeek}
+              onValueChange={(value) => setFormData({ ...formData, dayOfWeek: value })}
             >
               <SelectTrigger className="bg-[var(--color-surface-primary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]">
                 <SelectValue placeholder="Select day of week" />
@@ -173,19 +177,19 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
                 ))}
               </SelectContent>
             </Select>
-            {errors.day_of_week && (
+            {errors.dayOfWeek && (
               <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
-                {errors.day_of_week}
+                {errors.dayOfWeek}
               </p>
             )}
           </div>
 
           {/* Session Duration */}
           <div className="space-y-2">
-            <Label htmlFor="session_duration_id">Session Duration</Label>
+            <Label htmlFor="sessionDurationId">Session Duration</Label>
             <Select
-              value={formData.session_duration_id}
-              onValueChange={(value) => setFormData({ ...formData, session_duration_id: value })}
+              value={formData.sessionDurationId}
+              onValueChange={(value) => setFormData({ ...formData, sessionDurationId: value })}
             >
               <SelectTrigger className="bg-[var(--color-surface-primary)] border-[var(--color-border-500)] text-[var(--color-text-primary)]">
                 <SelectValue placeholder="Select session duration" />
@@ -198,9 +202,9 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
                 ))}
               </SelectContent>
             </Select>
-            {errors.session_duration_id && (
+            {errors.sessionDurationId && (
               <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
-                {errors.session_duration_id}
+                {errors.sessionDurationId}
               </p>
             )}
           </div>
@@ -208,33 +212,33 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
           {/* Time Range */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="start_time">Start Time</Label>
+              <Label htmlFor="startTime">Start Time</Label>
               <BaseInput
-                id="start_time"
+                id="startTime"
                 type="time"
-                value={formData.start_time}
-                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                value={formData.startTime}
+                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                 required
               />
-              {errors.start_time && (
+              {errors.startTime && (
                 <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
-                  {errors.start_time}
+                  {errors.startTime}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="end_time">End Time</Label>
+              <Label htmlFor="endTime">End Time</Label>
               <BaseInput
-                id="end_time"
+                id="endTime"
                 type="time"
-                value={formData.end_time}
-                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                value={formData.endTime}
+                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                 required
               />
-              {errors.end_time && (
+              {errors.endTime && (
                 <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
-                  {errors.end_time}
+                  {errors.endTime}
                 </p>
               )}
             </div>
@@ -242,19 +246,19 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
 
           {/* Max Capacity */}
           <div className="space-y-2">
-            <Label htmlFor="max_capacity">Max Capacity</Label>
+            <Label htmlFor="capacity">Capacity</Label>
             <BaseInput
-              id="max_capacity"
+              id="capacity"
               type="number"
               min="1"
-              value={formData.max_capacity}
-              onChange={(e) => setFormData({ ...formData, max_capacity: e.target.value })}
-              placeholder="Enter maximum capacity"
+              value={formData.capacity}
+              onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+              placeholder="Enter capacity"
               required
             />
-            {errors.max_capacity && (
+            {errors.capacity && (
               <p className="text-[var(--color-status-error)] text-[var(--font-size-sm)]">
-                {errors.max_capacity}
+                {errors.capacity}
               </p>
             )}
           </div>
@@ -262,12 +266,24 @@ const ScheduleTemplateModal: React.FC<ScheduleTemplateModalProps> = ({
           {/* Active Status */}
           <div className="flex items-center space-x-2">
             <Switch
-              id="is_active"
-              checked={formData.is_active}
-              onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+              id="isAvailable"
+              checked={formData.isAvailable}
+              onCheckedChange={(checked) => setFormData({ ...formData, isAvailable: checked })}
             />
-            <Label htmlFor="is_active" className="text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-secondary)]">
-              Active
+            <Label htmlFor="isAvailable" className="text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-secondary)]">
+              Available
+            </Label>
+          </div>
+
+          {/* Auto Available */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="autoAvailable"
+              checked={formData.autoAvailable}
+              onCheckedChange={(checked) => setFormData({ ...formData, autoAvailable: checked })}
+            />
+            <Label htmlFor="autoAvailable" className="text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-secondary)]">
+              Auto Available
             </Label>
           </div>
         </form>

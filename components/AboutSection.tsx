@@ -1,11 +1,12 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useProfileImage } from '@/hooks/useProfileImage';
 
 interface AboutSectionProps {
-  t: any;
+  t: Record<string, string | Record<string, string>>;
 }
 
 export function AboutSection({ t }: AboutSectionProps) {
@@ -15,17 +16,17 @@ export function AboutSection({ t }: AboutSectionProps) {
     <>
       <style jsx>{`
         .image-container {
-          --mobile-scale: 0.92;
+          --mobile-scale: 0.95;
           --desktop-scale: 1;
         }
-        
+
         @media (max-width: 639px) {
           .image-container {
             transform: scale(var(--mobile-scale));
             transform-origin: center center;
           }
         }
-        
+
         @media (min-width: 640px) {
           .image-container {
             transform: scale(var(--desktop-scale));
@@ -43,7 +44,7 @@ export function AboutSection({ t }: AboutSectionProps) {
             className="order-2 md:order-1 space-y-4 sm:space-y-6"
           >
             <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-3xl lg:text-4xl xl:text-5xl font-heading text-[#EAEAEA] leading-tight">
-              {t.about.title}
+              {(t.about as Record<string, string>).title}
             </h2>
             <motion.div
               initial={{ width: 0 }}
@@ -52,7 +53,7 @@ export function AboutSection({ t }: AboutSectionProps) {
               className="h-0.5 bg-gradient-to-r from-[#FFD700] to-transparent"
             />
             <p className="text-sm sm:text-base md:text-sm lg:text-base xl:text-lg text-[#EAEAEA]/80 leading-relaxed max-w-2xl">
-              {t.about.text}
+              {(t.about as Record<string, string>).text}
             </p>
             
             {/* Additional cosmic elements */}
@@ -86,9 +87,9 @@ export function AboutSection({ t }: AboutSectionProps) {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="order-1 md:order-2 flex justify-center"
           >
-            <div className="relative max-w-sm mx-auto flex justify-center">
-              <motion.div 
-                className="w-40 h-40 xs:w-48 xs:h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-72 lg:h-72 xl:w-80 xl:h-80 bg-gradient-to-br from-[#191970]/30 to-[#0A0A23]/30 rounded-full border border-[#C0C0C0]/20 p-2 sm:p-3 cosmic-glow relative overflow-hidden flex items-center justify-center"
+            <div className="relative max-w-xs xs:max-w-sm mx-auto flex justify-center">
+              <motion.div
+                className="w-32 h-32 xs:w-40 xs:h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 xl:w-72 xl:h-72 bg-gradient-to-br from-[#191970]/30 to-[#0A0A23]/30 rounded-full border border-[#C0C0C0]/20 p-1.5 xs:p-2 sm:p-3 cosmic-glow relative overflow-hidden flex items-center justify-center"
                 whileHover={{ scale: 1.02 }}
                 transition={{ duration: 0.3 }}
               >
@@ -99,7 +100,7 @@ export function AboutSection({ t }: AboutSectionProps) {
                   className="absolute inset-2 border border-[#FFD700]/10 rounded-full"
                 />
                 
-                <div className="w-11/12 h-11/12 sm:w-full sm:h-full rounded-full overflow-hidden border-2 border-[#FFD700]/30 relative z-10 flex items-center justify-center image-container">
+                <div className="w-full h-full rounded-full overflow-hidden border-1 xs:border-2 border-[#FFD700]/30 relative z-10 flex items-center justify-center image-container">
                   {isImageLoading ? (
                     <div className="w-full h-full bg-[#191970]/30 flex items-center justify-center">
                       <motion.div
@@ -109,26 +110,16 @@ export function AboutSection({ t }: AboutSectionProps) {
                       />
                     </div>
                   ) : (
-                    <img
+                    <Image
                       src={profileImage}
                       alt="José Garfias - Cosmic Navigator and Astrologer"
-                      className="w-full h-full object-cover object-center rounded-full"
+                      fill
+                      className="object-cover object-center rounded-full"
                       style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        objectPosition: 'center center'
+                        objectPosition: 'center 20%'
                       }}
-                      onError={(e) => {
+                      onError={() => {
                         console.error('Profile image failed to load, using fallback');
-                        const target = e.target as HTMLImageElement;
-                        // Use a default background color on error
-                        target.style.display = 'none';
-                        target.parentElement!.innerHTML = `
-                          <div class="w-full h-full bg-gradient-to-br from-[#191970]/60 to-[#0A0A23]/80 flex items-center justify-center rounded-full">
-                            <span class="text-[#FFD700] text-2xl font-heading">JG</span>
-                          </div>
-                        `;
                       }}
                     />
                   )}

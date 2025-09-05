@@ -14,6 +14,7 @@ import { ConstellationBackground } from './ConstellationBackground';
 import { MobileMenu } from './MobileMenu';
 import LoginModal from './LoginModal';
 import { AdminDashboard } from './AdminDashboard';
+import { ChatWindow } from './ChatWindow';
 
 export function App() {
   const { language, setLanguage } = useLanguage();
@@ -132,7 +133,7 @@ export function App() {
       setShowAdmin(false);
       setHasExplicitlyClosed(false);
     }
-  }, [user, isAdmin, showLoginModal, hasExplicitlyClosed]);
+  }, [user, isAdmin, showLoginModal, hasExplicitlyClosed, showAdmin]);
 
   // Don't render navigation elements until translations are loaded
   // Only check for essential translations to avoid endless loading
@@ -318,8 +319,8 @@ export function App() {
 
 
       {/* Login Modal */}
-      <LoginModal 
-        isOpen={showLoginModal} 
+      <LoginModal
+        isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onLogin={async (email: string, password: string) => {
           try {
@@ -340,6 +341,8 @@ export function App() {
         }}
       />
 
+      {/* Chat Window - Always available */}
+      <ChatWindow />
 
     </div>
   );

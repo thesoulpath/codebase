@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Package, Clock, DollarSign, 
   Download, RefreshCw,
@@ -125,6 +125,7 @@ const PurchaseHistoryManagement: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('packages');
   const [loading, setLoading] = useState(true);
+  const [lastLoaded, setLastLoaded] = useState<Date | null>(null);
   const [userPackages, setUserPackages] = useState<UserPackage[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -138,30 +139,108 @@ const PurchaseHistoryManagement: React.FC = () => {
     paymentStatus: 'all'
   });
 
-  useEffect(() => {
-    if (user?.access_token) {
-      fetchData();
-    }
-  }, [user?.access_token, filters]);
 
-  const fetchData = async () => {
-    if (!user?.access_token) return;
-    
-    setLoading(true);
+
+  const fetchData = useCallback(async () => {
     try {
+      console.log('🔍 fetchData called, user:', user);
+      console.log('🔍 access_token exists:', !!user?.access_token);
+      console.log('🔍 access_token length:', user?.access_token?.length);
+
+      if (!user?.access_token) {
+        console.log('❌ No access token, cannot load purchase history data');
+        return;
+      }
+
+      setLoading(true);
+      console.log('Loading purchase history data...');
+
       await Promise.all([
         fetchUserPackages(),
         fetchBookings(),
         fetchClients(),
         fetchStats()
       ]);
+
+      setLastLoaded(new Date());
+      console.log('✅ Purchase history data loaded successfully');
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('❌ Error fetching purchase history data:', error);
       toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, filters]);
+
+  // Add a manual refresh function that can be called from parent components
+  const refreshPurchaseHistoryData = useCallback(() => {
+    if (user?.access_token) {
+      console.log('Manual refresh requested...');
+      fetchData();
+    }
+  }, [user?.access_token, fetchData]);
+
+  useEffect(() => {
+    if (user?.access_token) {
+      console.log('User authenticated, loading purchase history data...');
+      fetchData();
+    } else {
+      console.log('User not authenticated, clearing purchase history data...');
+      setUserPackages([]);
+      setBookings([]);
+      setClients([]);
+      setStats(null);
+      setLoading(false);
+    }
+  }, [user?.access_token, fetchData]);
+
+  // Refresh data when component becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user?.access_token && userPackages.length === 0) {
+        console.log('Component became visible, refreshing purchase history data...');
+        fetchData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user?.access_token, userPackages.length, fetchData]);
+
+  // Additional effect to handle component mounting/navigation
+  useEffect(() => {
+    if (user?.access_token && userPackages.length === 0) {
+      console.log('Component mounted or navigated to, loading purchase history data...');
+      fetchData();
+    }
+  }, [user?.access_token, userPackages.length, fetchData]);
+
+  // Expose refresh function to parent components if needed
+  useEffect(() => {
+    // @ts-expect-error - Exposing refresh function globally for debugging
+    window.refreshPurchaseHistoryData = refreshPurchaseHistoryData;
+
+    return () => {
+      // @ts-expect-error - Clean up global function
+      delete window.refreshPurchaseHistoryData;
+    };
+  }, [refreshPurchaseHistoryData]);
+
+  // Listen for navigation events and refresh data when needed
+  useEffect(() => {
+    const handleNavigation = () => {
+      // Small delay to ensure the component is fully mounted
+      setTimeout(() => {
+        if (user?.access_token && userPackages.length === 0) {
+          console.log('Navigation detected, refreshing purchase history data...');
+          fetchData();
+        }
+      }, 100);
+    };
+
+    window.addEventListener('popstate', handleNavigation);
+    return () => window.removeEventListener('popstate', handleNavigation);
+  }, [user?.access_token, userPackages.length, fetchData]);
 
   const fetchUserPackages = async () => {
     try {
@@ -308,9 +387,10 @@ const PurchaseHistoryManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="dashboard-container p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-dashboard-text-muted">Loading...</div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading purchase history...</p>
         </div>
       </div>
     );
@@ -322,6 +402,11 @@ const PurchaseHistoryManagement: React.FC = () => {
         <div>
           <h1 className="dashboard-text-primary text-3xl font-bold">Purchase History & Analytics</h1>
           <p className="dashboard-text-secondary">Track package purchases, usage patterns, and revenue analytics</p>
+          {lastLoaded && (
+            <p className="text-sm text-gray-400 mt-1">
+              Last updated: {lastLoaded.toLocaleTimeString()}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <BaseButton
@@ -332,10 +417,11 @@ const PurchaseHistoryManagement: React.FC = () => {
             Export
           </BaseButton>
           <BaseButton
-            onClick={fetchData}
+            onClick={refreshPurchaseHistoryData}
+            disabled={loading}
             className="dashboard-button-reload"
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </BaseButton>
         </div>

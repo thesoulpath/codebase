@@ -4,7 +4,7 @@ import React from 'react';
 import { CalendlyBookingFlow } from './CalendlyBookingFlow';
 
 interface BookingSectionProps {
-  t: any;
+  t: Record<string, string | Record<string, string>>;
   language: string;
 }
 

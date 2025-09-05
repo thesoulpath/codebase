@@ -9,7 +9,9 @@ import {
   UserIcon,
   LogOutIcon,
   PlusIcon,
-  ShoppingCartIcon
+  ShoppingCartIcon,
+  HistoryIcon,
+  VideoIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
@@ -50,15 +52,27 @@ export default function ClientSidebarNav({ user }: ClientSidebarNavProps) {
     },
     {
       name: 'My Packages',
-      href: '/account/packages',
+      href: '/account/my-packages',
       icon: PackageIcon,
-      current: pathname === '/account/packages'
+      current: pathname === '/account/my-packages'
+    },
+    {
+      name: 'Live Sessions',
+      href: '/account/live-session',
+      icon: VideoIcon,
+      current: pathname === '/account/live-session'
     },
     {
       name: 'My Sessions',
       href: '/account/sessions',
       icon: CalendarIcon,
       current: pathname === '/account/sessions'
+    },
+    {
+      name: 'Purchase History',
+      href: '/account/purchase-history',
+      icon: HistoryIcon,
+      current: pathname === '/account/purchase-history'
     },
     {
       name: 'My Profile',

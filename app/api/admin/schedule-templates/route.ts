@@ -3,6 +3,47 @@ import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 
+interface ScheduleTemplateWhereClause {
+  dayOfWeek?: string;
+  isAvailable?: boolean;
+  sessionDurationId?: number;
+  autoAvailable?: boolean;
+}
+
+interface ScheduleTemplateSelectClause {
+  id: boolean;
+  dayOfWeek: boolean;
+  startTime: boolean;
+  endTime: boolean;
+  capacity: boolean;
+  isAvailable: boolean;
+  sessionDurationId: boolean;
+  autoAvailable: boolean;
+  createdAt: boolean;
+  updatedAt: boolean;
+  sessionDuration?: {
+    select: {
+      id: boolean;
+      name: boolean;
+      duration_minutes: boolean;
+    };
+  };
+  scheduleSlots?: {
+    take?: number;
+    orderBy?: {
+      startTime: 'asc' | 'desc';
+    };
+    select: {
+      id: boolean;
+      startTime: boolean;
+      endTime: boolean;
+      isAvailable: boolean;
+      bookedCount: boolean;
+      capacity: boolean;
+    };
+  };
+}
+
 
 // Zod schemas for schedule template validation
 const createScheduleTemplateSchema = z.object({
@@ -63,15 +104,15 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Query parameters:', { dayOfWeek, isAvailable, sessionDurationId, autoAvailable, page, limit, enhanced });
 
     // Build the query with proper relationships
-    const where: any = {};
-    
+    const where: ScheduleTemplateWhereClause = {};
+
     if (dayOfWeek) where.dayOfWeek = dayOfWeek;
     if (isAvailable !== undefined) where.isAvailable = isAvailable === 'true';
     if (sessionDurationId) where.sessionDurationId = sessionDurationId;
     if (autoAvailable !== undefined) where.autoAvailable = autoAvailable === 'true';
 
     // Base select fields
-    const select: any = {
+    const select: ScheduleTemplateSelectClause = {
       id: true,
       dayOfWeek: true,
       startTime: true,
@@ -86,15 +127,14 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           name: true,
-          duration_minutes: true,
-          description: true
+          duration_minutes: true
         }
       }
     };
 
     // Enhanced mode includes slot information
     if (enhanced === 'true') {
-      select._count = {
+      (select as any)._count = {
         scheduleSlots: true
       };
       select.scheduleSlots = {

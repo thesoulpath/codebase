@@ -141,7 +141,7 @@ const ContentManagementDashboard: React.FC<ContentManagementDashboardProps> = ({
                   />
                   <select
                     value={newSection.type || 'content'}
-                    onChange={(e) => setNewSection({ ...newSection, type: e.target.value as any })}
+                    onChange={(e) => setNewSection({ ...newSection, type: e.target.value as 'hero' | 'content' | 'form' | 'gallery' | 'testimonial' })}
                     className="bg-[#1a1a2e] border border-[#16213e] rounded-lg px-3 py-2 text-[#C0C0C0]"
                   >
                     <option value="hero">Hero</option>
@@ -271,7 +271,7 @@ const ContentManagementDashboard: React.FC<ContentManagementDashboardProps> = ({
                       />
                       <select
                         value={section.type}
-                        onChange={(e) => handleUpdateSection(section.id, { type: e.target.value as any })}
+                        onChange={(e) => handleUpdateSection(section.id, { type: e.target.value as 'hero' | 'content' | 'form' | 'gallery' | 'testimonial' })}
                         className="bg-[#1a1a2e] border border-[#16213e] rounded-lg px-3 py-2 text-[#C0C0C0]"
                       >
                         <option value="hero">Hero</option>

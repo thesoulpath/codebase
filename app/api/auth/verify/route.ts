@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify JWT token
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; iat?: number; exp?: number };
     
     if (!decoded) {
       return NextResponse.json({

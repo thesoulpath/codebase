@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, 
@@ -26,6 +26,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import { useAuth } from '../hooks/useAuth';
 import { formatDate, formatTime } from '@/lib/utils';
+import { StripeInlineForm } from './stripe/StripeInlineForm';
+import { CreditCard, ChevronDown, Check } from 'lucide-react';
 
 interface CustomerPackage {
   id: string;
@@ -58,9 +60,21 @@ interface BookingStep {
   completed: boolean;
 }
 
+interface PaymentMethod {
+  id: number;
+  name: string;
+  type: string;
+  description: string;
+  icon: string;
+  requiresConfirmation: boolean;
+  autoAssignPackage: boolean;
+  isActive: boolean;
+}
+
 interface BookingFormData {
   selectedPackage: CustomerPackage | null;
   selectedSchedule: AvailableSchedule | null;
+  selectedPaymentMethod: PaymentMethod | null;
   clientName: string;
   clientEmail: string;
   clientPhone: string;
@@ -76,13 +90,18 @@ export function CustomerBookingFlow() {
   const { user } = useAuth();
   const [packages, setPackages] = useState<CustomerPackage[]>([]);
   const [schedules, setSchedules] = useState<AvailableSchedule[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [processing, setProcessing] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [showPaymentMethodDropdown, setShowPaymentMethodDropdown] = useState(false);
   const [formData, setFormData] = useState<BookingFormData>({
     selectedPackage: null,
     selectedSchedule: null,
+    selectedPaymentMethod: null,
     clientName: '',
     clientEmail: '',
     clientPhone: '',
@@ -98,21 +117,19 @@ export function CustomerBookingFlow() {
     { id: 'package', title: 'Select Package', description: 'Choose your package for booking', completed: false },
     { id: 'schedule', title: 'Select Schedule', description: 'Pick your preferred date and time', completed: false },
     { id: 'details', title: 'Session Details', description: 'Provide your information and questions', completed: false },
+    { id: 'payment', title: 'Payment', description: 'Secure payment processing', completed: false },
     { id: 'confirmation', title: 'Confirm Booking', description: 'Review and confirm your booking', completed: false }
   ];
 
-  useEffect(() => {
-    if (user?.access_token) {
-      loadCustomerData();
-    }
-  }, [user?.access_token]);
 
-  const loadCustomerData = async () => {
+
+  const loadCustomerData = useCallback(async () => {
     try {
       setLoading(true);
       await Promise.all([
         loadPackages(),
-        loadSchedules()
+        loadSchedules(),
+        loadPaymentMethods()
       ]);
     } catch (error) {
       console.error('Error loading customer data:', error);
@@ -120,9 +137,27 @@ export function CustomerBookingFlow() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.access_token]);
 
-  const loadPackages = async () => {
+  useEffect(() => {
+    if (user?.access_token) {
+      loadCustomerData();
+    }
+  }, [user?.access_token, loadCustomerData]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showPaymentMethodDropdown && !(event.target as Element).closest('.payment-method-dropdown')) {
+        setShowPaymentMethodDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showPaymentMethodDropdown]);
+
+  const loadPackages = useCallback(async () => {
     try {
       const response = await fetch('/api/client/my-packages', {
         headers: {
@@ -143,11 +178,11 @@ export function CustomerBookingFlow() {
     } catch (error) {
       console.error('Error loading packages:', error);
     }
-  };
+  }, [user?.access_token]);
 
-  const loadSchedules = async () => {
+  const loadSchedules = useCallback(async () => {
     try {
-      const response = await fetch('/api/schedules?available=true', {
+      const response = await fetch('/api/client/schedule-slots', {
         headers: {
           'Authorization': `Bearer ${user?.access_token}`,
           'Content-Type': 'application/json'
@@ -156,11 +191,58 @@ export function CustomerBookingFlow() {
 
       if (response.ok) {
         const data = await response.json();
-        setSchedules(data.schedules || []);
+        if (data.success) {
+          setSchedules(data.data || []);
+        }
       }
     } catch (error) {
       console.error('Error loading schedules:', error);
     }
+  }, [user?.access_token]);
+
+  const loadPaymentMethods = useCallback(async () => {
+    try {
+      const response = await fetch('/api/client/payment-methods', {
+        headers: {
+          'Authorization': `Bearer ${user?.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setPaymentMethods(data.data);
+          // Auto-select Stripe as default payment method
+          const stripeMethod = data.data.find((method: PaymentMethod) => method.type === 'stripe');
+          if (stripeMethod) {
+            setFormData(prev => ({ ...prev, selectedPaymentMethod: stripeMethod }));
+          }
+        }
+      } else {
+        // If payment methods fail to load, create a default Stripe method
+        console.warn('Failed to load payment methods, using default Stripe');
+        const defaultStripeMethod = {
+          id: 1,
+          name: 'Credit Card',
+          type: 'stripe',
+          description: 'Pay with Visa, Mastercard, or American Express',
+          icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/visa/visa-original.svg',
+          requiresConfirmation: false,
+          autoAssignPackage: true,
+          isActive: true
+        };
+        setPaymentMethods([defaultStripeMethod]);
+        setFormData(prev => ({ ...prev, selectedPaymentMethod: defaultStripeMethod }));
+      }
+    } catch (error) {
+      console.error('Error loading payment methods:', error);
+    }
+  }, [user?.access_token]);
+
+  const handlePaymentMethodSelect = (method: PaymentMethod) => {
+    setFormData(prev => ({ ...prev, selectedPaymentMethod: method }));
+    setShowPaymentMethodDropdown(false);
   };
 
   const handlePackageSelect = (pkg: CustomerPackage) => {
@@ -176,7 +258,7 @@ export function CustomerBookingFlow() {
     updateStepCompletion(1, true);
   };
 
-  const handleFormChange = (field: keyof BookingFormData, value: any) => {
+  const handleFormChange = (field: keyof BookingFormData, value: string | Date | number | boolean | null | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -185,42 +267,51 @@ export function CustomerBookingFlow() {
     updatedSteps[stepIndex].completed = completed;
   };
 
-  const handleSubmitBooking = async () => {
-    if (!formData.selectedPackage || !formData.selectedSchedule) {
-      toast.error('Please select a package and schedule');
+  const handlePaymentSuccess = (intentId: string) => {
+    setPaymentIntentId(intentId);
+    setPaymentStatus('success');
+    setCurrentStep(4); // Go to confirmation step
+    updateStepCompletion(3, true);
+    toast.success('Payment processed successfully!');
+  };
+
+  const handlePaymentError = (error: string) => {
+    setPaymentStatus('error');
+    toast.error(`Payment failed: ${error}`);
+  };
+
+    const handleSubmitBooking = async () => {
+    if (!formData.selectedPackage || !formData.selectedSchedule || !formData.selectedPaymentMethod) {
+      toast.error('Missing required information');
       return;
     }
 
     setProcessing(true);
 
     try {
+      const bookingData = {
+        scheduleSlotId: parseInt(formData.selectedSchedule.id),
+        userPackageId: parseInt(formData.selectedPackage.id),
+        sessionType: 'Session',
+        notes: formData.specialRequests || formData.question,
+        phoneNumber: formData.clientPhone
+      };
+
       const response = await fetch('/api/client/bookings', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${user?.access_token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          packageId: formData.selectedPackage.id,
-          scheduleId: formData.selectedSchedule.id,
-          clientName: formData.clientName,
-          clientEmail: formData.clientEmail,
-          clientPhone: formData.clientPhone,
-          birthDate: formData.birthDate,
-          birthTime: formData.birthTime,
-          birthPlace: formData.birthPlace,
-          question: formData.question,
-          specialRequests: formData.specialRequests,
-          language: formData.language
-        })
+        body: JSON.stringify(bookingData)
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         toast.success('Booking created successfully!');
-        setCurrentStep(3);
-        updateStepCompletion(2, true);
+        setCurrentStep(5); // Final confirmation
+        updateStepCompletion(4, true);
         // Refresh packages to update session count
         loadPackages();
       } else {
@@ -248,6 +339,15 @@ export function CustomerBookingFlow() {
 
   const handleBackToDetails = () => {
     setCurrentStep(2);
+  };
+
+  const handleBackToPayment = () => {
+    setCurrentStep(3);
+  };
+
+  const handleProceedToPayment = () => {
+    setCurrentStep(3);
+    updateStepCompletion(2, true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -291,7 +391,7 @@ export function CustomerBookingFlow() {
         <Package size={48} className="mx-auto text-gray-400/50 mb-4" />
         <h3 className="text-lg font-heading text-white mb-2">No Active Packages</h3>
         <p className="text-gray-400 mb-4">You need to purchase a package before you can book a session</p>
-        <a href="/account/packages">
+        <a href="/account/purchase">
           <BaseButton className="dashboard-button-primary">
             <Package size={16} className="mr-2" />
             Buy Packages
@@ -676,17 +776,237 @@ export function CustomerBookingFlow() {
                 Back to Schedule
               </BaseButton>
               <BaseButton
-                onClick={() => setCurrentStep(3)}
+                onClick={handleProceedToPayment}
                 className="dashboard-button-primary"
               >
-                Review Booking
+                Proceed to Payment
                 <ArrowRight size={16} className="ml-2" />
               </BaseButton>
             </div>
           </motion.div>
         )}
 
-        {currentStep === 3 && (
+        {currentStep === 3 && formData.selectedPackage && formData.selectedSchedule && (
+          <motion.div
+            key="payment"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-white mb-2">Choose Payment Method</h2>
+                <p className="text-gray-400">Select how you&apos;d like to pay for your session</p>
+              </div>
+
+              {/* Payment Summary */}
+              <Card className="bg-[#1a1a2e] border-[#16213e]">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center">
+                    <CreditCard size={20} className="mr-2 text-[#ffd700]" />
+                    Payment Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-[#16213e] rounded-lg">
+                    <div>
+                      <p className="text-white font-medium">{formData.selectedPackage.name}</p>
+                      <p className="text-sm text-gray-400">
+                        {formatDate(formData.selectedSchedule.date)} at {formatTime(formData.selectedSchedule.time)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-[#ffd700]">
+                        ${(formData.selectedSchedule.price / 100).toFixed(2)}
+                      </p>
+                      <p className="text-sm text-gray-400">USD</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+
+              {/* Payment Method Indicator & Switcher */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  {formData.selectedPaymentMethod && (
+                    <>
+                      <img
+                        src={formData.selectedPaymentMethod.icon}
+                        alt={formData.selectedPaymentMethod.name}
+                        className="w-6 h-6 object-contain"
+                      />
+                      <div>
+                        <p className="text-white font-medium text-sm">{formData.selectedPaymentMethod.name}</p>
+                        <p className="text-xs text-gray-400">{formData.selectedPaymentMethod.description}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Compact Payment Method Switcher */}
+                <div className="relative payment-method-dropdown">
+                  <button
+                    onClick={() => setShowPaymentMethodDropdown(!showPaymentMethodDropdown)}
+                    className="flex items-center space-x-2 px-3 py-2 bg-[#16213e] border border-[#2a2a4a] rounded-lg hover:border-[#ffd700]/50 transition-colors text-xs"
+                  >
+                    <span className="text-gray-300">Change Method</span>
+                    <ChevronDown
+                      size={14}
+                      className={`text-gray-400 transition-transform ${
+                        showPaymentMethodDropdown ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {/* Compact Dropdown */}
+                  {showPaymentMethodDropdown && (
+                    <div className="absolute top-full right-0 mt-2 bg-[#16213e] border border-[#2a2a4a] rounded-lg shadow-xl z-10 min-w-[200px]">
+                      {paymentMethods.map((method) => (
+                        <button
+                          key={method.id}
+                          onClick={() => handlePaymentMethodSelect(method)}
+                          className="w-full flex items-center space-x-3 p-3 hover:bg-[#2a2a4a] transition-colors first:rounded-t-lg last:rounded-b-lg"
+                        >
+                          <img
+                            src={method.icon}
+                            alt={method.name}
+                            className="w-5 h-5 object-contain"
+                          />
+                          <div className="flex-1 text-left">
+                            <p className="text-white font-medium text-sm">{method.name}</p>
+                          </div>
+                          {formData.selectedPaymentMethod?.id === method.id && (
+                            <Check size={16} className="text-[#ffd700]" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Payment Form - Show Stripe by Default */}
+              {formData.selectedPaymentMethod?.type === 'stripe' ? (
+                // Stripe Inline Form - Show immediately when Stripe is selected
+                <div className="space-y-4">
+                  <StripeInlineForm
+                    amount={formData.selectedSchedule.price}
+                    currency="usd"
+                    description={`Booking: ${formData.selectedPackage.name}`}
+                    customerEmail={formData.clientEmail}
+                    metadata={{
+                      booking_type: 'session',
+                      package_id: formData.selectedPackage.id,
+                      package_name: formData.selectedPackage.name,
+                      schedule_id: formData.selectedSchedule.id,
+                      session_date: formData.selectedSchedule.date,
+                      session_time: formData.selectedSchedule.time,
+                      client_name: formData.clientName,
+                      client_email: formData.clientEmail
+                    }}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                    appearance={{
+                      theme: 'night',
+                      variables: {
+                        colorPrimary: '#ffd700',
+                        colorBackground: '#1a1a2e',
+                        colorText: '#ffffff',
+                        colorDanger: '#ef4444',
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        spacingUnit: '2px',
+                        borderRadius: '6px',
+                      },
+                    }}
+                  />
+                </div>
+              ) : formData.selectedPaymentMethod ? (
+                // Other Payment Methods
+                <div className="space-y-4">
+                  <Card className="bg-[#1a1a2e] border-[#16213e]">
+                    <CardContent className="pt-6">
+                      <div className="text-center space-y-4">
+                        <img
+                          src={formData.selectedPaymentMethod.icon}
+                          alt={formData.selectedPaymentMethod.name}
+                          className="w-16 h-16 object-contain mx-auto"
+                        />
+                        <div>
+                          <h3 className="text-xl font-semibold text-white mb-2">
+                            Pay with {formData.selectedPaymentMethod.name}
+                          </h3>
+                          <p className="text-gray-400 mb-4">
+                            {formData.selectedPaymentMethod.description}
+                          </p>
+                        </div>
+
+                        {formData.selectedPaymentMethod.requiresConfirmation ? (
+                          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                            <p className="text-yellow-400 text-sm">
+                              ⚠️ This payment method requires manual confirmation.
+                              You&apos;ll receive payment instructions after booking.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                            <p className="text-green-400 text-sm">
+                              ✅ Instant processing available for this payment method.
+                            </p>
+                          </div>
+                        )}
+
+                        <BaseButton
+                          onClick={() => setCurrentStep(4)}
+                          className="dashboard-button-primary"
+                          disabled={processing}
+                        >
+                          Continue with {formData.selectedPaymentMethod.name}
+                          <ArrowRight size={16} className="ml-2" />
+                        </BaseButton>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                // Loading state while payment methods are being fetched
+                <Card className="bg-[#1a1a2e] border-[#16213e]">
+                  <CardContent className="pt-6">
+                    <div className="text-center space-y-4">
+                      <div className="w-8 h-8 border-4 border-[#ffd700] border-t-transparent rounded-full animate-spin mx-auto"></div>
+                      <p className="text-gray-400">Loading payment options...</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="flex justify-between">
+                <BaseButton
+                  variant="outline"
+                  onClick={handleBackToDetails}
+                  className="border-[#2a2a4a] text-gray-400 hover:bg-[#2a2a4a] hover:text-white"
+                >
+                  <ArrowLeft size={16} className="mr-2" />
+                  Back to Details
+                </BaseButton>
+
+                {/* Show continue button for non-Stripe methods */}
+                {formData.selectedPaymentMethod && formData.selectedPaymentMethod.type !== 'stripe' && (
+                  <BaseButton
+                    onClick={() => setCurrentStep(4)}
+                    className="dashboard-button-primary"
+                  >
+                    Continue to Confirmation
+                    <ArrowRight size={16} className="ml-2" />
+                  </BaseButton>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {currentStep === 4 && (
           <motion.div
             key="confirmation"
             initial={{ opacity: 0, x: 20 }}
@@ -758,12 +1078,20 @@ export function CustomerBookingFlow() {
                 <div className="flex justify-between pt-4">
                   <BaseButton
                     variant="outline"
-                    onClick={handleBackToDetails}
+                    onClick={handleBackToPayment}
                     className="border-[#2a2a4a] text-gray-400 hover:bg-[#2a2a4a] hover:text-white"
                   >
                     <ArrowLeft size={16} className="mr-2" />
-                    Back to Details
+                    Back to Payment
                   </BaseButton>
+
+                  {/* Payment Status Indicator */}
+                  {paymentStatus === 'success' && (
+                    <div className="flex items-center text-green-400">
+                      <CheckCircle size={16} className="mr-2" />
+                      Payment Completed
+                    </div>
+                  )}
                   <BaseButton
                     onClick={handleSubmitBooking}
                     disabled={processing}
@@ -785,6 +1113,68 @@ export function CustomerBookingFlow() {
                       </div>
                     )}
                   </BaseButton>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {currentStep === 5 && (
+          <motion.div
+            key="success"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="bg-[#1a1a2e] border-[#16213e] text-center">
+              <CardContent className="pt-8 pb-8">
+                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle size={40} className="text-green-400" />
+                </div>
+
+                <h2 className="text-3xl font-bold text-white mb-4">Booking Confirmed!</h2>
+
+                <p className="text-gray-300 mb-6">
+                  Your session has been successfully booked and paid for. You will receive a confirmation email shortly.
+                </p>
+
+                <div className="bg-[#16213e] rounded-lg p-6 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                    <div>
+                      <p className="text-gray-400 text-sm">Session Details</p>
+                      <p className="text-white font-medium">{formData.selectedPackage?.name}</p>
+                      <p className="text-gray-400 text-sm">
+                        {formatDate(formData.selectedSchedule!.date)} at {formatTime(formData.selectedSchedule!.time)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-sm">Payment</p>
+                      <p className="text-green-400 font-medium">
+                        ${(formData.selectedSchedule!.price / 100).toFixed(2)} USD
+                      </p>
+                      <p className="text-gray-400 text-sm">Payment ID: {paymentIntentId?.slice(-8)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-gray-400 text-sm">
+                    📧 Check your email for session details and Zoom link
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    📅 Add this session to your calendar
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    📞 Join 5 minutes before your scheduled time
+                  </p>
+                </div>
+
+                <div className="mt-8">
+                  <a href="/account/sessions">
+                    <BaseButton className="dashboard-button-primary">
+                      View My Sessions
+                    </BaseButton>
+                  </a>
                 </div>
               </CardContent>
             </Card>

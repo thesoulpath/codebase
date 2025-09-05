@@ -14,27 +14,22 @@ import { Plus, Edit, Trash2, CreditCard, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { colors, spacing, typography } from '@/lib/design-system';
 
-interface Currency {
-  id: number;
-  code: string;
-  symbol: string;
-  name: string;
-}
 
 interface PaymentMethod {
   id: number;
   name: string;
+  type: string;
   description: string | null;
-  is_active: boolean;
-  currency_id: number;
-  created_at: string;
-  updated_at: string;
-  currencies: Currency;
+  icon: string | null;
+  requiresConfirmation: boolean;
+  autoAssignPackage: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function PaymentMethodsPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -43,15 +38,17 @@ export default function PaymentMethodsPage() {
   // Form states
   const [formData, setFormData] = useState({
     name: '',
+    type: 'custom',
     description: '',
-    is_active: true,
-    currency_id: ''
+    icon: '',
+    requiresConfirmation: false,
+    autoAssignPackage: true,
+    isActive: true
   });
 
-  // Fetch payment methods and currencies
+  // Fetch payment methods
   useEffect(() => {
     fetchPaymentMethods();
-    fetchCurrencies();
   }, []);
 
   const fetchPaymentMethods = async () => {
@@ -72,18 +69,6 @@ export default function PaymentMethodsPage() {
     }
   };
 
-  const fetchCurrencies = async () => {
-    try {
-      const response = await fetch('/api/admin/currencies');
-      const result = await response.json();
-      
-      if (result.success) {
-        setCurrencies(result.data);
-      }
-    } catch (error) {
-      console.error('Error fetching currencies:', error);
-    }
-  };
 
   const handleCreate = async () => {
     try {
@@ -161,9 +146,12 @@ export default function PaymentMethodsPage() {
   const resetForm = () => {
     setFormData({
       name: '',
+      type: 'custom',
       description: '',
-      is_active: true,
-      currency_id: ''
+      icon: '',
+      requiresConfirmation: false,
+      autoAssignPackage: true,
+      isActive: true
     });
   };
 
@@ -171,9 +159,12 @@ export default function PaymentMethodsPage() {
     setEditingPaymentMethod(paymentMethod);
     setFormData({
       name: paymentMethod.name,
+      type: paymentMethod.type,
       description: paymentMethod.description || '',
-      is_active: paymentMethod.is_active,
-      currency_id: paymentMethod.currency_id.toString()
+      icon: paymentMethod.icon || '',
+      requiresConfirmation: paymentMethod.requiresConfirmation,
+      autoAssignPackage: paymentMethod.autoAssignPackage,
+      isActive: paymentMethod.isActive
     });
     setIsEditModalOpen(true);
   };
@@ -223,10 +214,10 @@ export default function PaymentMethodsPage() {
                   {method.name}
                 </CardTitle>
                 <Badge 
-                  variant={method.is_active ? "default" : "secondary"}
-                  className={method.is_active ? `bg-[${colors.status.success}] text-white` : `bg-[${colors.status.error}] text-white`}
+                  variant={method.isActive ? "default" : "secondary"}
+                  className={method.isActive ? `bg-[${colors.status.success}] text-white` : `bg-[${colors.status.error}] text-white`}
                 >
-                  {method.is_active ? 'Active' : 'Inactive'}
+                  {method.isActive ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
               {method.description && (
@@ -238,16 +229,25 @@ export default function PaymentMethodsPage() {
             
             <CardContent className={`space-y-[${spacing[4]}]`}>
               <div className={`flex items-center space-x-[${spacing[2]}] text-[${colors.text.secondary}]`}>
-                <DollarSign className="w-4 h-4" />
+                <CreditCard className="w-4 h-4" />
                 <span className={`text-[${typography.fontSize.sm}]`}>
-                  {method.currencies.symbol} {method.currencies.code} - {method.currencies.name}
+                  Type: {method.type}
                 </span>
               </div>
               
+              {method.icon && (
+                <div className={`flex items-center space-x-[${spacing[2]}] text-[${colors.text.secondary}]`}>
+                  <img src={method.icon} alt={method.name} className="w-4 h-4" />
+                  <span className={`text-[${typography.fontSize.sm}]`}>
+                    Icon available
+                  </span>
+                </div>
+              )}
+              
               <div className={`flex items-center space-x-[${spacing[2]}] text-[${colors.text.secondary}]`}>
-                <CreditCard className="w-4 h-4" />
+                <DollarSign className="w-4 h-4" />
                 <span className={`text-[${typography.fontSize.sm}]`}>
-                  Created: {new Date(method.created_at).toLocaleDateString()}
+                  Created: {new Date(method.createdAt).toLocaleDateString()}
                 </span>
               </div>
 
@@ -299,6 +299,40 @@ export default function PaymentMethodsPage() {
                 placeholder="e.g., Credit Card, PayPal"
               />
             </div>
+
+            <div>
+              <Label htmlFor="type" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                Type *
+              </Label>
+              <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                <SelectTrigger className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}] text-[${colors.text.primary}]`}>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent className={`bg-[${colors.semantic.surface.secondary}] border-[${colors.border[500]}]`}>
+                  <SelectItem value="stripe" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    Stripe
+                  </SelectItem>
+                  <SelectItem value="paypal" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    PayPal
+                  </SelectItem>
+                  <SelectItem value="bank" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    Bank Transfer
+                  </SelectItem>
+                  <SelectItem value="crypto" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    Cryptocurrency
+                  </SelectItem>
+                  <SelectItem value="apple" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    Apple Pay
+                  </SelectItem>
+                  <SelectItem value="google" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    Google Pay
+                  </SelectItem>
+                  <SelectItem value="custom" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    Custom
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             
             <div>
               <Label htmlFor="description" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
@@ -314,32 +348,54 @@ export default function PaymentMethodsPage() {
             </div>
 
             <div>
-              <Label htmlFor="currency" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
-                Currency *
+              <Label htmlFor="icon" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                Icon URL
               </Label>
-              <Select value={formData.currency_id} onValueChange={(value) => setFormData({ ...formData, currency_id: value })}>
-                <SelectTrigger className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}] text-[${colors.text.primary}]`}>
-                  <SelectValue placeholder="Select currency" />
-                </SelectTrigger>
-                <SelectContent className={`bg-[${colors.semantic.surface.secondary}] border-[${colors.border[500]}]`}>
-                  {currencies.map((currency) => (
-                    <SelectItem key={currency.id} value={currency.id.toString()} className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
-                      {currency.symbol} {currency.code} - {currency.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <BaseInput
+                id="icon"
+                value={formData.icon}
+                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                placeholder="https://example.com/icon.png"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="requiresConfirmation"
+                  checked={formData.requiresConfirmation}
+                  onChange={(e) => setFormData({ ...formData, requiresConfirmation: e.target.checked })}
+                  className={`rounded border-[${colors.border[500]}] bg-[${colors.semantic.surface.primary}]`}
+                />
+                <Label htmlFor="requiresConfirmation" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                  Requires Confirmation
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="autoAssignPackage"
+                  checked={formData.autoAssignPackage}
+                  onChange={(e) => setFormData({ ...formData, autoAssignPackage: e.target.checked })}
+                  className={`rounded border-[${colors.border[500]}] bg-[${colors.semantic.surface.primary}]`}
+                />
+                <Label htmlFor="autoAssignPackage" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                  Auto Assign Package
+                </Label>
+              </div>
             </div>
 
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                id="is_active"
-                checked={formData.is_active}
-                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                id="isActive"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                 className={`rounded border-[${colors.border[500]}] bg-[${colors.semantic.surface.primary}]`}
               />
-              <Label htmlFor="is_active" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+              <Label htmlFor="isActive" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
                 Active
               </Label>
             </div>
@@ -355,7 +411,7 @@ export default function PaymentMethodsPage() {
           </BaseButton>
           <BaseButton
             onClick={handleCreate}
-            disabled={!formData.name || !formData.currency_id}
+            disabled={!formData.name || !formData.type}
             variant="primary"
           >
             Create
@@ -385,6 +441,40 @@ export default function PaymentMethodsPage() {
                 placeholder="e.g., Credit Card, PayPal"
               />
             </div>
+
+            <div>
+              <Label htmlFor="edit-type" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                Type *
+              </Label>
+              <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                <SelectTrigger className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}] text-[${colors.text.primary}]`}>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent className={`bg-[${colors.semantic.surface.secondary}] border-[${colors.border[500]}]`}>
+                  <SelectItem value="stripe" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    Stripe
+                  </SelectItem>
+                  <SelectItem value="paypal" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    PayPal
+                  </SelectItem>
+                  <SelectItem value="bank" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    Bank Transfer
+                  </SelectItem>
+                  <SelectItem value="crypto" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    Cryptocurrency
+                  </SelectItem>
+                  <SelectItem value="apple" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    Apple Pay
+                  </SelectItem>
+                  <SelectItem value="google" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    Google Pay
+                  </SelectItem>
+                  <SelectItem value="custom" className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
+                    Custom
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             
             <div>
               <Label htmlFor="edit-description" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
@@ -400,32 +490,54 @@ export default function PaymentMethodsPage() {
             </div>
 
             <div>
-              <Label htmlFor="edit-currency" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
-                Currency *
+              <Label htmlFor="edit-icon" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                Icon URL
               </Label>
-              <Select value={formData.currency_id} onValueChange={(value) => setFormData({ ...formData, currency_id: value })}>
-                <SelectTrigger className={`bg-[${colors.semantic.surface.primary}] border-[${colors.border[500]}] text-[${colors.text.primary}]`}>
-                  <SelectValue placeholder="Select currency" />
-                </SelectTrigger>
-                <SelectContent className={`bg-[${colors.semantic.surface.secondary}] border-[${colors.border[500]}]`}>
-                  {currencies.map((currency) => (
-                    <SelectItem key={currency.id} value={currency.id.toString()} className={`text-[${colors.text.primary}] hover:bg-[${colors.semantic.surface.tertiary}]`}>
-                      {currency.symbol} {currency.code} - {currency.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <BaseInput
+                id="edit-icon"
+                value={formData.icon}
+                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                placeholder="https://example.com/icon.png"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-requiresConfirmation"
+                  checked={formData.requiresConfirmation}
+                  onChange={(e) => setFormData({ ...formData, requiresConfirmation: e.target.checked })}
+                  className={`rounded border-[${colors.border[500]}] bg-[${colors.semantic.surface.primary}]`}
+                />
+                <Label htmlFor="edit-requiresConfirmation" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                  Requires Confirmation
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-autoAssignPackage"
+                  checked={formData.autoAssignPackage}
+                  onChange={(e) => setFormData({ ...formData, autoAssignPackage: e.target.checked })}
+                  className={`rounded border-[${colors.border[500]}] bg-[${colors.semantic.surface.primary}]`}
+                />
+                <Label htmlFor="edit-autoAssignPackage" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+                  Auto Assign Package
+                </Label>
+              </div>
             </div>
 
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                id="edit-is_active"
-                checked={formData.is_active}
-                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                id="edit-isActive"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                 className={`rounded border-[${colors.border[500]}] bg-[${colors.semantic.surface.primary}]`}
               />
-              <Label htmlFor="edit-is_active" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
+              <Label htmlFor="edit-isActive" className={`text-[${typography.fontSize.sm}] font-[${typography.fontWeight.medium}] text-[${colors.text.secondary}]`}>
                 Active
               </Label>
             </div>
@@ -441,7 +553,7 @@ export default function PaymentMethodsPage() {
           </BaseButton>
           <BaseButton
             onClick={handleUpdate}
-            disabled={!formData.name || !formData.currency_id}
+            disabled={!formData.name || !formData.type}
             variant="primary"
           >
             Update

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BaseButton } from '@/components/ui/BaseButton';
 import { BaseInput } from '@/components/ui/BaseInput';
@@ -143,15 +143,9 @@ const BookingsManagement: React.FC = () => {
     individualBookings: 0
   });
 
-  useEffect(() => {
-    if (user?.access_token) {
-      fetchBookings();
-      fetchClients();
-      fetchStats();
-    }
-  }, [user?.access_token, pagination.page, filters]);
 
-  const fetchBookings = async () => {
+
+  const fetchBookings = useCallback(async () => {
     if (!user?.access_token) return;
     try {
       setLoading(true);
@@ -159,7 +153,7 @@ const BookingsManagement: React.FC = () => {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
         ...Object.fromEntries(
-          Object.entries(filters).filter(([_, value]) => value && value !== '' && value !== 'all')
+          Object.entries(filters).filter(([, value]) => value && value !== '' && value !== 'all')
         )
       });
 
@@ -182,14 +176,14 @@ const BookingsManagement: React.FC = () => {
       } else {
         toast.error('Failed to fetch bookings');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error fetching bookings');
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.access_token, pagination.page, pagination.limit, filters]);
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     if (!user?.access_token) return;
     try {
       const response = await fetch('/api/admin/users', {
@@ -205,12 +199,12 @@ const BookingsManagement: React.FC = () => {
       } else {
         toast.error('Failed to fetch clients');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error fetching clients');
     }
-  };
+  }, [user?.access_token]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!user?.access_token) return;
     try {
       const response = await fetch('/api/admin/bookings/stats', {
@@ -227,7 +221,15 @@ const BookingsManagement: React.FC = () => {
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
-  };
+  }, [user?.access_token]);
+
+  useEffect(() => {
+    if (user?.access_token) {
+      fetchBookings();
+      fetchClients();
+      fetchStats();
+    }
+  }, [user?.access_token, pagination.page, filters, fetchBookings, fetchClients, fetchStats]);
 
   const handleStatusUpdate = async (bookingId: number, newStatus: string) => {
     if (!user?.access_token) return;
@@ -254,7 +256,7 @@ const BookingsManagement: React.FC = () => {
       } else {
         toast.error(data.message || 'Failed to update booking status');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error updating booking status');
     }
   };
@@ -282,7 +284,7 @@ const BookingsManagement: React.FC = () => {
       } else {
         toast.error(data.message || 'Failed to delete booking');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error deleting booking');
     }
   };
@@ -317,9 +319,10 @@ const BookingsManagement: React.FC = () => {
 
   if (loading && bookings.length === 0) {
     return (
-      <div className="dashboard-container p-6 space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-dashboard-text-muted">Loading...</div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading bookings management...</p>
         </div>
       </div>
     );
@@ -364,7 +367,7 @@ const BookingsManagement: React.FC = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-dashboard-text-secondary">Today's Bookings</p>
+                <p className="text-sm font-medium text-dashboard-text-secondary">Today&apos;s Bookings</p>
                 <p className="text-2xl font-bold text-dashboard-text-primary">{stats.todayBookings}</p>
               </div>
               <Clock3 className="w-8 h-8 text-dashboard-accent" />

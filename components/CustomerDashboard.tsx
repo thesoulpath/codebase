@@ -85,11 +85,7 @@ export function CustomerDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
-  useEffect(() => {
-    if (user?.access_token) {
-      loadCustomerData();
-    }
-  }, [user?.access_token]);
+
 
   const loadCustomerData = async () => {
     try {
@@ -107,6 +103,12 @@ export function CustomerDashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user?.access_token) {
+      loadCustomerData();
+    }
+  }, [user?.access_token, loadCustomerData]);
 
   const loadStats = async () => {
     try {
@@ -213,10 +215,11 @@ export function CustomerDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div
-          className="w-8 h-8 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin"
-        />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }

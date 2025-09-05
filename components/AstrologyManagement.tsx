@@ -193,7 +193,7 @@ This chart was generated using the ephemeris library.
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
-              onClick={() => setActiveTab(key as any)}
+              onClick={() => setActiveTab(key as 'create' | 'saved' | 'interpretations')}
               className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === key
                   ? 'border-[var(--color-primary-500)] text-[var(--color-primary-500)]'
@@ -224,7 +224,7 @@ This chart was generated using the ephemeris library.
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
-                      {currentChart.name}'s Natal Chart
+                      {currentChart.name}&apos;s Natal Chart
                     </h2>
                     <button
                       onClick={handleSaveChart}
@@ -386,7 +386,7 @@ This chart was generated using the ephemeris library.
                     <div>
                       <h4 className="font-medium text-[var(--color-text-primary)] mb-2">Planetary Symbols</h4>
                       <p className="text-sm text-[var(--color-text-secondary)]">
-                        Each planet has its own symbol and color. Retrograde planets (marked with "R") 
+                        Each planet has its own symbol and color. Retrograde planets (marked with &quot;R&quot;)
                         move backward in the sky and have special significance in interpretation.
                       </p>
                     </div>

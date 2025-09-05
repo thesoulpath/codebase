@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import webpack from 'webpack'
 
 const nextConfig: NextConfig = {
   // Remove turbopack config that might cause Vercel build issues
@@ -54,7 +55,7 @@ const nextConfig: NextConfig = {
 
     // Handle sweph-wasm specific issues
     config.plugins.push(
-      new (require('webpack')).DefinePlugin({
+      new webpack.DefinePlugin({
         'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
       })
     )

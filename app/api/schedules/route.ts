@@ -82,12 +82,12 @@ export async function POST(request: NextRequest) {
     // Validate schedule data
     const validation = scheduleCreateSchema.safeParse(body);
     if (!validation.success) {
-      console.error('Validation error:', (validation as any).error.errors);
+      console.error('Validation error:', validation.error.issues);
       return NextResponse.json({
         success: false,
         error: 'Validation failed',
         message: 'Schedule data validation failed',
-        details: (validation as any).error.errors,
+        details: validation.error.issues,
         toast: {
           type: 'error',
           title: 'Validation Error',

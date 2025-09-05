@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Query parameters:', { isActive, hasRemainingSessions, page, limit });
 
     // Build the query with proper relationships
-    const where: any = {
+    const where: Record<string, unknown> = {
       userId: user.id
     };
 

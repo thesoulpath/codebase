@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 
+interface BugReportUpdateData {
+  status: string;
+  resolvedAt?: string;
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -20,7 +25,7 @@ export async function PATCH(
 
     // Check if user is admin
     const { data: profile } = await supabase
-      .from('profiles')
+      .from('users')
       .select('role')
       .eq('id', user.id)
       .single();
@@ -44,7 +49,7 @@ export async function PATCH(
     }
 
     // Update bug report status
-    const updateData: any = { status };
+    const updateData: BugReportUpdateData = { status };
     
     // Set resolvedAt if status is RESOLVED
     if (status === 'RESOLVED') {

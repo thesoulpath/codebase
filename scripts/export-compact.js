@@ -6,8 +6,8 @@
  * This script exports the essential codebase files as text, excluding unnecessary files
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 // Only include essential directories
 const INCLUDE_DIRS = [

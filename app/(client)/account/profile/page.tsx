@@ -1,26 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 
 interface ClientProfile {
   id: string;
   email: string;
-  full_name: string | null;
+  fullName: string | null;
   phone: string | null;
-  date_of_birth: string | null;
-  address: string | null;
-  emergency_contact: string | null;
-  medical_conditions: string | null;
-  spiritual_preferences: string | null;
-  created_at: string;
-  updated_at: string;
+  birthDate: string | null;
+  birthTime: string | null;
+  birthPlace: string | null;
+  question: string | null;
+  language: string;
+  role: string;
+  status: string;
+  adminNotes: string | null;
+  scheduledDate: string | null;
+  scheduledTime: string | null;
+  sessionType: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function ProfilePage() {
@@ -30,23 +38,21 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
-    full_name: '',
+    fullName: '',
     phone: '',
-    date_of_birth: '',
-    address: '',
-    emergency_contact: '',
-    medical_conditions: '',
-    spiritual_preferences: ''
+    birthDate: '',
+    birthTime: '',
+    birthPlace: '',
+    question: '',
+    language: 'en',
+    notes: ''
   });
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!user?.access_token) return;
-    
+
     try {
+      setLoading(true);
       const response = await fetch('/api/client/me', {
         headers: {
           'Authorization': `Bearer ${user.access_token}`,
@@ -59,13 +65,14 @@ export default function ProfilePage() {
         if (data.success) {
           setProfile(data.data);
           setFormData({
-            full_name: data.data.fullName || '',
+            fullName: data.data.fullName || '',
             phone: data.data.phone || '',
-            date_of_birth: data.data.birthDate || '',
-            address: data.data.birthPlace || '',
-            emergency_contact: '',
-            medical_conditions: '',
-            spiritual_preferences: data.data.question || ''
+            birthDate: data.data.birthDate || '',
+            birthTime: data.data.birthTime || '',
+            birthPlace: data.data.birthPlace || '',
+            question: data.data.question || '',
+            language: data.data.language || 'en',
+            notes: data.data.notes || ''
           });
         }
       }
@@ -75,7 +82,11 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.access_token]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleSave = async () => {
     if (!profile || !user?.access_token) return;
@@ -90,11 +101,14 @@ export default function ProfilePage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          fullName: formData.full_name,
+          fullName: formData.fullName,
           phone: formData.phone,
-          birthDate: formData.date_of_birth,
-          birthPlace: formData.address,
-          question: formData.spiritual_preferences
+          birthDate: formData.birthDate,
+          birthTime: formData.birthTime,
+          birthPlace: formData.birthPlace,
+          question: formData.question,
+          language: formData.language,
+          notes: formData.notes
         })
       });
 
@@ -121,13 +135,14 @@ export default function ProfilePage() {
   const handleCancel = () => {
     if (profile) {
       setFormData({
-        full_name: profile.full_name || '',
+        fullName: profile.fullName || '',
         phone: profile.phone || '',
-        date_of_birth: profile.date_of_birth || '',
-        address: profile.address || '',
-        emergency_contact: profile.emergency_contact || '',
-        medical_conditions: profile.medical_conditions || '',
-        spiritual_preferences: profile.spiritual_preferences || ''
+        birthDate: profile.birthDate || '',
+        birthTime: profile.birthTime || '',
+        birthPlace: profile.birthPlace || '',
+        question: profile.question || '',
+        language: profile.language || 'en',
+        notes: profile.notes || ''
       });
     }
     setIsEditing(false);
@@ -135,8 +150,11 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ffd700]"></div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading your profile...</p>
+        </div>
       </div>
     );
   }
@@ -193,11 +211,11 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <Label htmlFor="full_name" className="text-gray-300">Full Name</Label>
+              <Label htmlFor="fullName" className="text-gray-300">Full Name</Label>
               <Input
-                id="full_name"
-                value={formData.full_name}
-                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                id="fullName"
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 disabled={!isEditing}
                 className="bg-[#16213e] border-[#0a0a23] text-white"
               />
@@ -215,12 +233,24 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <Label htmlFor="date_of_birth" className="text-gray-300">Date of Birth</Label>
+              <Label htmlFor="birthDate" className="text-gray-300">Date of Birth</Label>
               <Input
-                id="date_of_birth"
+                id="birthDate"
                 type="date"
-                value={formData.date_of_birth}
-                onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                value={formData.birthDate}
+                onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                disabled={!isEditing}
+                className="bg-[#16213e] border-[#0a0a23] text-white"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="birthTime" className="text-gray-300">Time of Birth</Label>
+              <Input
+                id="birthTime"
+                type="time"
+                value={formData.birthTime}
+                onChange={(e) => setFormData({ ...formData, birthTime: e.target.value })}
                 disabled={!isEditing}
                 className="bg-[#16213e] border-[#0a0a23] text-white"
               />
@@ -236,51 +266,57 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="address" className="text-gray-300">Address</Label>
-              <Textarea
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                disabled={!isEditing}
-                className="bg-[#16213e] border-[#0a0a23] text-white"
-                rows={2}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="emergency_contact" className="text-gray-300">Emergency Contact</Label>
+              <Label htmlFor="birthPlace" className="text-gray-300">Place of Birth</Label>
               <Input
-                id="emergency_contact"
-                value={formData.emergency_contact}
-                onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
+                id="birthPlace"
+                value={formData.birthPlace}
+                onChange={(e) => setFormData({ ...formData, birthPlace: e.target.value })}
                 disabled={!isEditing}
                 className="bg-[#16213e] border-[#0a0a23] text-white"
+                placeholder="City, Country"
               />
             </div>
 
             <div>
-              <Label htmlFor="medical_conditions" className="text-gray-300">Medical Conditions</Label>
+              <Label htmlFor="language" className="text-gray-300">Preferred Language</Label>
+              <Select 
+                value={formData.language} 
+                onValueChange={(value) => setFormData({ ...formData, language: value })}
+                disabled={!isEditing}
+              >
+                <SelectTrigger className="bg-[#16213e] border-[#0a0a23] text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#16213e] border-[#0a0a23] text-white">
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="es">Español</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="question" className="text-gray-300">Spiritual Question/Preferences</Label>
               <Textarea
-                id="medical_conditions"
-                value={formData.medical_conditions}
-                onChange={(e) => setFormData({ ...formData, medical_conditions: e.target.value })}
+                id="question"
+                value={formData.question}
+                onChange={(e) => setFormData({ ...formData, question: e.target.value })}
                 disabled={!isEditing}
                 className="bg-[#16213e] border-[#0a0a23] text-white"
-                rows={2}
-                placeholder="Any medical conditions we should be aware of..."
+                rows={3}
+                placeholder="Your spiritual questions or preferences..."
               />
             </div>
 
             <div>
-              <Label htmlFor="spiritual_preferences" className="text-gray-300">Spiritual Preferences</Label>
+              <Label htmlFor="notes" className="text-gray-300">Additional Notes</Label>
               <Textarea
-                id="spiritual_preferences"
-                value={formData.spiritual_preferences}
-                onChange={(e) => setFormData({ ...formData, spiritual_preferences: e.target.value })}
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 disabled={!isEditing}
                 className="bg-[#16213e] border-[#0a0a23] text-white"
                 rows={2}
-                placeholder="Your spiritual beliefs and preferences..."
+                placeholder="Any additional information you'd like to share..."
               />
             </div>
           </CardContent>

@@ -20,7 +20,7 @@ export async function POST(
 
     // Check if user is admin
     const { data: profile } = await supabase
-      .from('profiles')
+      .from('users')
       .select('role')
       .eq('id', user.id)
       .single();
@@ -53,7 +53,7 @@ export async function POST(
       })
       .select(`
         *,
-        author:profiles!bug_comments_author_id_fkey(id, fullName, email)
+        author:users!bug_comments_author_id_fkey(id, fullName, email)
       `)
       .single();
 

@@ -1,8 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth';
+import { withCache } from '@/lib/cache';
+import { withApiOptimization } from '@/lib/middleware/performance';
 
-export async function GET(request: NextRequest) {
+interface BookingData {
+  id: string;
+  status: string;
+  created_at: string;
+  rating?: number;
+}
+
+
+
+interface PurchaseData {
+  id: string;
+  total_amount: number;
+  payment_status: string;
+  purchased_at: string;
+}
+
+interface PackageWithDetails {
+  id: string;
+  is_active: boolean;
+  sessions_used: number;
+  quantity: number;
+  expires_at: string;
+  package_prices?: Array<{
+    package_definitions?: Array<{
+      name: string;
+      description?: string;
+      sessions_count: number;
+    }>;
+    price: number;
+    currency?: {
+      symbol: string;
+      code: string;
+    };
+  }>;
+}
+
+
+
+async function handler(request: NextRequest) {
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,112 +57,119 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get customer ID from user
-    const { data: customer, error: customerError } = await supabase
-      .from('customers')
-      .select('id, email, created_at')
-      .eq('email', user.email)
-      .single();
+    // Cache key based on user email
+    const cacheKey = `dashboard-stats-${user.email}`;
 
-    if (customerError || !customer) {
-      return NextResponse.json(
-        { success: false, error: 'Customer not found' },
-        { status: 404 }
-      );
-    }
+    return withCache(
+      cacheKey,
+      async () => {
+        // Get customer ID from user
+        const { data: customer, error: customerError } = await supabase
+          .from('users')
+          .select('id, email, created_at')
+          .eq('email', user.email)
+          .single();
 
-    // Get total bookings
-    const { data: bookings, error: bookingsError } = await supabase
-      .from('bookings')
-      .select('id, status, created_at, completed_at, rating')
-      .eq('customer_id', customer.id);
+        if (customerError || !customer) {
+          throw new Error('Customer not found');
+        }
 
-    if (bookingsError) {
-      console.error('Error fetching bookings:', bookingsError);
+    // Get all dashboard data in parallel for better performance
+    const [bookingsResult, packagesResult, purchasesResult] = await Promise.all([
+      supabase
+        .from('bookings')
+        .select('id, status, created_at, completed_at, rating')
+        .eq('user_id', customer.id),
+      supabase
+        .from('user_packages')
+        .select(`
+          id,
+          is_active,
+          sessions_used,
+          quantity,
+          expires_at,
+          package_prices (
+            package_definitions (
+              name,
+              description,
+              sessions_count
+            ),
+            price,
+            currency (
+              symbol,
+              code
+            )
+          )
+        `)
+        .eq('user_id', customer.id)
+        .returns<PackageWithDetails[]>(),
+      supabase
+        .from('purchases')
+        .select(`
+          id,
+          total_amount,
+          payment_status,
+          purchased_at,
+          payment_method
+        `)
+        .eq('user_id', customer.id)
+    ]);
+
+    if (bookingsResult.error) {
+      console.error('Error fetching bookings:', bookingsResult.error);
       return NextResponse.json(
         { success: false, error: 'Failed to fetch bookings' },
         { status: 500 }
       );
     }
 
-    // Get customer packages
-    const { data: packages, error: packagesError } = await supabase
-      .from('customer_packages')
-      .select(`
-        id, 
-        status, 
-        sessions_remaining, 
-        total_sessions,
-        purchase_date,
-        expires_at,
-        package_definitions (
-          name,
-          description,
-          session_duration_id
-        ),
-        package_prices (
-          price,
-          currencies (
-            symbol,
-            code
-          )
-        )
-      `)
-      .eq('customer_id', customer.id);
-
-    if (packagesError) {
-      console.error('Error fetching packages:', packagesError);
+    if (packagesResult.error) {
+      console.error('Error fetching packages:', packagesResult.error);
       return NextResponse.json(
         { success: false, error: 'Failed to fetch packages' },
         { status: 500 }
       );
     }
 
-    // Get purchase history
-    const { data: purchases, error: purchasesError } = await supabase
-      .from('purchases')
-      .select(`
-        id,
-        amount,
-        status,
-        created_at,
-        payment_methods (
-          name
-        )
-      `)
-      .eq('customer_id', customer.id);
-
-    if (purchasesError) {
-      console.error('Error fetching purchases:', purchasesError);
+    if (purchasesResult.error) {
+      console.error('Error fetching purchases:', purchasesResult.error);
       return NextResponse.json(
         { success: false, error: 'Failed to fetch purchases' },
         { status: 500 }
       );
     }
 
+    const bookings = bookingsResult.data;
+    const packages = packagesResult.data;
+    const purchases = purchasesResult.data;
+
     // Calculate statistics
     const totalBookings = bookings?.length || 0;
-    const completedBookings = bookings?.filter((b: any) => b.status === 'completed').length || 0;
-    const upcomingBookings = bookings?.filter((b: any) => 
+    const completedBookings = bookings?.filter((b: BookingData) => b.status === 'completed').length || 0;
+    const upcomingBookings = bookings?.filter((b: BookingData) =>
       b.status === 'confirmed' && new Date(b.created_at) > new Date()
     ).length || 0;
-    
-    const activePackages = packages?.filter((p: any) => 
-      p.status === 'active' && p.sessions_remaining > 0
-    ).length || 0;
 
-    const totalSpent = purchases?.reduce((sum: number, purchase: any) => {
-      if (purchase.status === 'completed') {
-        return sum + (purchase.amount || 0);
+    const activePackages = (packages as PackageWithDetails[])?.filter((p: PackageWithDetails) => {
+      const packagePrice = p.package_prices?.[0];
+      const sessionsCount = packagePrice?.package_definitions?.[0]?.sessions_count || 0;
+      const totalSessions = sessionsCount * (p.quantity || 1);
+      const sessionsRemaining = totalSessions - (p.sessions_used || 0);
+      return p.is_active && sessionsRemaining > 0;
+    }).length || 0;
+
+    const totalSpent = purchases?.reduce((sum: number, purchase: PurchaseData) => {
+      if (purchase.payment_status === 'completed') {
+        return sum + (purchase.total_amount || 0);
       }
       return sum;
     }, 0) || 0;
 
-    const averageRating = bookings?.length > 0 
+    const averageRating = bookings?.length > 0
       ? bookings
-          .filter((b: any) => b.rating)
-          .reduce((sum: number, b: any) => sum + (b.rating || 0), 0) / 
-          bookings.filter((b: any) => b.rating).length
+          .filter((b: BookingData) => b.rating)
+          .reduce((sum: number, b: BookingData) => sum + (b.rating || 0), 0) /
+          bookings.filter((b: BookingData) => b.rating).length
       : 0;
 
     // Calculate loyalty points (example: 1 point per $10 spent + 1 point per completed booking)
@@ -138,17 +185,35 @@ export async function GET(request: NextRequest) {
       loyaltyPoints
     };
 
-    return NextResponse.json({
-      success: true,
-      data: stats
-    });
+        return NextResponse.json({
+          success: true,
+          data: stats
+        });
+      },
+      5 * 60 * 1000 // Cache for 5 minutes
+    );
 
   } catch (error) {
     console.error('Error in dashboard stats:', error);
+    if (error instanceof Error && error.message === 'Customer not found') {
+      return NextResponse.json(
+        { success: false, error: 'Customer not found' },
+        { status: 404 }
+      );
+    }
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Failed to fetch dashboard statistics' },
       { status: 500 }
     );
   }
 }
+
+// Export with performance optimization
+export const GET = withApiOptimization(handler, {
+  cache: true,
+  cacheTTL: 300, // 5 minutes
+  compress: true,
+  rateLimit: true,
+  rateLimitMax: 50 // 50 requests per 15 minutes for dashboard
+});
 

@@ -18,6 +18,16 @@ interface Package {
   features: string[];
   created_at: string;
   updated_at: string;
+  packagePrices?: Array<{
+    price: number;
+    currency: {
+      symbol: string;
+      code: string;
+    };
+  }>;
+  sessionDuration?: {
+    duration_minutes: number;
+  };
 }
 
 export default function PackagesPage() {
@@ -31,6 +41,7 @@ export default function PackagesPage() {
 
   const fetchPackages = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/client/packages');
       const result = await response.json();
       
@@ -48,8 +59,11 @@ export default function PackagesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ffd700]"></div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading available packages...</p>
+        </div>
       </div>
     );
   }
@@ -88,8 +102,18 @@ export default function PackagesPage() {
                   <CardTitle className="text-lg">{pkg.name}</CardTitle>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-[#ffd700]">${pkg.price}</div>
-                  <div className="text-sm text-gray-400">USD</div>
+                  <div className="text-2xl font-bold text-[#ffd700]">
+                    {pkg.packagePrices && pkg.packagePrices.length > 0 
+                      ? `${pkg.packagePrices[0].currency.symbol}${pkg.packagePrices[0].price.toFixed(2)}`
+                      : 'Price TBD'
+                    }
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    {pkg.packagePrices && pkg.packagePrices.length > 0 
+                      ? pkg.packagePrices[0].currency.code 
+                      : 'USD'
+                    }
+                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -98,7 +122,7 @@ export default function PackagesPage() {
               
               <div className="flex items-center space-x-2 text-sm text-gray-400">
                 <CalendarIcon className="w-4 h-4" />
-                <span>{pkg.duration_minutes} minutes</span>
+                <span>{pkg.sessionDuration?.duration_minutes || 'N/A'} minutes</span>
               </div>
 
               {pkg.features && pkg.features.length > 0 && (

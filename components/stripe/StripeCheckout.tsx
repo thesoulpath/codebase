@@ -41,7 +41,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       try {
         const stripeClient = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
         setStripe(stripeClient);
-      } catch (err) {
+      } catch (_err) {
         setError('Failed to load Stripe');
         onError?.('Failed to load Stripe');
       }
@@ -163,7 +163,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         </BaseButton>
 
         <p className="text-xs text-gray-500 text-center mt-4">
-          By clicking "Pay", you agree to our terms of service and privacy policy.
+          By clicking &ldquo;Pay&rdquo;, you agree to our terms of service and privacy policy.
         </p>
       </div>
     </BaseCard>

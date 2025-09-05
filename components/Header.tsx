@@ -11,7 +11,7 @@ interface HeaderProps {
   language: "en" | "es";
   setLanguage: (language: "en" | "es") => void;
   scrollToSection: (section: string) => void;
-  t: any;
+  t: Record<string, string | Record<string, string>>;
   isMenuOpen: boolean;
   setIsMenuOpen: (isOpen: boolean) => void;
   onLoginClick: () => void;
@@ -159,7 +159,7 @@ export function Header({
               className="hidden sm:flex items-center space-x-1 header-button-language-inactive"
             >
               <LogIn size={14} />
-              <span>{t.nav.login || 'Login'}</span>
+              <span>{(t.nav as Record<string, string>).login || 'Login'}</span>
             </motion.button>
           )}
           

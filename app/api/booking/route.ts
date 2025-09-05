@@ -24,12 +24,12 @@ export async function POST(request: NextRequest) {
     // Validate booking data
     const validation = bookingCreateSchema.safeParse(body);
     if (!validation.success) {
-      console.error('Validation error:', (validation as any).error.errors);
+      console.error('Validation error:', validation.error.issues);
       return NextResponse.json({
         success: false,
         error: 'Validation failed',
         message: 'Booking data validation failed',
-        details: (validation as any).error.errors,
+        details: validation.error.issues,
         toast: {
           type: 'error',
           title: 'Validation Error',

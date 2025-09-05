@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
+import Image from 'next/image';
 
 import { 
   Bug, 
@@ -23,12 +24,23 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { BugReportSystem } from './BugReportSystem';
 
+interface Annotation {
+  id: string;
+  type: 'drawing' | 'text';
+  points?: { x: number; y: number }[];
+  text?: string;
+  textPosition?: { x: number; y: number };
+  color: string;
+  strokeWidth: number;
+  fontSize: number;
+}
+
 interface BugReport {
   id: string;
   title: string;
   description: string;
   screenshot: string | null;
-  annotations: any[] | null;
+  annotations: Annotation[] | null;
   status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'ARCHIVED';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   category: string;
@@ -71,7 +83,7 @@ export interface BugReportManagementRef {
   refreshBugReports: () => void;
 }
 
-export const BugReportManagement = forwardRef<BugReportManagementRef, {}>((_, ref) => {
+export const BugReportManagement = forwardRef<BugReportManagementRef>((_, ref) => {
   const { user } = useAuth();
   const [bugReports, setBugReports] = useState<BugReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +98,7 @@ export const BugReportManagement = forwardRef<BugReportManagementRef, {}>((_, re
     search: ''
   });
 
-  const fetchBugReports = async () => {
+  const fetchBugReports = useCallback(async () => {
     try {
       const queryParams = new URLSearchParams();
       if (filters.status) queryParams.append('status', filters.status);
@@ -112,19 +124,19 @@ export const BugReportManagement = forwardRef<BugReportManagementRef, {}>((_, re
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, user?.access_token]);
 
   // useEffect hook to fetch data when component mounts or filters change
   useEffect(() => {
     if (user?.access_token) {
       fetchBugReports();
     }
-  }, [user, filters]);
+  }, [user, filters, fetchBugReports]);
 
   // Expose the refresh function through the ref
   useImperativeHandle(ref, () => ({
     refreshBugReports: fetchBugReports
-  }), []);
+  }), [fetchBugReports]);
 
   const updateBugStatus = async (bugId: string, status: string) => {
     try {
@@ -256,10 +268,10 @@ export const BugReportManagement = forwardRef<BugReportManagementRef, {}>((_, re
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ffd700] mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading bug reports...</p>
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading bug reports...</p>
         </div>
       </div>
     );
@@ -565,9 +577,11 @@ export const BugReportManagement = forwardRef<BugReportManagementRef, {}>((_, re
                   )}
                 </div>
                 <div className="relative">
-                  <img
+                  <Image
                     src={selectedBug.screenshot}
                     alt="Bug Screenshot"
+                    width={600}
+                    height={320}
                     className="max-w-full h-80 object-contain rounded-lg border border-gray-600"
                   />
                   {selectedBug.annotations && selectedBug.annotations.length > 0 && (
@@ -635,7 +649,7 @@ export const BugReportManagement = forwardRef<BugReportManagementRef, {}>((_, re
                 </h4>
                 <div className="p-4 bg-gray-800 rounded-lg">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {selectedBug.annotations.map((annotation: any, index: number) => (
+                    {selectedBug.annotations.map((annotation: Annotation, index: number) => (
                       <div key={annotation.id || index} className="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg">
                         <div 
                           className="w-6 h-6 rounded border-2 border-white"
@@ -651,7 +665,7 @@ export const BugReportManagement = forwardRef<BugReportManagementRef, {}>((_, re
                             </span>
                           </div>
                           {annotation.type === 'text' && annotation.text && (
-                            <p className="text-gray-300 text-sm mt-1">"{annotation.text}"</p>
+                            <p className="text-gray-300 text-sm mt-1">&quot;{annotation.text}&quot;</p>
                           )}
                           {annotation.type === 'drawing' && (
                             <p className="text-gray-400 text-xs mt-1">

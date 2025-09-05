@@ -2,6 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth';
 
+
+
+interface PurchaseWithDetails {
+  id: string;
+  created_at: string;
+  amount: number;
+  status: string;
+  transaction_id?: string;
+  package_definitions?: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    sessions_count?: number;
+  }>;
+  payment_methods?: Array<{
+    id: string;
+    name: string;
+    description?: string;
+  }>;
+  currencies?: Array<{
+    symbol: string;
+    code: string;
+    name?: string;
+  }>;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = createClient(
@@ -36,10 +62,9 @@ export async function GET(request: NextRequest) {
       .from('purchases')
       .select(`
         id,
+        created_at,
         amount,
         status,
-        created_at,
-        updated_at,
         transaction_id,
         payment_methods (
           id,
@@ -59,7 +84,8 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq('customer_id', customer.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .returns<PurchaseWithDetails[]>();
 
     if (purchasesError) {
       console.error('Error fetching purchases:', purchasesError);
@@ -70,18 +96,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform the data to match the expected format
-    const transformedPurchases = purchases?.map((purchase: any) => ({
+    const transformedPurchases = (purchases as PurchaseWithDetails[])?.map((purchase: PurchaseWithDetails) => ({
       id: purchase.id,
       date: purchase.created_at,
-      packageName: purchase.package_definitions?.name || 'Unknown Package',
+      packageName: purchase.package_definitions?.[0]?.name || 'Unknown Package',
       amount: purchase.amount,
       status: purchase.status,
-      paymentMethod: purchase.payment_methods?.name || 'Unknown',
-      transactionId: purchase.transaction_id,
-      currency: purchase.currencies?.symbol || '$',
-      currencyCode: purchase.currencies?.code || 'USD',
-      sessionsCount: purchase.package_definitions?.sessions_count || 0,
-      description: purchase.package_definitions?.description || ''
+      paymentMethod: purchase.payment_methods?.[0]?.name || 'Unknown'
     })) || [];
 
     return NextResponse.json({

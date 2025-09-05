@@ -120,7 +120,7 @@ export async function createEmailService(): Promise<BrevoEmailService | null> {
           senderName: emailConfig.sender_name || process.env.BREVO_SENDER_NAME || 'SoulPath'
         };
       }
-    } catch (dbError) {
+    } catch (_dbError) {
       console.log('Could not fetch email config from database, using environment variables');
     }
     

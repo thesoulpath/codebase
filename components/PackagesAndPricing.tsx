@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BaseButton } from '@/components/ui/BaseButton';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, DollarSign, Plus, Edit, Trash2, Filter } from 'lucide-react';
+import { Package, DollarSign, Plus, Edit, Trash2, Filter, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../hooks/useAuth';
 import PackageDefinitionModal from './modals/PackageDefinitionModal';
@@ -67,6 +67,7 @@ const PackagesAndPricing: React.FC = () => {
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [sessionDurations, setSessionDurations] = useState<SessionDuration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastLoaded, setLastLoaded] = useState<Date | null>(null);
   const [activeTab, setActiveTab] = useState('definitions');
   
   // Filters
@@ -111,22 +112,14 @@ const PackagesAndPricing: React.FC = () => {
     isActive: true
   });
 
-  useEffect(() => {
-    if (user?.access_token) {
-      fetchCurrencies();
-      fetchSessionDurations();
-      fetchPackageDefinitions();
-      fetchPackagePrices();
-    }
-  }, [user?.access_token]);
 
-  const fetchPackageDefinitions = async () => {
+
+  const fetchPackageDefinitions = useCallback(async () => {
     if (!user?.access_token) return;
-    
+
     try {
-      setLoading(true);
       const params = new URLSearchParams();
-      
+
       Object.entries(definitionFilters).forEach(([key, value]) => {
         if (value && value !== 'all') params.append(key, value);
       });
@@ -144,19 +137,17 @@ const PackagesAndPricing: React.FC = () => {
       } else {
         toast.error('Failed to fetch package definitions');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error fetching package definitions');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [user?.access_token, definitionFilters]);
 
-  const fetchPackagePrices = async () => {
+  const fetchPackagePrices = useCallback(async () => {
     if (!user?.access_token) return;
-    
+
     try {
       const params = new URLSearchParams();
-      
+
       Object.entries(priceFilters).forEach(([key, value]) => {
         if (value && value !== 'all') params.append(key, value);
       });
@@ -174,12 +165,12 @@ const PackagesAndPricing: React.FC = () => {
       } else {
         toast.error('Failed to fetch package prices');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error fetching package prices');
     }
-  };
+  }, [user?.access_token, priceFilters]);
 
-  const fetchCurrencies = async () => {
+  const fetchCurrencies = useCallback(async () => {
     if (!user?.access_token) return;
     try {
       const response = await fetch('/api/admin/currencies', {
@@ -189,16 +180,16 @@ const PackagesAndPricing: React.FC = () => {
         }
       });
       const data = await response.json();
-      
+
       if (data.success) {
         setCurrencies(data.data);
       }
-    } catch (error) {
+    } catch {
       toast.error('Error fetching currencies');
     }
-  };
+  }, [user?.access_token]);
 
-  const fetchSessionDurations = async () => {
+  const fetchSessionDurations = useCallback(async () => {
     if (!user?.access_token) return;
     try {
       const response = await fetch('/api/admin/session-durations', {
@@ -208,14 +199,117 @@ const PackagesAndPricing: React.FC = () => {
         }
       });
       const data = await response.json();
-      
+
       if (data.success) {
         setSessionDurations(data.data);
       }
-    } catch (error) {
+    } catch {
       toast.error('Error fetching session durations');
     }
-  };
+  }, [user?.access_token]);
+
+  const fetchAllData = useCallback(async () => {
+    try {
+      console.log('🔍 fetchAllData called, user:', user);
+      console.log('🔍 access_token exists:', !!user?.access_token);
+      console.log('🔍 access_token length:', user?.access_token?.length);
+
+      if (!user?.access_token) {
+        console.log('❌ No access token, cannot load packages data');
+        toast.error('Please log in to access this feature');
+        return;
+      }
+
+      setLoading(true);
+      console.log('Loading packages data...');
+
+      await Promise.all([
+        fetchCurrencies(),
+        fetchSessionDurations(),
+        fetchPackageDefinitions(),
+        fetchPackagePrices()
+      ]);
+
+      setLastLoaded(new Date());
+      console.log('✅ Packages data loaded successfully');
+      toast.success('Packages data loaded successfully');
+    } catch (error) {
+      console.error('❌ Error fetching packages data:', error);
+      toast.error('Failed to load packages data');
+    } finally {
+      setLoading(false);
+    }
+  }, [user, fetchCurrencies, fetchSessionDurations, fetchPackageDefinitions, fetchPackagePrices]);
+
+  // Add a manual refresh function that can be called from parent components
+  const refreshPackagesData = useCallback(() => {
+    if (user?.access_token) {
+      console.log('Manual refresh requested...');
+      fetchAllData();
+    }
+  }, [user?.access_token, fetchAllData]);
+
+  useEffect(() => {
+    if (user?.access_token) {
+      console.log('User authenticated, loading packages data...');
+      fetchAllData();
+    } else {
+      console.log('User not authenticated, clearing packages data...');
+      setPackageDefinitions([]);
+      setPackagePrices([]);
+      setCurrencies([]);
+      setSessionDurations([]);
+      setLoading(false);
+    }
+  }, [user?.access_token, fetchAllData]);
+
+  // Refresh data when component becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user?.access_token && packageDefinitions.length === 0) {
+        console.log('Component became visible, refreshing packages data...');
+        fetchAllData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user?.access_token, packageDefinitions.length, fetchAllData]);
+
+  // Additional effect to handle component mounting/navigation
+  useEffect(() => {
+    if (user?.access_token && packageDefinitions.length === 0) {
+      console.log('Component mounted or navigated to, loading packages data...');
+      fetchAllData();
+    }
+  }, [user?.access_token, packageDefinitions.length, fetchAllData]);
+
+  // Expose refresh function to parent components if needed
+  useEffect(() => {
+    // @ts-expect-error - Exposing refresh function globally for debugging
+    window.refreshPackagesData = refreshPackagesData;
+
+    return () => {
+      // @ts-expect-error - Clean up global function
+      delete window.refreshPackagesData;
+    };
+  }, [refreshPackagesData]);
+
+  // Listen for navigation events and refresh data when needed
+  useEffect(() => {
+    const handleNavigation = () => {
+      // Small delay to ensure the component is fully mounted
+      setTimeout(() => {
+        if (user?.access_token && packageDefinitions.length === 0) {
+          console.log('Navigation detected, refreshing packages data...');
+          fetchAllData();
+        }
+      }, 100);
+    };
+
+    window.addEventListener('popstate', handleNavigation);
+    return () => window.removeEventListener('popstate', handleNavigation);
+  }, [user?.access_token, packageDefinitions.length, fetchAllData]);
 
   const handleCreateDefinition = async () => {
     if (!user?.access_token) return;
@@ -247,7 +341,7 @@ const PackagesAndPricing: React.FC = () => {
       } else {
         toast.error(data.message || 'Failed to create package definition');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error creating package definition');
     }
   };
@@ -280,14 +374,14 @@ const PackagesAndPricing: React.FC = () => {
       } else {
         toast.error(data.message || 'Failed to create package price');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error creating package price');
     }
   };
 
-  const handleEditDefinition = async (data: any) => {
+  const handleEditDefinition = async (data: unknown) => {
     if (!user?.access_token || !selectedItem || 'package_prices' in selectedItem) return;
-    
+
     try {
       const response = await fetch('/api/admin/package-definitions', {
         method: 'PUT',
@@ -297,7 +391,7 @@ const PackagesAndPricing: React.FC = () => {
         },
         body: JSON.stringify({
           id: selectedItem.id,
-          ...data
+          ...(data as Record<string, unknown>)
         })
       });
 
@@ -311,14 +405,14 @@ const PackagesAndPricing: React.FC = () => {
       } else {
         toast.error(responseData.message || 'Failed to update package definition');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error updating package definition');
     }
   };
 
-  const handleEditPrice = async (data: any) => {
+  const handleEditPrice = async (data: unknown) => {
     if (!user?.access_token || !selectedItem || !('package_prices' in selectedItem)) return;
-    
+
     try {
       const response = await fetch('/api/admin/package-prices', {
         method: 'PUT',
@@ -328,7 +422,7 @@ const PackagesAndPricing: React.FC = () => {
         },
         body: JSON.stringify({
           id: selectedItem.id,
-          ...data
+          ...(data as Record<string, unknown>)
         })
       });
 
@@ -342,7 +436,7 @@ const PackagesAndPricing: React.FC = () => {
       } else {
         toast.error(responseData.message || 'Failed to update package price');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error updating package price');
     }
   };
@@ -374,7 +468,7 @@ const PackagesAndPricing: React.FC = () => {
       } else {
         toast.error(data.message || `Failed to delete ${deleteType}`);
       }
-    } catch (error) {
+    } catch {
       toast.error(`Error deleting ${deleteType}`);
     }
   };
@@ -403,7 +497,7 @@ const PackagesAndPricing: React.FC = () => {
       } else {
         toast.error(data.message || 'Failed to update package status');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error updating package status');
     }
   };
@@ -449,9 +543,10 @@ const PackagesAndPricing: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="dashboard-container p-6 space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-dashboard-text-muted">Loading...</div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading packages and pricing...</p>
         </div>
       </div>
     );
@@ -463,8 +558,22 @@ const PackagesAndPricing: React.FC = () => {
         <div>
           <h1 className="dashboard-text-primary text-3xl font-bold">Packages & Pricing</h1>
           <p className="dashboard-text-secondary">Manage package definitions and multi-currency pricing</p>
+          {lastLoaded && (
+            <p className="text-sm text-gray-400 mt-1">
+              Last updated: {lastLoaded.toLocaleTimeString()}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
+          <BaseButton 
+            variant="outline" 
+            className="dashboard-button-outline"
+            onClick={refreshPackagesData}
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </BaseButton>
           <BaseButton 
             className="dashboard-button-primary"
             onClick={() => setShowCreateDefinitionModal(true)}

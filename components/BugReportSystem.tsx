@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { 
-  Camera, 
-  Pen, 
-  Type, 
-  Send, 
+import {
+  Camera,
+  Pen,
+  Send,
   RotateCcw,
   Palette
 } from 'lucide-react';
@@ -18,13 +17,10 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface Annotation {
   id: string;
-  type: 'drawing' | 'text';
+  type: 'drawing';
   points?: { x: number; y: number }[];
-  text?: string;
-  textPosition?: { x: number; y: number };
   color: string;
   strokeWidth: number;
-  fontSize: number;
 }
 
 interface BugReportData {
@@ -40,6 +36,7 @@ interface BugReportData {
     userId: string;
   };
   submittedAt: string;
+  isCapturingScreenshot?: boolean;
 }
 
 interface BugReportSystemProps {
@@ -53,10 +50,11 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
 
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const [currentTool, setCurrentTool] = useState<'pen' | 'text'>('pen');
+  const [currentTool, setCurrentTool] = useState<'pen'>('pen');
   const [currentColor, setCurrentColor] = useState('#ff0000'); // Default bold red
   const [strokeWidth, setStrokeWidth] = useState(3);
-  const [fontSize, setFontSize] = useState(16);
+  const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // const [isDrawing, setIsDrawing] = useState(false); // Unused for now
   const [formData, setFormData] = useState<BugReportData>({
     title: '',
@@ -120,10 +118,6 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
                 }
               });
               context.stroke();
-            } else if (annotation.type === 'text' && annotation.text && annotation.textPosition) {
-              context.fillStyle = annotation.color;
-              context.font = `${annotation.fontSize}px Arial`;
-              context.fillText(annotation.text, annotation.textPosition.x, annotation.textPosition.y);
             }
           });
         };
@@ -165,35 +159,51 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
     }
   }, []);
 
-  const openCaptureDialog = useCallback(async () => {
+  const captureScreenshot = useCallback(async () => {
+    if (isCapturingScreenshot) return; // Prevent multiple captures
+
     try {
-      // Hide the bug report modal temporarily
+      setIsCapturingScreenshot(true);
+
+      // Close modal temporarily to exclude it from screenshot
       setIsOpen(false);
-      
-      // Wait for the modal to fully close
+
+      // Wait for modal to fully close
       await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Capture the screen directly
-      const stream = await navigator.mediaDevices.getDisplayMedia({ 
-        // preferCurrentTab: true, // Not supported in all browsers
+
+      // Show user feedback that capture is starting
+      toast.info('Select screen/window to capture...', { duration: 2000 });
+
+      // Capture the screen
+      const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { displaySurface: 'monitor' }
       });
-      
+
       await handleScreenshotCapture(stream);
-      
-      // Reopen the modal after capture
+      toast.success('Screenshot captured successfully');
+
+      // Reopen modal after successful capture
       setTimeout(() => {
         setIsOpen(true);
-      }, 100);
+      }, 500);
+
     } catch (error) {
       console.error('Error capturing screenshot:', error);
-      toast.error('Failed to capture screenshot');
-      // Ensure modal reopens even if screenshot fails
+
+      // Reopen modal even if capture fails
       setTimeout(() => {
         setIsOpen(true);
-      }, 100);
+      }, 500);
+
+      if (error instanceof Error && error.name === 'NotAllowedError') {
+        toast.error('Screenshot capture was cancelled or denied');
+      } else {
+        toast.error('Failed to capture screenshot');
+      }
+    } finally {
+      setIsCapturingScreenshot(false);
     }
-  }, []);
+  }, [handleScreenshotCapture, isCapturingScreenshot]);
 
   const startDrawing = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (currentTool !== 'pen') return;
@@ -258,41 +268,7 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
     }
   }, [currentTool, annotations]);
 
-  const addText = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (currentTool !== 'text') return;
-    
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-    
-    const text = prompt('Enter text:');
-    if (text) {
-      const newAnnotation: Annotation = {
-        id: Date.now().toString(),
-        type: 'text',
-        text,
-        textPosition: { x, y },
-        color: currentColor,
-        strokeWidth,
-        fontSize
-      };
-      
-      setAnnotations(prev => [...prev, newAnnotation]);
-      
-      // Draw the text on canvas
-      const context = contextRef.current;
-      if (context) {
-        context.fillStyle = currentColor;
-        context.font = `${fontSize}px Arial`;
-        context.fillText(text, x, y);
-      }
-    }
-  }, [currentTool, currentColor, strokeWidth, fontSize]);
+
 
   const startDrawingAnnotation = useCallback(() => {
     const newAnnotation: Annotation = {
@@ -300,11 +276,10 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
       type: 'drawing',
       points: [],
       color: currentColor,
-      strokeWidth,
-      fontSize
+      strokeWidth
     };
     setAnnotations(prev => [...prev, newAnnotation]);
-  }, [currentColor, strokeWidth, fontSize]);
+  }, [currentColor, strokeWidth]);
 
   const clearAnnotations = useCallback(() => {
     setAnnotations([]);
@@ -324,11 +299,12 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
 
 
 
-  const submitBugReport = useCallback(async () => {
+    const submitBugReport = useCallback(async () => {
     console.log('Submit function called');
     console.log('Form data:', formData);
-    console.log('User:', user);
-    
+    console.log('User object:', user);
+    console.log('User access_token:', user?.access_token);
+
     if (!formData.title.trim() || !formData.description.trim()) {
       console.log('Missing required fields');
       toast.error('Please fill in all required fields');
@@ -336,11 +312,23 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
     }
 
     if (!user) {
-      console.log('No user found');
+      console.log('No user found - user is null/undefined');
       toast.error('You must be logged in to submit a bug report');
       return;
     }
 
+    // Get the access token - either from user object or localStorage
+    const accessToken = user.access_token || localStorage.getItem('auth_token');
+
+    if (!accessToken) {
+      console.log('No access token found in either user object or localStorage');
+      toast.error('Authentication token not found. Please log in again.');
+      return;
+    }
+
+    console.log('Using access token for authentication');
+
+    setIsSubmitting(true);
     try {
       // Convert canvas to base64 with annotations
       let finalScreenshot = screenshot;
@@ -363,6 +351,7 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify(reportData),
       });
@@ -394,6 +383,7 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
         // Reset screenshot and annotations
         setScreenshot(null);
         setAnnotations([]);
+        setIsCapturingScreenshot(false);
         
         // Reset canvas
         if (canvasRef.current) {
@@ -408,7 +398,6 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
         setCurrentTool('pen');
         setCurrentColor('#ff0000');
         setStrokeWidth(3);
-        setFontSize(16);
         
         // Call the success callback to refresh the bug reports list
         if (onSubmitSuccess) {
@@ -422,13 +411,17 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
         
       } else {
         console.error('Bug report submission failed:', result);
-        toast.error(result.error || 'Failed to submit bug report');
+        const errorMessage = result.error || result.message || 'Failed to submit bug report';
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error('Error submitting bug report:', error);
-      toast.error('Failed to submit bug report');
+      const errorMessage = error instanceof Error ? error.message : 'Network error occurred';
+      toast.error(`Failed to submit bug report: ${errorMessage}`);
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [formData, screenshot, annotations, user]);
+  }, [formData, screenshot, annotations, user, onSubmitSuccess]);
 
   const resetForm = useCallback(() => {
     setFormData({
@@ -450,7 +443,7 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
     setCurrentTool('pen');
     setCurrentColor('#ff0000');
     setStrokeWidth(3);
-    setFontSize(16);
+    setIsCapturingScreenshot(false);
     
     // Clear canvas
     if (canvasRef.current) {
@@ -485,6 +478,7 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
       <FullScreenModal
         isOpen={isOpen}
         onClose={() => {
+          if (isSubmitting) return; // Prevent closing during submission
           setIsOpen(false);
           resetForm();
         }}
@@ -571,7 +565,7 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
                       </label>
                       <select
                         value={formData.priority}
-                        onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as any }))}
+                        onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' }))}
                         className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="LOW">Low</option>
@@ -590,24 +584,26 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
                 <div className="space-y-4">
                   {!screenshot ? (
                     <BaseButton
-                      onClick={openCaptureDialog}
+                      onClick={captureScreenshot}
                       variant="primary"
                       size="md"
                       leftIcon={<Camera size={16} />}
                       className="w-full"
+                      disabled={isCapturingScreenshot}
                     >
-                      Capture Screenshot
+                      {isCapturingScreenshot ? 'Capturing...' : 'Capture Screenshot'}
                     </BaseButton>
                   ) : (
                     <div className="space-y-2">
                       <p className="text-sm text-gray-400">Screenshot captured successfully</p>
                       <BaseButton
-                        onClick={openCaptureDialog}
+                        onClick={captureScreenshot}
                         variant="primary"
                         size="sm"
                         leftIcon={<Camera size={14} />}
+                        disabled={isCapturingScreenshot}
                       >
-                        Retake Screenshot
+                        {isCapturingScreenshot ? 'Capturing...' : 'Retake Screenshot'}
                       </BaseButton>
                     </div>
                   )}
@@ -625,17 +621,36 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
                   }}
                   variant="primary"
                   size="md"
-                  leftIcon={<Send size={16} />}
+                  leftIcon={isSubmitting ? undefined : <Send size={16} />}
                   className="w-full"
+                  disabled={isSubmitting}
                 >
-                  Submit Bug Report
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Submitting...
+                    </>
+                  ) : (
+                    'Submit Bug Report'
+                  )}
                 </BaseButton>
               </div>
             </div>
           </div>
 
           {/* Right Panel - Screenshot Annotation */}
-          <div className="flex-1 p-6 bg-gray-900">
+          <div className="flex-1 p-6 bg-gray-900 relative">
+            {/* Loading overlay during screenshot capture */}
+            {isCapturingScreenshot && (
+              <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <p className="text-white text-lg font-medium">Capturing Screenshot...</p>
+                  <p className="text-gray-400 text-sm mt-2">Select the screen/window you want to capture</p>
+                </div>
+              </div>
+            )}
+
             {screenshot ? (
               <div className="space-y-4">
                 {/* Annotation Tools */}
@@ -648,14 +663,6 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
                       leftIcon={<Pen size={16} />}
                     >
                       Draw
-                    </BaseButton>
-                    <BaseButton
-                      onClick={() => setCurrentTool('text')}
-                      variant={currentTool === 'text' ? 'primary' : 'outline'}
-                      size="sm"
-                      leftIcon={<Type size={16} />}
-                    >
-                      Text
                     </BaseButton>
                   </div>
 
@@ -689,25 +696,12 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
                     </div>
                   )}
 
-                  {currentTool === 'text' && (
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-400">Size:</span>
-                      <input
-                        type="range"
-                        min="12"
-                        max="32"
-                        value={fontSize}
-                        onChange={(e) => setFontSize(Number(e.target.value))}
-                        className="w-20"
-                      />
-                    </div>
-                  )}
-
                   <BaseButton
                     onClick={clearAnnotations}
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     leftIcon={<RotateCcw size={16} />}
+                    className="bg-white text-gray-900 hover:bg-gray-100"
                   >
                     Clear
                   </BaseButton>
@@ -722,8 +716,6 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
                         if (currentTool === 'pen') {
                           startDrawingAnnotation();
                           startDrawing(e);
-                        } else if (currentTool === 'text') {
-                          addText(e);
                         }
                       }}
                       onMouseMove={draw}
@@ -741,7 +733,6 @@ export function BugReportSystem({ children, onSubmitSuccess }: BugReportSystemPr
 
                 <div className="text-sm text-gray-400">
                   <p>• Click and drag to draw on the screenshot</p>
-                  <p>• Click anywhere to add text annotations</p>
                   <p>• Use the color palette to change annotation colors</p>
                 </div>
               </div>

@@ -90,12 +90,12 @@ export async function POST() {
     // Validate sample schedules data
     const validation = seedSchedulesSchema.safeParse({ schedules: sampleSchedules });
     if (!validation.success) {
-      console.error('Validation error:', (validation as any).error.errors);
+      console.error('Validation error:', validation.error.issues);
       return NextResponse.json({
         success: false,
         error: 'Validation failed',
         message: 'Sample schedule data validation failed',
-        details: (validation as any).error.errors,
+        details: validation.error.issues,
         toast: {
           type: 'error',
           title: 'Validation Error',

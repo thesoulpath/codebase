@@ -116,12 +116,12 @@ export async function POST(request: NextRequest) {
     // Validate sample customers data
     const validationResult = seedClientsSchema.safeParse({ customers: sampleCustomers });
     if (!validationResult.success) {
-      console.error('Validation error:', (validationResult as any).error.errors);
+      console.error('Validation error:', validationResult.error.issues);
       return NextResponse.json({
         success: false,
         error: 'Validation failed',
         message: 'Sample customer data validation failed',
-        details: (validationResult as any).error.errors,
+        details: validationResult.error.issues,
         toast: {
           type: 'error',
           title: 'Validation Error',

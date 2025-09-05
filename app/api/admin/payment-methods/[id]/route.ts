@@ -84,7 +84,7 @@ export async function PUT(
       );
     }
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (is_active !== undefined) updateData.is_active = is_active;

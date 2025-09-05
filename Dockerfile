@@ -1,15 +1,26 @@
-# Use Python 3.8 as base image
-FROM python:3.8-slim
+# Use Ubuntu base image for better compatibility
+FROM ubuntu:20.04
 
-# Install Node.js
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install -y nodejs
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies
+# Install system dependencies and Node.js
 RUN apt-get update && apt-get install -y \
-    build-essential \
     curl \
+    gnupg \
+    build-essential \
+    python3.8 \
+    python3.8-dev \
+    python3-pip \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Create symlinks for python
+RUN ln -s /usr/bin/python3.8 /usr/bin/python
+RUN ln -s /usr/bin/pip3 /usr/bin/pip
 
 # Set working directory
 WORKDIR /app

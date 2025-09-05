@@ -70,21 +70,21 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Query parameters:', { userId, paymentStatus, paymentMethod, dateFrom, dateTo, page, limit, enhanced });
 
     // Build the query with proper relationships
-    const where: any = {};
-    
+    const where: Record<string, unknown> = {};
+
     if (userId) where.userId = userId;
     if (paymentStatus) where.paymentStatus = paymentStatus;
     if (paymentMethod) where.paymentMethod = paymentMethod;
     if (dateFrom) where.purchasedAt = { gte: new Date(`${dateFrom}T00:00:00Z`) };
     if (dateTo) {
       where.purchasedAt = {
-        ...where.purchasedAt,
+        ...(where.purchasedAt || {}),
         lte: new Date(`${dateTo}T23:59:59Z`)
       };
     }
 
     // Base select fields
-    const select: any = {
+    const select: Record<string, unknown> = {
       id: true,
       userId: true,
       totalAmount: true,

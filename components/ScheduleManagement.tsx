@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BaseButton } from '@/components/ui/BaseButton';
 import { BaseInput } from '@/components/ui/BaseInput';
@@ -21,42 +21,40 @@ interface SessionDuration {
   name: string;
   duration_minutes: number;
   description: string;
-  is_active: boolean;
+  isActive: boolean;
 }
 
 interface ScheduleTemplate {
   id: number;
-  day_of_week: string;
-  start_time: string;
-  end_time: string;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
   capacity: number;
-  max_capacity: number;
-  is_available: boolean;
-  is_active: boolean;
-  session_duration_id: number;
-  auto_available: boolean;
-  created_at: string;
-  updated_at: string;
-  session_durations: SessionDuration;
+  isAvailable: boolean;
+  sessionDurationId: number;
+  autoAvailable: boolean;
+  createdAt: string;
+  updatedAt: string;
+  sessionDuration: SessionDuration;
 }
 
 interface ScheduleSlot {
   id: number;
-  schedule_template_id: number;
-  start_time: string;
-  end_time: string;
+  scheduleTemplateId: number;
+  startTime: string;
+  endTime: string;
   capacity: number;
-  booked_count: number;
-  is_available: boolean;
-  created_at: string;
-  updated_at: string;
-  schedule_templates: ScheduleTemplate;
+  bookedCount: number;
+  isAvailable: boolean;
+  createdAt: string;
+  updatedAt: string;
+  scheduleTemplate: ScheduleTemplate;
   bookings: Array<{
     id: number;
-    client_id: number;
+    clientId: number;
     status: string;
-    booking_type: string;
-    group_size: number;
+    bookingType: string;
+    groupSize: number;
   }>;
 }
 
@@ -66,6 +64,7 @@ const ScheduleManagement: React.FC = () => {
   const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([]);
   const [sessionDurations, setSessionDurations] = useState<SessionDuration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastLoaded, setLastLoaded] = useState<Date | null>(null);
   const [activeTab, setActiveTab] = useState('templates');
   
   // Filters
@@ -103,21 +102,19 @@ const ScheduleManagement: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarView, setCalendarView] = useState<'week' | 'month'>('week');
 
-  useEffect(() => {
-    if (user?.access_token) {
-      fetchSessionDurations();
-      fetchScheduleTemplates();
-      fetchScheduleSlots();
-    }
-  }, [user?.access_token]);
 
-  const fetchScheduleTemplates = async () => {
-    if (!user?.access_token) return;
-    
+
+  const fetchScheduleTemplates = useCallback(async () => {
     try {
-      setLoading(true);
-      const params = new URLSearchParams();
+      console.log('🔍 fetchScheduleTemplates called');
       
+      if (!user?.access_token) {
+        console.log('❌ No access token for schedule templates');
+        return;
+      }
+
+      const params = new URLSearchParams();
+
       Object.entries(templateFilters).forEach(([key, value]) => {
         if (value && value !== 'all') params.append(key, value);
       });
@@ -128,68 +125,201 @@ const ScheduleManagement: React.FC = () => {
           'Content-Type': 'application/json'
         }
       });
-      const data = await response.json();
 
-      if (data.success) {
-        setScheduleTemplates(data.data);
+      console.log('🔍 Schedule templates response status:', response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Schedule templates loaded:', data.data?.length || 0, 'items');
+        setScheduleTemplates(data.data || []);
       } else {
+        const errorText = await response.text();
+        console.error('❌ Failed to load schedule templates:', response.status, response.statusText);
+        console.error('❌ Error response body:', errorText);
         toast.error('Failed to fetch schedule templates');
       }
     } catch (error) {
+      console.error('❌ Error fetching schedule templates:', error);
       toast.error('Error fetching schedule templates');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [user?.access_token, templateFilters]);
 
-  const fetchScheduleSlots = async () => {
-    if (!user?.access_token) return;
-    
+  const fetchScheduleSlots = useCallback(async () => {
     try {
-      const params = new URLSearchParams();
+      console.log('🔍 fetchScheduleSlots called');
       
+      if (!user?.access_token) {
+        console.log('❌ No access token for schedule slots');
+        return;
+      }
+
+      const params = new URLSearchParams();
+
       Object.entries(slotFilters).forEach(([key, value]) => {
         if (value && value !== 'all') params.append(key, value);
       });
 
-      const response = await fetch(`/api/admin/schedule-slots?${params}`, {
+      const response = await fetch(`/api/admin/schedule-slots?${params}&enhanced=true`, {
         headers: {
           'Authorization': `Bearer ${user.access_token}`,
           'Content-Type': 'application/json'
         }
       });
-      const data = await response.json();
 
-      if (data.success) {
-        setScheduleSlots(data.data);
+      console.log('🔍 Schedule slots response status:', response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Schedule slots loaded:', data.data?.length || 0, 'items');
+        setScheduleSlots(data.data || []);
       } else {
+        const errorText = await response.text();
+        console.error('❌ Failed to load schedule slots:', response.status, response.statusText);
+        console.error('❌ Error response body:', errorText);
         toast.error('Failed to fetch schedule slots');
       }
     } catch (error) {
+      console.error('❌ Error fetching schedule slots:', error);
       toast.error('Error fetching schedule slots');
     }
-  };
+  }, [user?.access_token, slotFilters]);
 
-  const fetchSessionDurations = async () => {
-    if (!user?.access_token) return;
+  const fetchSessionDurations = useCallback(async () => {
     try {
+      console.log('🔍 fetchSessionDurations called');
+      
+      if (!user?.access_token) {
+        console.log('❌ No access token for session durations');
+        return;
+      }
+
       const response = await fetch('/api/admin/session-durations', {
         headers: {
           'Authorization': `Bearer ${user.access_token}`,
           'Content-Type': 'application/json'
         }
       });
-      const data = await response.json();
-      
-      if (data.success) {
-        setSessionDurations(data.data);
+
+      console.log('🔍 Session durations response status:', response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Session durations loaded:', data.data?.length || 0, 'items');
+        setSessionDurations(data.data || []);
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Failed to load session durations:', response.status, response.statusText);
+        console.error('❌ Error response body:', errorText);
+        toast.error('Failed to load session durations');
       }
     } catch (error) {
+      console.error('❌ Error fetching session durations:', error);
       toast.error('Error fetching session durations');
     }
-  };
+  }, [user?.access_token]);
 
-  const handleCreateTemplate = async (data: any) => {
+  const fetchAllData = useCallback(async () => {
+    try {
+      console.log('🔍 fetchAllData called, user:', user);
+      console.log('🔍 access_token exists:', !!user?.access_token);
+      console.log('🔍 access_token length:', user?.access_token?.length);
+
+      if (!user?.access_token) {
+        console.log('❌ No access token, cannot load schedule data');
+        toast.error('Please log in to access this feature');
+        return;
+      }
+
+      setLoading(true);
+      console.log('Loading schedule data...');
+
+      await Promise.all([
+        fetchSessionDurations(),
+        fetchScheduleTemplates(),
+        fetchScheduleSlots()
+      ]);
+
+      setLastLoaded(new Date());
+      console.log('✅ Schedule data loaded successfully');
+      toast.success('Schedule data loaded successfully');
+    } catch (error) {
+      console.error('❌ Error fetching schedule data:', error);
+      toast.error('Failed to load schedule data');
+    } finally {
+      setLoading(false);
+    }
+  }, [user, fetchSessionDurations, fetchScheduleTemplates, fetchScheduleSlots]);
+
+  // Add a manual refresh function that can be called from parent components
+  const refreshScheduleData = useCallback(() => {
+    if (user?.access_token) {
+      console.log('Manual refresh requested...');
+      fetchAllData();
+    }
+  }, [user?.access_token, fetchAllData]);
+
+  useEffect(() => {
+    if (user?.access_token) {
+      console.log('User authenticated, loading schedule data...');
+      fetchAllData();
+    } else {
+      console.log('User not authenticated, clearing schedule data...');
+      setScheduleTemplates([]);
+      setScheduleSlots([]);
+      setSessionDurations([]);
+      setLoading(false);
+    }
+  }, [user?.access_token, fetchAllData]);
+
+  // Refresh data when component becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user?.access_token && scheduleTemplates.length === 0) {
+        console.log('Component became visible, refreshing schedule data...');
+        fetchAllData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user?.access_token, scheduleTemplates.length, fetchAllData]);
+
+  // Additional effect to handle component mounting/navigation
+  useEffect(() => {
+    if (user?.access_token && scheduleTemplates.length === 0) {
+      console.log('Component mounted or navigated to, loading schedule data...');
+      fetchAllData();
+    }
+  }, [user?.access_token, scheduleTemplates.length, fetchAllData]);
+
+  // Expose refresh function to parent components if needed
+  useEffect(() => {
+    // @ts-expect-error - Exposing refresh function globally for debugging
+    window.refreshScheduleData = refreshScheduleData;
+
+    return () => {
+      // @ts-expect-error - Clean up global function
+      delete window.refreshScheduleData;
+    };
+  }, [refreshScheduleData]);
+
+  // Listen for navigation events and refresh data when needed
+  useEffect(() => {
+    const handleNavigation = () => {
+      // Small delay to ensure the component is fully mounted
+      setTimeout(() => {
+        if (user?.access_token && scheduleTemplates.length === 0) {
+          console.log('Navigation detected, refreshing schedule data...');
+          fetchAllData();
+        }
+      }, 100);
+    };
+
+    window.addEventListener('popstate', handleNavigation);
+    return () => window.removeEventListener('popstate', handleNavigation);
+  }, [user?.access_token, scheduleTemplates.length, fetchAllData]);
+
+  const handleCreateTemplate = async (data: unknown) => {
     if (!user?.access_token) return;
     try {
       const response = await fetch('/api/admin/schedule-templates', {
@@ -210,12 +340,12 @@ const ScheduleManagement: React.FC = () => {
       } else {
         toast.error(responseData.message || 'Failed to create schedule template');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error creating schedule template');
     }
   };
 
-  const handleEditTemplate = async (data: any) => {
+  const handleEditTemplate = async (data: unknown) => {
     if (!user?.access_token || !selectedItem) return;
     
     try {
@@ -227,7 +357,7 @@ const ScheduleManagement: React.FC = () => {
         },
         body: JSON.stringify({
           id: selectedItem.id,
-          ...data
+          ...(data as Record<string, unknown>)
         })
       });
 
@@ -241,7 +371,7 @@ const ScheduleManagement: React.FC = () => {
       } else {
         toast.error(responseData.message || 'Failed to update schedule template');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error updating schedule template');
     }
   };
@@ -273,7 +403,7 @@ const ScheduleManagement: React.FC = () => {
       } else {
         toast.error(data.message || `Failed to delete ${deleteType}`);
       }
-    } catch (error) {
+    } catch {
       toast.error(`Error deleting ${deleteType}`);
     }
   };
@@ -309,7 +439,7 @@ const ScheduleManagement: React.FC = () => {
       } else {
         toast.error(data.message || 'Failed to generate schedule slots');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error generating schedule slots');
     }
   };
@@ -363,9 +493,10 @@ const ScheduleManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="dashboard-container p-6 space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-dashboard-text-muted">Loading...</div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading schedule management...</p>
         </div>
       </div>
     );
@@ -377,8 +508,22 @@ const ScheduleManagement: React.FC = () => {
         <div>
           <h1 className="dashboard-text-primary text-3xl font-bold">Schedule Management</h1>
           <p className="dashboard-text-secondary">Manage recurring availability patterns and generate bookable time slots</p>
+          {lastLoaded && (
+            <p className="text-sm text-gray-400 mt-1">
+              Last updated: {lastLoaded.toLocaleTimeString()}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
+          <BaseButton 
+            variant="outline" 
+            className="dashboard-button-outline"
+            onClick={refreshScheduleData}
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </BaseButton>
           <BaseButton 
             className="dashboard-button-primary"
             onClick={() => setShowCreateTemplateModal(true)}
@@ -504,9 +649,9 @@ const ScheduleManagement: React.FC = () => {
                   <tbody>
                     {scheduleTemplates.map((template) => (
                       <tr key={template.id} className="dashboard-table-row">
-                        <td>{getDayOfWeekBadge(template.day_of_week)}</td>
+                        <td>{getDayOfWeekBadge(template.dayOfWeek)}</td>
                         <td className="font-mono">
-                          {formatTime(template.start_time)} - {formatTime(template.end_time)}
+                          {formatTime(template.startTime)} - {formatTime(template.endTime)}
                         </td>
                         <td>
                           <Badge className="dashboard-badge">
@@ -515,22 +660,22 @@ const ScheduleManagement: React.FC = () => {
                           </Badge>
                         </td>
                         <td>
-                          {template.session_durations ? (
+                          {template.sessionDuration ? (
                             <Badge className="dashboard-badge-info">
-                              {template.session_durations.name}
+                              {template.sessionDuration.name}
                             </Badge>
                           ) : (
                             <span className="text-gray-500">Any</span>
                           )}
                         </td>
                         <td>
-                          <Badge className={template.is_available ? 'dashboard-badge-success' : 'dashboard-badge-error'}>
-                            {template.is_available ? 'Available' : 'Unavailable'}
+                          <Badge className={template.isAvailable ? 'dashboard-badge-success' : 'dashboard-badge-error'}>
+                            {template.isAvailable ? 'Available' : 'Unavailable'}
                           </Badge>
                         </td>
                         <td>
-                          <Badge className={template.auto_available ? 'dashboard-badge-success' : 'dashboard-badge-warning'}>
-                            {template.auto_available ? 'Auto' : 'Manual'}
+                          <Badge className={template.autoAvailable ? 'dashboard-badge-success' : 'dashboard-badge-warning'}>
+                            {template.autoAvailable ? 'Auto' : 'Manual'}
                           </Badge>
                         </td>
                         <td>
@@ -655,7 +800,7 @@ const ScheduleManagement: React.FC = () => {
                       <SelectItem value="all" className="dashboard-dropdown-item">All Templates</SelectItem>
                       {scheduleTemplates.map((template) => (
                         <SelectItem key={template.id} value={template.id.toString()} className="dashboard-dropdown-item">
-                          {template.day_of_week} {formatTime(template.start_time)}-{formatTime(template.end_time)}
+                          {template.dayOfWeek} {formatTime(template.startTime)}-{formatTime(template.endTime)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -707,15 +852,15 @@ const ScheduleManagement: React.FC = () => {
                       <tr key={slot.id} className="dashboard-table-row">
                         <td className="font-medium">
                           <div className="space-y-1">
-                            <div>{formatDateTime(slot.start_time)}</div>
+                            <div>{formatDateTime(slot.startTime)}</div>
                             <div className="text-sm text-gray-500">
-                              {formatTime(slot.schedule_templates.start_time)} - {formatTime(slot.schedule_templates.end_time)}
+                              {formatTime(slot.scheduleTemplate.startTime)} - {formatTime(slot.scheduleTemplate.endTime)}
                             </div>
                           </div>
                         </td>
                         <td>
                           <Badge className="dashboard-badge">
-                            {slot.schedule_templates.day_of_week}
+                            {slot.scheduleTemplate.dayOfWeek}
                           </Badge>
                         </td>
                         <td>
@@ -726,11 +871,11 @@ const ScheduleManagement: React.FC = () => {
                         </td>
                         <td>
                           <Badge className="dashboard-badge-info">
-                            {slot.bookings.length} bookings
+                            {slot.bookings?.length || 0} bookings
                           </Badge>
                         </td>
                         <td>
-                          {getAvailabilityBadge(slot.is_available, slot.booked_count, slot.capacity)}
+                          {getAvailabilityBadge(slot.isAvailable, slot.bookedCount, slot.capacity)}
                         </td>
                         <td>
                           <div className="flex gap-2">
@@ -802,7 +947,7 @@ const ScheduleManagement: React.FC = () => {
               <div className="space-y-2">
                 <Label className="dashboard-label">Select Templates</Label>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {scheduleTemplates.filter(t => t.is_available).map((template) => (
+                  {scheduleTemplates.filter(t => t.isAvailable).map((template) => (
                     <label key={template.id} className="flex items-center space-x-2">
                       <input
                         type="checkbox"
@@ -823,7 +968,7 @@ const ScheduleManagement: React.FC = () => {
                         className="dashboard-checkbox"
                       />
                       <span className="text-sm">
-                        {template.day_of_week} {formatTime(template.start_time)}-{formatTime(template.end_time)}
+                        {template.dayOfWeek} {formatTime(template.startTime)}-{formatTime(template.endTime)}
                       </span>
                     </label>
                   ))}
@@ -892,7 +1037,7 @@ const ScheduleManagement: React.FC = () => {
         onConfirm={handleDelete}
         title={`Delete ${deleteType === 'template' ? 'Schedule Template' : 'Schedule Slot'}`}
         description={`Are you sure you want to delete this ${deleteType === 'template' ? 'schedule template' : 'schedule slot'}?`}
-        itemName={selectedItem ? ('day_of_week' in selectedItem ? selectedItem.day_of_week : 'slot') : undefined}
+        itemName={selectedItem ? ('dayOfWeek' in selectedItem ? selectedItem.dayOfWeek : 'slot') : undefined}
         itemType={deleteType}
       />
     </div>

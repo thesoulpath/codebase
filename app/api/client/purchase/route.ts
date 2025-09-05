@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import { requireAuth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
 import { createEmailService } from '@/lib/brevo-email-service';
+
+// Zod schema for purchase creation
+const createPurchaseSchema = z.object({
+  packagePriceId: z.number().int('Invalid package price ID'),
+  paymentMethodId: z.number().int('Invalid payment method ID'),
+  quantity: z.number().int().min(1, 'Quantity must be at least 1').default(1),
+  notes: z.string().optional()
+});
 
 export async function GET() {
   // This endpoint requires authentication for all methods
@@ -9,123 +19,198 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerClient();
+    console.log('🔍 POST /api/client/purchase - Starting request...');
     
-    // Get the authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = await requireAuth(request);
+    if (!user) {
+      console.log('❌ Unauthorized access attempt');
+      return NextResponse.json({ 
+        success: false,
+        error: 'Unauthorized',
+        message: 'Authentication required'
+      }, { status: 401 });
     }
+
+    console.log('✅ User authenticated:', user.email);
 
     const body = await request.json();
-    const { packageId, paymentMethodId, quantity = 1 } = body;
+    const validation = createPurchaseSchema.safeParse(body);
 
-    if (!packageId || !paymentMethodId) {
-      return NextResponse.json({ error: 'Package ID and payment method are required' }, { status: 400 });
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Invalid purchase data',
+        details: validation.error.issues
+      }, { status: 400 });
     }
 
-    // Get package details
-    const { data: packageData, error: packageError } = await supabase
-      .from('soul_packages')
-      .select('*')
-      .eq('id', packageId)
-      .single();
+    const { packagePriceId, paymentMethodId, quantity, notes } = validation.data;
 
-    if (packageError || !packageData) {
-      return NextResponse.json({ error: 'Package not found' }, { status: 404 });
+    // Get package price details with related data
+    const packagePrice = await prisma.packagePrice.findUnique({
+      where: { id: packagePriceId },
+      include: {
+        packageDefinition: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            sessionsCount: true,
+            isActive: true
+          }
+        },
+        currency: {
+          select: {
+            id: true,
+            code: true,
+            symbol: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    if (!packagePrice) {
+      return NextResponse.json({
+        success: false,
+        error: 'Package not found',
+        message: 'The specified package price does not exist'
+      }, { status: 404 });
+    }
+
+    if (!packagePrice.packageDefinition.isActive) {
+      return NextResponse.json({
+        success: false,
+        error: 'Package inactive',
+        message: 'This package is currently not available for purchase'
+      }, { status: 400 });
     }
 
     // Get payment method details
-    const { data: paymentMethod, error: paymentMethodError } = await supabase
-      .from('payment_methods')
-      .select(`
-        *,
-        currencies:currency_id(
-          id,
-          code,
-          symbol,
-          name
-        )
-      `)
-      .eq('id', paymentMethodId)
-      .single();
+    const paymentMethod = await prisma.paymentMethodConfig.findUnique({
+      where: { id: paymentMethodId }
+    });
 
-    if (paymentMethodError || !paymentMethod) {
-      return NextResponse.json({ error: 'Payment method not found' }, { status: 404 });
+    if (!paymentMethod || !paymentMethod.isActive) {
+      return NextResponse.json({
+        success: false,
+        error: 'Payment method not found',
+        message: 'The specified payment method is not available'
+      }, { status: 404 });
     }
 
     // Calculate total amount
-    const totalAmount = packageData.price * quantity;
+    const totalAmount = Number(packagePrice.price) * quantity;
 
     // Create purchase record
-    const { data: purchaseRecord, error: purchaseError } = await supabase
-      .from('purchase_records')
-      .insert({
-        client_id: user.id,
-        package_id: packageId,
-        payment_method: paymentMethodId,
-        amount: totalAmount,
-        quantity: quantity,
-        status: 'pending',
-        currency_id: paymentMethod.currency_id
-      })
-      .select()
-      .single();
+    const purchase = await prisma.purchase.create({
+      data: {
+        userId: user.id,
+        totalAmount: totalAmount,
+        currencyCode: packagePrice.currency.code,
+        paymentMethod: paymentMethod.name,
+        paymentStatus: 'pending',
+        notes: notes
+      }
+    });
 
-    if (purchaseError) {
-      console.error('Error creating purchase record:', purchaseError);
-      return NextResponse.json({ error: 'Failed to create purchase record' }, { status: 500 });
+    console.log('✅ Purchase created:', purchase.id);
+
+    // Create user package if payment method auto-assigns packages
+    let userPackage = null;
+    if (paymentMethod.autoAssignPackage) {
+      userPackage = await prisma.userPackage.create({
+        data: {
+          userId: user.id,
+          purchaseId: purchase.id,
+          packagePriceId: packagePriceId,
+          quantity: quantity,
+          sessionsUsed: 0,
+          isActive: true,
+          expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year from now
+        },
+        include: {
+          packagePrice: {
+            include: {
+              packageDefinition: true
+            }
+          }
+        }
+      });
+      console.log('✅ User package created:', userPackage.id);
     }
 
-    // Get email template
-    const { data: emailTemplate, error: templateError } = await supabase
-      .from('email_templates')
-      .select('*')
-      .eq('name', 'purchase_confirmation')
-      .single();
-
-    if (!templateError && emailTemplate) {
-      // Prepare email replacements
-      const replacements = {
-        client_name: user.user_metadata?.full_name || user.email,
-        package_name: packageData.name,
-        quantity: quantity.toString(),
-        total_amount: `${paymentMethod.currencies.symbol}${totalAmount}`,
-        payment_method: paymentMethod.name,
-        purchase_date: new Date().toLocaleDateString()
-      };
-
-      // Send email using Brevo API with database template
-      let emailSent = false;
+    // Send confirmation email
+    try {
       const emailService = await createEmailService();
       if (emailService) {
-        emailSent = await emailService.sendTemplateEmail(
-          user.email || '',
-          emailTemplate.body,
-          emailTemplate.subject,
+        const replacements = {
+          client_name: user.email,
+          package_name: packagePrice.packageDefinition.name,
+          quantity: quantity.toString(),
+          total_amount: `${packagePrice.currency.symbol}${totalAmount.toFixed(2)}`,
+          payment_method: paymentMethod.name,
+          purchase_date: new Date().toLocaleDateString(),
+          sessions_count: packagePrice.packageDefinition.sessionsCount.toString()
+        };
+
+        await emailService.sendTemplateEmail(
+          user.email,
+          'purchase_confirmation',
+          'Purchase Confirmation - SoulPath',
           replacements
         );
+        console.log('✅ Purchase confirmation email sent');
       }
-
-      if (emailSent) {
-        console.log('Purchase confirmation email sent successfully');
-      }
+    } catch (emailError) {
+      console.error('⚠️ Failed to send confirmation email:', emailError);
+      // Don't fail the purchase if email fails
     }
 
     return NextResponse.json({
       success: true,
       data: {
-        purchase: purchaseRecord,
-        package: packageData,
-        paymentMethod: paymentMethod,
-        totalAmount: totalAmount
+        purchase: {
+          id: purchase.id,
+          totalAmount: purchase.totalAmount,
+          currencyCode: purchase.currencyCode,
+          paymentMethod: purchase.paymentMethod,
+          paymentStatus: purchase.paymentStatus,
+          notes: purchase.notes,
+          purchasedAt: purchase.purchasedAt,
+          package: {
+            name: packagePrice.packageDefinition.name,
+            description: packagePrice.packageDefinition.description,
+            sessionsCount: packagePrice.packageDefinition.sessionsCount
+          },
+          paymentMethodDetails: {
+            name: paymentMethod.name,
+            type: paymentMethod.type
+          },
+          currency: {
+            symbol: packagePrice.currency.symbol,
+            code: packagePrice.currency.code
+          }
+        },
+        userPackage: userPackage ? {
+          id: userPackage.id,
+          sessionsUsed: userPackage.sessionsUsed,
+          isActive: userPackage.isActive,
+          quantity: userPackage.quantity
+        } : null
       },
       message: 'Purchase created successfully'
     });
 
   } catch (error) {
-    console.error('Error in POST /api/client/purchase:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('❌ Error in POST /api/client/purchase:', error);
+    return NextResponse.json({ 
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to process purchase'
+    }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }

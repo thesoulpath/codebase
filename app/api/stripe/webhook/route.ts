@@ -66,23 +66,23 @@ export async function POST(request: NextRequest) {
     // Handle the event
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session, supabase);
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session, supabase as any);
         break;
       
       case 'payment_intent.succeeded':
-        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent, supabase);
+        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent, supabase as any);
         break;
       
       case 'payment_intent.payment_failed':
-        await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent, supabase);
+        await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent, supabase as any);
         break;
       
       case 'invoice.payment_succeeded':
-        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice, supabase);
+        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
         break;
       
       case 'invoice.payment_failed':
-        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice, supabase);
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
         break;
       
       default:
@@ -155,27 +155,59 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
       return;
     }
 
-    // Create customer packages for each quantity
+    // Create purchase record
+    const { data: purchaseData, error: purchaseError } = await supabase
+      .from('purchases')
+      .insert({
+        user_id: customerId,
+        total_amount: totalAmount,
+        currency_code: 'USD', // Assuming USD, you may want to get this from metadata
+        payment_method: 'stripe',
+        payment_status: 'completed',
+        transaction_id: session.payment_intent as string,
+        purchased_at: new Date().toISOString(),
+        confirmed_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (purchaseError || !purchaseData) {
+      console.error('Error creating purchase:', purchaseError);
+      return;
+    }
+
+    // Create user packages for each quantity
     for (let i = 0; i < quantity; i++) {
-      const { error: customerPackageError } = await supabase
-        .from('customer_packages')
+      // First get the package price for this package definition
+      const { data: packagePrice, error: priceError } = await supabase
+        .from('package_prices')
+        .select('id')
+        .eq('package_definition_id', packageId)
+        .single();
+
+      if (priceError || !packagePrice) {
+        console.error('Error finding package price:', priceError);
+        continue;
+      }
+
+      const { error: userPackageError } = await supabase
+        .from('user_packages')
         .insert({
-          customer_id: customerId,
-          package_definition_id: packageId,
-          status: 'active',
-                  sessions_remaining: packageData.sessions_count,
-        total_sessions: packageData.sessions_count,
-          purchase_date: new Date().toISOString(),
+          user_id: customerId,
+          purchase_id: purchaseData.id,
+          package_price_id: packagePrice.id,
+          quantity: 1,
+          sessions_used: 0,
+          is_active: true,
           expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
-          metadata: {
-            stripe_session_id: session.id,
-            stripe_payment_intent: session.payment_intent,
-            purchase_amount: totalAmount / quantity
-          }
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         });
 
-      if (customerPackageError) {
-        console.error('Error creating customer package:', customerPackageError);
+      if (userPackageError) {
+        console.error('Error creating user package:', userPackageError);
       }
     }
 
@@ -237,7 +269,7 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent, su
   }
 }
 
-async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, _supabase: any) {
+async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   try {
     console.log('Processing invoice payment succeeded:', invoice.id);
 
@@ -252,7 +284,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, _supabase:
   }
 }
 
-async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, _supabase: any) {
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   try {
     console.log('Processing invoice payment failed:', invoice.id);
 

@@ -12,6 +12,13 @@ function getBaseUrl(): string {
   return `http://localhost:${port}`;
 }
 
+function getRasaUrl(): string {
+  if (process.env.RASA_URL) {
+    return process.env.RASA_URL;
+  }
+  return 'http://localhost:5005';
+}
+
 // Country code and phone format helper functions
 function getCountryCode(country: string): string {
   const countryMap: { [key: string]: string } = {
@@ -152,7 +159,7 @@ export async function POST(request: NextRequest) {
       intent = message;
     } else {
       // Step 1: Get intent and entities from Rasa for natural language
-      const rasaResponse = await fetch('http://localhost:5005/model/parse', {
+      const rasaResponse = await fetch(`${getRasaUrl()}/model/parse`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -179,7 +186,7 @@ export async function POST(request: NextRequest) {
       responseText = "Here are our available astrology packages. Each package is designed to provide you with comprehensive insights into your birth chart and astrological profile.";
     } else {
       // Use Rasa webhook for other intents
-      const webhookResponse = await fetch('http://localhost:5005/webhooks/rest/webhook', {
+      const webhookResponse = await fetch(`${getRasaUrl()}/webhooks/rest/webhook`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

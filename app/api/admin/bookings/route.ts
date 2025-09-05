@@ -2,6 +2,92 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { replacePlaceholders } from '@/lib/communication/placeholders';
+
+interface BookingWhereClause {
+  userId?: string;
+  status?: string;
+  sessionType?: string;
+  createdAt?: {
+    gte?: Date;
+    lte?: Date;
+  };
+}
+
+interface BookingSelectClause {
+  id: boolean;
+  userId: boolean;
+  userPackageId: boolean;
+  scheduleSlotId: boolean;
+  sessionType: boolean;
+  status: boolean;
+  notes: boolean;
+  cancelledAt: boolean;
+  cancelledReason: boolean;
+  reminderSent: boolean;
+  reminderSentAt: boolean;
+  createdAt: boolean;
+  updatedAt: boolean;
+  user?: {
+    select: {
+      id: boolean;
+      email: boolean;
+      fullName: boolean;
+      phone: boolean;
+    };
+  };
+  userPackage?: {
+    select: {
+      id: boolean;
+      packagePrice: {
+        select: {
+          id: boolean;
+          price: boolean;
+          pricingMode: boolean;
+          packageDefinition: {
+            select: {
+              id: boolean;
+              name: boolean;
+              description: boolean;
+              sessionsCount: boolean;
+              packageType: boolean;
+              sessionDuration: {
+                select: {
+                  name: boolean;
+                  duration_minutes: boolean;
+                };
+              };
+            };
+          };
+          currency: {
+            select: {
+              symbol: boolean;
+              code: boolean;
+            };
+          };
+        };
+      };
+    };
+  };
+  scheduleSlot?: {
+    select: {
+      id: boolean;
+      startTime: boolean;
+      endTime: boolean;
+      scheduleTemplate: {
+        select: {
+          dayOfWeek: boolean;
+          sessionDuration: {
+            select: {
+              name: boolean;
+              duration_minutes: boolean;
+            };
+          };
+        };
+      };
+    };
+  };
+}
 
 
 // Zod schemas for the refactored booking system
@@ -10,7 +96,9 @@ const createBookingSchema = z.object({
   userPackageId: z.number().int().positive('User package ID must be positive'),
   scheduleSlotId: z.number().int().positive('Schedule slot ID must be positive'),
   sessionType: z.string().min(1, 'Session type is required'),
-  notes: z.string().optional()
+  notes: z.string().optional(),
+  otpCode: z.string().optional(), // OTP code for verification
+  phoneNumber: z.string().optional() // Phone number for OTP verification
 });
 
 const updateBookingSchema = z.object({
@@ -66,7 +154,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Query parameters:', { userId, status, dateFrom, dateTo, sessionType, page, limit, enhanced });
 
     // Build the query with proper relationships
-    const where: any = {};
+    const where: BookingWhereClause = {};
     
     if (userId) where.userId = userId;
     if (status) where.status = status;
@@ -80,7 +168,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Base select fields
-    const select: any = {
+    const select: BookingSelectClause = {
       id: true,
       userId: true,
       userPackageId: true,
@@ -99,8 +187,7 @@ export async function GET(request: NextRequest) {
           id: true,
           email: true,
           fullName: true,
-          phone: true,
-          status: true
+          phone: true
         }
       },
       scheduleSlot: {
@@ -108,11 +195,8 @@ export async function GET(request: NextRequest) {
           id: true,
           startTime: true,
           endTime: true,
-          capacity: true,
-          bookedCount: true,
           scheduleTemplate: {
             select: {
-              id: true,
               dayOfWeek: true,
               sessionDuration: {
                 select: {
@@ -131,10 +215,6 @@ export async function GET(request: NextRequest) {
       select.userPackage = {
         select: {
           id: true,
-          quantity: true,
-          sessionsUsed: true,
-          isActive: true,
-          expiresAt: true,
           purchase: {
             select: {
               id: true,
@@ -162,29 +242,52 @@ export async function GET(request: NextRequest) {
                     }
                   }
                 }
-              }
-            }
-          }
-        }
-      };
-    } else {
-      select.userPackage = {
-        select: {
-          id: true,
-          sessionsUsed: true,
-          isActive: true,
-          packagePrice: {
-            select: {
-              packageDefinition: {
+              },
+              currency: {
                 select: {
-                  name: true,
-                  sessionsCount: true
+                  code: true,
+                  symbol: true
                 }
               }
             }
           }
         }
-      };
+      } as any;
+    } else {
+      select.userPackage = {
+        select: {
+          id: true,
+          isActive: true as any,
+          packagePrice: {
+            select: {
+              id: true,
+              price: true,
+              pricingMode: true,
+              packageDefinition: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  sessionsCount: true,
+                  packageType: true,
+                  sessionDuration: {
+                    select: {
+                      name: true,
+                      duration_minutes: true
+                    }
+                  }
+                }
+              },
+              currency: {
+                select: {
+                  symbol: true,
+                  code: true
+                }
+              }
+            }
+          }
+        }
+      } as any;
     }
 
     console.log('🔍 Executing database query...');
@@ -200,7 +303,7 @@ export async function GET(request: NextRequest) {
       prisma.booking.count({ where })
     ]);
 
-    console.log('✅ Database query successful, found', bookings.length, 'bookings');
+    console.log('✅ Database query successful, found', bookings?.length || 0, 'bookings');
 
     const totalPages = Math.ceil(totalCount / limit);
 
@@ -251,7 +354,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const { userId, userPackageId, scheduleSlotId, sessionType, notes } = validation.data;
+    const { userId, userPackageId, scheduleSlotId, sessionType, notes, otpCode, phoneNumber } = validation.data;
 
     // Verify user exists
     const targetUser = await prisma.user.findUnique({
@@ -264,6 +367,31 @@ export async function POST(request: NextRequest) {
         error: 'User not found',
         message: 'The specified user does not exist'
       }, { status: 404 });
+    }
+
+    // Verify OTP if provided
+    if (otpCode && phoneNumber) {
+      const otpVerification = await prisma.otpVerification.findFirst({
+        where: {
+          phoneNumber,
+          otpCode,
+          isVerified: true,
+          expiresAt: {
+            gt: new Date()
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      if (!otpVerification) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid OTP',
+          message: 'OTP code is invalid or has expired'
+        }, { status: 400 });
+      }
     }
 
     // Check if schedule slot exists and has capacity
@@ -426,6 +554,62 @@ export async function POST(request: NextRequest) {
         }
       }
     });
+
+    // Send booking confirmation using communication templates
+    try {
+      // Get booking confirmation template
+      const bookingTemplate = await prisma.communicationTemplate.findFirst({
+        where: {
+          templateKey: 'booking_confirmation',
+          type: 'email',
+          isActive: true
+        },
+        include: {
+          translations: true
+        }
+      });
+
+      if (bookingTemplate && targetUser.email && completeBooking) {
+        // Prepare template data
+        const templateData = {
+          userName: targetUser.fullName || 'User',
+          userEmail: targetUser.email || '',
+          bookingId: completeBooking.id.toString(),
+          language: targetUser.language || 'English',
+          adminEmail: 'admin@soulpath.lat',
+          submissionDate: new Date().toLocaleDateString(),
+          birthDate: targetUser.birthDate?.toISOString().split('T')[0] || '',
+          birthTime: targetUser.birthTime?.toString().substring(0, 5) || '',
+          birthPlace: targetUser.birthPlace || '',
+          clientQuestion: notes || 'No specific question provided',
+          bookingDate: completeBooking.scheduleSlot.scheduleTemplate.dayOfWeek,
+          bookingTime: completeBooking.scheduleSlot.startTime,
+          sessionType: sessionType
+        };
+
+        // Get the appropriate translation
+        const userLanguage = targetUser.language?.toLowerCase() || 'en';
+        const translation = bookingTemplate.translations.find(t => 
+          t.language === userLanguage
+        ) || bookingTemplate.translations[0];
+
+        if (translation) {
+          // Replace placeholders in subject and content
+          const subject = replacePlaceholders(translation.subject || '', templateData);
+          const content = replacePlaceholders(translation.content || '', templateData);
+
+          // TODO: Send email using your email service
+          console.log('📧 Admin booking confirmation email prepared:', {
+            to: targetUser.email,
+            subject,
+            content: content.substring(0, 100) + '...'
+          });
+        }
+      }
+    } catch (templateError) {
+      console.error('Error sending booking confirmation:', templateError);
+      // Don't fail the booking creation if template sending fails
+    }
 
     return NextResponse.json({
       success: true,

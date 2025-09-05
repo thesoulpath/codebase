@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import jwt from 'jsonwebtoken';
+import { prisma } from '@/lib/prisma';
 
-export async function GET(_request: NextRequest) {
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+export async function GET() {
   return NextResponse.json({ message: 'Bug reports API is working' });
 }
 
@@ -9,21 +12,49 @@ export async function POST(request: NextRequest) {
   try {
     console.log('Bug report API called');
     console.log('Request method:', request.method);
-    
-    const supabase = await createServerClient();
-    
-    // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    console.log('Auth check:', { user: user?.id, error: authError });
-    
-    if (authError || !user) {
-      console.log('Unauthorized access attempt');
+
+    // Extract JWT token from Authorization header
+    const authHeader = request.headers.get('authorization');
+    console.log('Auth header present:', !!authHeader);
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('No Bearer token found in Authorization header');
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - No token provided' },
         { status: 401 }
       );
     }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    console.log('Token extracted from header');
+
+    // Verify JWT token
+    let decoded: { userId: string };
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      console.log('JWT token verified successfully for user:', decoded.userId);
+    } catch {
+      console.log('JWT verification failed');
+      return NextResponse.json(
+        { error: 'Unauthorized - Invalid token' },
+        { status: 401 }
+      );
+    }
+
+    // Get user from database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId }
+    });
+
+    if (!user) {
+      console.log('User not found in database:', decoded.userId);
+      return NextResponse.json(
+        { error: 'Unauthorized - User not found' },
+        { status: 401 }
+      );
+    }
+
+    console.log('User authenticated successfully:', user.id);
 
     const body = await request.json();
     const { title, description, screenshot, annotations, category, priority } = body;
@@ -39,38 +70,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user profile
-    const { data: _profile } = await supabase
-      .from('profiles')
-      .select('id, fullName, email')
-      .eq('id', user.id)
-      .single();
-
-    // Insert bug report
-    const { data: bugReport, error: insertError } = await supabase
-      .from('bug_reports')
-      .insert({
+    // Insert bug report using Prisma
+    const bugReport = await prisma.bugReport.create({
+      data: {
         title,
         description,
         screenshot,
-        annotations,
-        category,
+        annotations: annotations || [],
+        category: category || null,
         priority: priority || 'MEDIUM',
-        reporterId: user.id,
-        status: 'OPEN'
-      })
-      .select()
-      .single();
+        status: 'OPEN',
+        reporterId: user.id
+      }
+    });
 
-    if (insertError) {
-      console.error('Error inserting bug report:', insertError);
-      return NextResponse.json(
-        { error: 'Failed to create bug report: ' + insertError.message },
-        { status: 500 }
-      );
-    }
-
-    console.log('Bug report created successfully:', bugReport);
+    console.log('Bug report created successfully:', bugReport.id);
 
     return NextResponse.json({
       success: true,
@@ -81,8 +95,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error in bug report API:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error: ' + (error instanceof Error ? error.message : 'Unknown error') },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

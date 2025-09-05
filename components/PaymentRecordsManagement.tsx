@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BaseButton } from '@/components/ui/BaseButton';
 import { BaseInput } from '@/components/ui/BaseInput';
@@ -108,26 +108,9 @@ const PaymentRecordsManagement: React.FC = () => {
     totalPages: 0
   });
 
-  useEffect(() => {
-    console.log('🔐 PaymentRecordsManagement: User auth state changed:', {
-      hasUser: !!user,
-      hasToken: !!user?.access_token,
-      userEmail: user?.email
-    });
-    
-    if (user?.access_token) {
-      fetchPurchases();
-      fetchUsers();
-    }
-  }, [user?.access_token]);
 
-  useEffect(() => {
-    if (user?.access_token) {
-      fetchPurchases();
-    }
-  }, [filters.userId, filters.paymentMethod, filters.paymentStatus, filters.dateFrom, filters.dateTo, filters.amountMin, filters.amountMax, pagination.page, user?.access_token]);
 
-  const fetchPurchases = async () => {
+  const fetchPurchases = useCallback(async () => {
     try {
       setLoading(true);
       const authToken = user?.access_token;
@@ -168,11 +151,18 @@ const PaymentRecordsManagement: React.FC = () => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Response error:', errorText);
-        throw new Error(`Failed to fetch purchases: ${response.status} ${response.statusText}`);
+        toast.error(`Failed to fetch purchases: ${response.status} ${response.statusText}`);
+        return;
       }
       
       const result = await response.json();
       console.log('✅ Purchases fetched successfully:', result);
+      
+      if (!result.success) {
+        console.error('❌ API returned error:', result.error || result.message);
+        toast.error(result.message || 'Failed to fetch purchases');
+        return;
+      }
       
       setPurchases(result.data || []);
       setPagination(prev => ({
@@ -186,9 +176,9 @@ const PaymentRecordsManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.access_token, filters.userId, filters.paymentMethod, filters.paymentStatus, filters.dateFrom, filters.dateTo, filters.amountMin, filters.amountMax, pagination.page]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const authToken = user?.access_token;
       if (!authToken) return;
@@ -207,7 +197,48 @@ const PaymentRecordsManagement: React.FC = () => {
     } catch (error) {
       console.error('Error fetching users:', error);
     }
-  };
+  }, [user?.access_token]);
+
+  // Refresh function for debugging
+  const refreshData = useCallback(() => {
+    console.log('🔄 Refreshing payment records data...');
+    if (user?.access_token) {
+      fetchPurchases();
+      fetchUsers();
+    }
+  }, [user?.access_token, fetchPurchases, fetchUsers]);
+
+  // Load data when component mounts or user changes
+  useEffect(() => {
+    console.log('🔐 PaymentRecordsManagement: User auth state changed:', {
+      hasUser: !!user,
+      hasToken: !!user?.access_token,
+      userEmail: user?.email
+    });
+
+    if (user?.access_token) {
+      fetchPurchases();
+      fetchUsers();
+    }
+  }, [user?.access_token, fetchPurchases, fetchUsers]);
+
+  // Load purchases when filters or pagination change
+  useEffect(() => {
+    if (user?.access_token) {
+      fetchPurchases();
+    }
+  }, [filters.userId, filters.paymentMethod, filters.paymentStatus, filters.dateFrom, filters.dateTo, filters.amountMin, filters.amountMax, pagination.page, fetchPurchases]);
+
+  // Expose refresh function globally for debugging
+  useEffect(() => {
+    // @ts-expect-error - Exposing refresh function globally for debugging
+    window.refreshPaymentRecordsData = refreshData;
+
+    return () => {
+      // @ts-expect-error - Clean up global function
+      delete window.refreshPaymentRecordsData;
+    };
+  }, [refreshData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

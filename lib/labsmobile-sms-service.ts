@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { CommunicationTemplateService } from './communication/template-service';
 
 export interface LabsMobileConfig {
   username: string;
@@ -36,6 +37,21 @@ export class LabsMobileSmsService {
 
   private async loadConfig() {
     try {
+      // Try to load from communication_config table first (unified communication settings)
+      const commConfig = await prisma.communicationConfig.findFirst({
+        where: { sms_enabled: true }
+      });
+
+      if (commConfig && commConfig.labsmobile_username && commConfig.labsmobile_token) {
+        this.config = {
+          username: commConfig.labsmobile_username,
+          tokenApi: commConfig.labsmobile_token,
+          senderName: commConfig.sms_sender_name || undefined
+        };
+        return;
+      }
+
+      // Fallback to separate SMS configuration table
       const smsConfig = await prisma.smsConfiguration.findFirst({
         where: { isActive: true, provider: 'labsmobile' }
       });
@@ -112,11 +128,60 @@ export class LabsMobileSmsService {
   }
 
   /**
-   * Send OTP SMS
+   * Send OTP SMS using template
    */
-  async sendOtpSms(phoneNumber: string, otpCode: string): Promise<LabsMobileResponse> {
-    const message = `Your SoulPath verification code is: ${otpCode}. This code expires in 10 minutes.`;
-    return this.sendSms(phoneNumber, message);
+  async sendOtpSms(phoneNumber: string, otpCode: string, language: string = 'en'): Promise<LabsMobileResponse> {
+    try {
+      // Try to get template first
+      const template = await CommunicationTemplateService.getTemplate('otp_verification', language, {
+        otpCode,
+        expiryTime: '10 minutes'
+      });
+
+      if (template) {
+        return this.sendSms(phoneNumber, template.content);
+      }
+
+      // Fallback to default message if template not found
+      const defaultMessage = language === 'es' 
+        ? `Su código de verificación de SoulPath es: ${otpCode}. Este código expira en 10 minutos.`
+        : `Your SoulPath verification code is: ${otpCode}. This code expires in 10 minutes.`;
+      
+      return this.sendSms(phoneNumber, defaultMessage);
+    } catch (error) {
+      console.error('Error sending OTP SMS with template:', error);
+      // Fallback to default message
+      const defaultMessage = `Your SoulPath verification code is: ${otpCode}. This code expires in 10 minutes.`;
+      return this.sendSms(phoneNumber, defaultMessage);
+    }
+  }
+
+  /**
+   * Send SMS using template name
+   */
+  async sendSmsWithTemplate(
+    phoneNumber: string, 
+    templateName: string, 
+    data: Record<string, any> = {}, 
+    language: string = 'en'
+  ): Promise<LabsMobileResponse> {
+    try {
+      const template = await CommunicationTemplateService.getTemplateByName(
+        templateName, 
+        'sms', 
+        language, 
+        data
+      );
+
+      if (template) {
+        return this.sendSms(phoneNumber, template.content);
+      }
+
+      throw new Error(`Template not found: ${templateName}`);
+    } catch (error) {
+      console.error('Error sending SMS with template:', error);
+      throw error;
+    }
   }
 
   /**

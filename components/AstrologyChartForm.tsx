@@ -197,7 +197,7 @@ export function AstrologyChartForm({ onSubmit, loading = false }: AstrologyChart
             <p className="text-red-400 text-sm mt-1">{errors.birthTime}</p>
           )}
           <p className="text-xs text-white/70 mt-1">
-            If you don't know your exact birth time, use 12:00 PM as a default
+            If you don&apos;t know your exact birth time, use 12:00 PM as a default
           </p>
         </div>
 

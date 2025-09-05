@@ -5,7 +5,7 @@
  * Run this to debug Vercel deployment issues
  */
 
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 
 async function checkEnvironment() {
   console.log('🔍 Checking environment variables...\n');

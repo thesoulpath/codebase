@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Bug, X, Camera, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BaseModal } from '@/components/ui/BaseModal';
@@ -171,9 +172,11 @@ export function BugReportButton() {
                 </div>
                 {screenshot && (
                   <div className="mt-3">
-                    <img
+                    <Image
                       src={screenshot}
                       alt="Screenshot"
+                      width={300}
+                      height={128}
                       className="max-w-full h-32 object-cover rounded-lg border border-gray-600"
                     />
                   </div>
@@ -223,7 +226,7 @@ export function BugReportButton() {
                 <select
                   id="priority"
                   value={formData.priority}
-                  onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
+                  onChange={(e) => setFormData({ ...formData, priority: e.target.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' })}
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="LOW">Low</option>

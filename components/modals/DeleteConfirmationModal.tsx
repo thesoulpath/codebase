@@ -93,7 +93,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
       <div className="space-y-2">
         {itemName && (
           <p className="font-medium">
-            "{itemName}"
+            &ldquo;{itemName}&rdquo;
           </p>
         )}
         <p className="text-sm">

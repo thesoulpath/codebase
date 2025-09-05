@@ -6,12 +6,13 @@ import { z } from 'zod';
 const sendOtpSchema = z.object({
   phoneNumber: z.string().min(1, 'Phone number is required'),
   countryCode: z.string().min(1, 'Country code is required'),
+  language: z.string().optional().default('en'),
 });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phoneNumber, countryCode } = sendOtpSchema.parse(body);
+    const { phoneNumber, countryCode, language } = sendOtpSchema.parse(body);
 
     // Validate phone number format
     if (!LabsMobileSmsService.validatePhoneNumber(phoneNumber, countryCode)) {
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     // Send SMS via LabsMobile
     try {
-      await labsMobileSmsService.sendOtpSms(formattedPhoneNumber, otpCode);
+      await labsMobileSmsService.sendOtpSms(formattedPhoneNumber, otpCode, language);
       
       return NextResponse.json({
         success: true,

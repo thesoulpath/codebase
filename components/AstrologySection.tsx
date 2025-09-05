@@ -78,7 +78,7 @@ export function AstrologySection({ className = '' }: AstrologySectionProps) {
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">Precise Calculations</h3>
             <p className="text-purple-200">
-              Uses NASA's ephemeris data for accurate planetary positions at your exact birth moment
+              Uses NASA&apos;s ephemeris data for accurate planetary positions at your exact birth moment
             </p>
           </div>
           
@@ -145,7 +145,7 @@ export function AstrologySection({ className = '' }: AstrologySectionProps) {
                 >
                   <div className="text-center">
                     <h3 className="text-2xl font-bold text-white mb-2">
-                      {currentChart.name}'s Natal Chart
+                      {currentChart.name}&apos;s Natal Chart
                     </h3>
                     <p className="text-purple-200 mb-4">
                       Your cosmic blueprint revealed through the positions of the planets at your birth

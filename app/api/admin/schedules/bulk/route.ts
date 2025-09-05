@@ -40,12 +40,12 @@ export async function POST(request: NextRequest) {
     // Validate bulk schedule data
     const validation = bulkScheduleSchema.safeParse(body);
     if (!validation.success) {
-      console.error('Validation error:', (validation as any).error.errors);
+      console.error('Validation error:', validation.error.issues);
       return NextResponse.json({
         success: false,
         error: 'Validation failed',
         message: 'Bulk schedule data validation failed',
-        details: (validation as any).error.errors,
+        details: validation.error.issues,
         toast: {
           type: 'error',
           title: 'Validation Error',
@@ -83,16 +83,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate all schedule combinations
-    const schedulesToCreate: any[] = [];
+    const schedulesToCreate: Array<{
+      date: string;
+      time: string;
+      duration: number;
+      capacity: number;
+      serviceType: string;
+    }> = [];
     for (const date of dates) {
       for (const time of scheduleData.timeSlots) {
-        schedulesToCreate.push({
+        (schedulesToCreate as any[]).push({
           date,
           time,
           duration: scheduleData.duration,
           capacity: scheduleData.capacity,
-          available: scheduleData.available,
-          notes: scheduleData.notes,
           created_at: new Date().toISOString()
         });
       }

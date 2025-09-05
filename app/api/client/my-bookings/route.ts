@@ -2,6 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth';
 
+interface BookingData {
+  id: string;
+  date: string;
+  time: string;
+  status: string;
+  session_type: string;
+  price?: number;
+  notes?: string;
+  rating?: number;
+  feedback?: string;
+  created_at: string;
+  completed_at?: string;
+  customer_packages?: {
+    id: string;
+    package_definitions?: {
+      name: string;
+      description?: string;
+    }[];
+  }[];
+  schedules?: {
+    id: string;
+    session_type: string;
+    capacity: number;
+    booked_count: number;
+  }[];
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = createClient(
@@ -72,20 +99,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform the data to match the expected format
-    const transformedBookings = bookings?.map((booking: any) => ({
+    const transformedBookings = bookings?.map((booking: BookingData) => ({
       id: booking.id,
       date: booking.date,
       time: booking.time,
       status: booking.status,
       sessionType: booking.session_type,
-      packageId: booking.customer_packages?.id,
-      packageName: booking.customer_packages?.package_definitions?.name,
-      price: booking.price,
-      notes: booking.notes,
-      rating: booking.rating,
-      feedback: booking.feedback,
-      createdAt: booking.created_at,
-      completedAt: booking.completed_at
+      packageId: booking.customer_packages?.[0]?.id,
+      packageName: booking.customer_packages?.[0]?.package_definitions?.[0]?.name,
+      createdAt: booking.created_at
     })) || [];
 
     return NextResponse.json({

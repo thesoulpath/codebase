@@ -187,7 +187,7 @@ const StripePaymentMethod: React.FC<StripePaymentMethodProps> = ({
         </div>
 
         <p className="text-xs text-gray-500 text-center mt-6">
-          By clicking "Pay", you agree to our terms of service and privacy policy.
+          By clicking &ldquo;Pay&rdquo;, you agree to our terms of service and privacy policy.
         </p>
       </div>
     </BaseCard>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BaseButton } from '@/components/ui/BaseButton';
 import { BaseInput } from '@/components/ui/BaseInput';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Save, X, CreditCard, Wallet, Banknote, QrCode, Bitcoin, Clock, Zap } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, CreditCard, Wallet, Banknote, QrCode, Bitcoin, Clock, Zap, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { PaymentMethodConfig, PaymentMethod } from '@/lib/types';
 import { useAuth } from '../hooks/useAuth';
@@ -25,15 +25,33 @@ interface PaymentMethodFormData {
   autoAssignPackage: boolean;
 }
 
+interface StripeConfig {
+  publishableKey: string;
+  secretKey: string;
+  webhookSecret: string;
+  currency: string;
+  supportedCountries: string[];
+  automaticTaxes: boolean;
+  allowPromotionCodes: boolean;
+}
+
+interface StripeConfigData {
+  publishableKey: string;
+  secretKey: string;
+  webhookSecret: string;
+  mode: 'test' | 'live';
+}
+
 const PaymentMethodManagement: React.FC = () => {
   const { user } = useAuth();
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodConfig[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastLoaded, setLastLoaded] = useState<Date | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showStripeConfig, setShowStripeConfig] = useState(false);
   const [editingMethod, setEditingMethod] = useState<PaymentMethodConfig | null>(null);
-  const [stripeConfig, setStripeConfig] = useState<any>(null);
-  const [formData, setFormData] = useState<PaymentMethodFormData>({
+  const [stripeConfig, setStripeConfig] = useState<StripeConfig | StripeConfigData | null>(null);
+    const [formData, setFormData] = useState<PaymentMethodFormData>({
     name: '',
     type: 'cash',
     description: '',
@@ -42,18 +60,13 @@ const PaymentMethodManagement: React.FC = () => {
     autoAssignPackage: true
   });
 
-  useEffect(() => {
-    if (user?.access_token) {
-      fetchPaymentMethods();
-    }
-  }, [user?.access_token]);
-
-  const fetchPaymentMethods = async () => {
+  const fetchPaymentMethods = useCallback(async () => {
     try {
-      setLoading(true);
+      console.log('🔍 fetchPaymentMethods called');
+      
       const authToken = user?.access_token;
       if (!authToken) {
-        console.error('No auth token available for fetching payment methods');
+        console.log('❌ No auth token for payment methods');
         return;
       }
 
@@ -63,17 +76,116 @@ const PaymentMethodManagement: React.FC = () => {
           'Content-Type': 'application/json'
         }
       });
-      if (!response.ok) throw new Error('Failed to fetch payment methods');
-      
+
+      console.log('🔍 Payment methods response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to fetch payment methods:', response.status, response.statusText);
+        console.error('❌ Error response body:', errorText);
+        throw new Error('Failed to fetch payment methods');
+      }
+
       const result = await response.json();
+      console.log('✅ Payment methods loaded successfully:', result.data?.length || 0, 'items');
       setPaymentMethods(result.data || []);
     } catch (error) {
-      console.error('Error fetching payment methods:', error);
+      console.error('❌ Error fetching payment methods:', error);
       toast.error('Failed to fetch payment methods');
+    }
+  }, [user?.access_token]);
+
+  const fetchAllData = useCallback(async () => {
+    try {
+      console.log('🔍 fetchAllData called, user:', user);
+      console.log('🔍 access_token exists:', !!user?.access_token);
+      console.log('🔍 access_token length:', user?.access_token?.length);
+
+      if (!user?.access_token) {
+        console.log('❌ No access token, cannot load payment methods data');
+        return;
+      }
+
+      setLoading(true);
+      console.log('Loading payment methods data...');
+
+      await fetchPaymentMethods();
+
+      setLastLoaded(new Date());
+      console.log('✅ Payment methods data loaded successfully');
+    } catch (error) {
+      console.error('❌ Error fetching payment methods data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, fetchPaymentMethods]);
+
+  // Add a manual refresh function that can be called from parent components
+  const refreshPaymentMethodsData = useCallback(() => {
+    if (user?.access_token) {
+      console.log('Manual refresh requested...');
+      fetchAllData();
+    }
+  }, [user?.access_token, fetchAllData]);
+
+  useEffect(() => {
+    if (user?.access_token) {
+      console.log('User authenticated, loading payment methods data...');
+      fetchAllData();
+    } else {
+      console.log('User not authenticated, clearing payment methods data...');
+      setPaymentMethods([]);
+      setLoading(false);
+    }
+  }, [user?.access_token, fetchAllData]);
+
+  // Refresh data when component becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user?.access_token && paymentMethods.length === 0) {
+        console.log('Component became visible, refreshing payment methods data...');
+        fetchAllData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user?.access_token, paymentMethods.length, fetchAllData]);
+
+  // Additional effect to handle component mounting/navigation
+  useEffect(() => {
+    if (user?.access_token && paymentMethods.length === 0) {
+      console.log('Component mounted or navigated to, loading payment methods data...');
+      fetchAllData();
+    }
+  }, [user?.access_token, paymentMethods.length, fetchAllData]);
+
+  // Expose refresh function to parent components if needed
+  useEffect(() => {
+    // @ts-expect-error - Exposing refresh function globally for debugging
+    window.refreshPaymentMethodsData = refreshPaymentMethodsData;
+
+    return () => {
+      // @ts-expect-error - Clean up global function
+      delete window.refreshPaymentMethodsData;
+    };
+  }, [refreshPaymentMethodsData]);
+
+  // Listen for navigation events and refresh data when needed
+  useEffect(() => {
+    const handleNavigation = () => {
+      // Small delay to ensure the component is fully mounted
+      setTimeout(() => {
+        if (user?.access_token && paymentMethods.length === 0) {
+          console.log('Navigation detected, refreshing payment methods data...');
+          fetchAllData();
+        }
+      }, 100);
+    };
+
+    window.addEventListener('popstate', handleNavigation);
+    return () => window.removeEventListener('popstate', handleNavigation);
+  }, [user?.access_token, paymentMethods.length, fetchAllData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,7 +288,7 @@ const PaymentMethodManagement: React.FC = () => {
     setStripeConfig(null);
   };
 
-  const handleStripeConfigSave = (config: any) => {
+  const handleStripeConfigSave = (config: StripeConfig) => {
     setStripeConfig(config);
     setShowStripeConfig(false);
   };
@@ -217,9 +329,10 @@ const PaymentMethodManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="dashboard-container p-6">
-        <div className="dashboard-loading">
-          <div className="dashboard-loading-spinner">Loading payment methods...</div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-lg font-semibold">Loading payment methods...</p>
         </div>
       </div>
     );
@@ -246,14 +359,30 @@ const PaymentMethodManagement: React.FC = () => {
           <p className="dashboard-text-secondary">
             Configure payment methods and their behavior for package purchases and bookings
           </p>
+          {lastLoaded && (
+            <p className="text-sm text-gray-400 mt-1">
+              Last updated: {lastLoaded.toLocaleTimeString()}
+            </p>
+          )}
         </div>
-        <BaseButton 
-          onClick={() => setShowCreateModal(true)} 
-          className="dashboard-button-primary"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Payment Method
-        </BaseButton>
+        <div className="flex gap-2">
+          <BaseButton 
+            onClick={refreshPaymentMethodsData}
+            disabled={loading}
+            variant="outline"
+            className="dashboard-button-outline"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </BaseButton>
+          <BaseButton 
+            onClick={() => setShowCreateModal(true)} 
+            className="dashboard-button-primary"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Payment Method
+          </BaseButton>
+        </div>
       </div>
 
       {/* Payment Methods Grid */}
@@ -392,15 +521,15 @@ const PaymentMethodManagement: React.FC = () => {
                       <div className="text-sm text-[var(--color-accent-800)]">
                         <p>✅ Stripe is configured</p>
                         <p className="text-xs text-[var(--color-accent-700)] mt-1">
-                          Currency: {stripeConfig.currency?.toUpperCase() || 'USD'} | 
-                          Countries: {stripeConfig.supportedCountries?.length || 0} supported
+                          Currency: {'currency' in stripeConfig ? stripeConfig.currency?.toUpperCase() || 'USD' : 'USD'} |
+                          Countries: {'supportedCountries' in stripeConfig ? stripeConfig.supportedCountries?.length || 0 : 0} supported
                         </p>
                       </div>
                     ) : (
                       <div className="text-sm text-[var(--color-accent-800)]">
                         <p className="text-[var(--color-text-primary)] font-medium">⚠️ Stripe configuration required</p>
                         <p className="text-xs text-[var(--color-accent-700)] mt-1">
-                          Click "Configure Stripe" to set up your payment gateway
+                          Click &ldquo;Configure Stripe&rdquo; to set up your payment gateway
                         </p>
                       </div>
                     )}
@@ -481,7 +610,7 @@ const PaymentMethodManagement: React.FC = () => {
         isOpen={showStripeConfig}
         onClose={() => setShowStripeConfig(false)}
         onSave={handleStripeConfigSave}
-        initialConfig={stripeConfig}
+        initialConfig={stripeConfig && 'currency' in stripeConfig ? stripeConfig : undefined}
       />
     </div>
   );

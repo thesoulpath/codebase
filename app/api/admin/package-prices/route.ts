@@ -3,13 +3,12 @@ import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 
-
 // Zod schemas for package price validation
 const createPackagePriceSchema = z.object({
   packageDefinitionId: z.number().int().positive('Package definition ID must be positive'),
   currencyId: z.number().int().positive('Currency ID must be positive'),
   price: z.number().positive('Price must be positive'),
-  pricingMode: z.string().min(1, 'Pricing mode is required').max(20, 'Pricing mode too long'),
+  pricingMode: z.enum(['fixed', 'calculated']).default('fixed'),
   isActive: z.boolean().default(true)
 });
 
@@ -20,8 +19,8 @@ const updatePackagePriceSchema = createPackagePriceSchema.partial().extend({
 const querySchema = z.object({
   packageDefinitionId: z.coerce.number().int().positive().optional(),
   currencyId: z.coerce.number().int().positive().optional(),
+  pricingMode: z.enum(['fixed', 'calculated']).optional(),
   isActive: z.enum(['true', 'false']).optional(),
-  pricingMode: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   enhanced: z.enum(['true', 'false']).optional()
@@ -55,21 +54,21 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const { packageDefinitionId, currencyId, isActive, pricingMode, page, limit, enhanced } = validation.data;
+    const { packageDefinitionId, currencyId, pricingMode, isActive, page, limit, enhanced } = validation.data;
     const offset = (page - 1) * limit;
 
-    console.log('🔍 Query parameters:', { packageDefinitionId, currencyId, isActive, pricingMode, page, limit, enhanced });
+    console.log('🔍 Query parameters:', { packageDefinitionId, currencyId, pricingMode, isActive, page, limit, enhanced });
 
     // Build the query with proper relationships
-    const where: any = {};
-    
+    const where: Record<string, unknown> = {};
+
     if (packageDefinitionId) where.packageDefinitionId = packageDefinitionId;
     if (currencyId) where.currencyId = currencyId;
-    if (isActive !== undefined) where.isActive = isActive === 'true';
     if (pricingMode) where.pricingMode = pricingMode;
+    if (isActive !== undefined) where.isActive = isActive === 'true';
 
     // Base select fields
-    const select: any = {
+    const select: Record<string, unknown> = {
       id: true,
       packageDefinitionId: true,
       currencyId: true,
@@ -85,6 +84,7 @@ export async function GET(request: NextRequest) {
           description: true,
           sessionsCount: true,
           packageType: true,
+          maxGroupSize: true,
           sessionDuration: {
             select: {
               id: true,
@@ -99,7 +99,8 @@ export async function GET(request: NextRequest) {
           id: true,
           code: true,
           name: true,
-          symbol: true
+          symbol: true,
+          isDefault: true
         }
       }
     };
@@ -115,8 +116,8 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           quantity: true,
-          sessionsUsed: true,
           isActive: true,
+          createdAt: true,
           user: {
             select: {
               id: true,
@@ -136,7 +137,11 @@ export async function GET(request: NextRequest) {
         select,
         skip: offset,
         take: limit,
-        orderBy: { createdAt: 'desc' }
+        orderBy: [
+          { packageDefinition: { name: 'asc' } },
+          { currency: { code: 'asc' } },
+          { price: 'asc' }
+        ]
       }),
       prisma.packagePrice.count({ where })
     ]);
@@ -220,7 +225,7 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Check if price already exists for this package definition and currency
+    // Check if price already exists for this package and currency
     const existingPrice = await prisma.packagePrice.findFirst({
       where: {
         packageDefinitionId: priceData.packageDefinitionId,
@@ -232,7 +237,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: 'Price already exists',
-        message: 'A price for this package definition and currency already exists'
+        message: 'A price for this package and currency already exists'
       }, { status: 409 });
     }
 
@@ -247,6 +252,7 @@ export async function POST(request: NextRequest) {
             description: true,
             sessionsCount: true,
             packageType: true,
+            maxGroupSize: true,
             sessionDuration: {
               select: {
                 id: true,
@@ -261,7 +267,8 @@ export async function POST(request: NextRequest) {
             id: true,
             code: true,
             name: true,
-            symbol: true
+            symbol: true,
+            is_default: true
           }
         }
       }
@@ -354,14 +361,14 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Check for conflicts if package definition or currency is being updated
+    // Check for conflicts if package or currency is being updated
     if (updateData.packageDefinitionId || updateData.currencyId) {
-      const newPackageDefId = updateData.packageDefinitionId || existingPrice.packageDefinitionId;
-      const newCurrencyId = updateData.currencyId || existingPrice.currencyId;
+      const newPackageDefinitionId = updateData.packageDefinitionId ?? existingPrice.packageDefinitionId;
+      const newCurrencyId = updateData.currencyId ?? existingPrice.currencyId;
 
       const conflict = await prisma.packagePrice.findFirst({
         where: {
-          packageDefinitionId: newPackageDefId,
+          packageDefinitionId: newPackageDefinitionId,
           currencyId: newCurrencyId,
           id: { not: id }
         }
@@ -371,7 +378,7 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({
           success: false,
           error: 'Price conflict',
-          message: 'A price for this package definition and currency already exists'
+          message: 'A price for this package and currency already exists'
         }, { status: 409 });
       }
     }
@@ -388,6 +395,7 @@ export async function PUT(request: NextRequest) {
             description: true,
             sessionsCount: true,
             packageType: true,
+            maxGroupSize: true,
             sessionDuration: {
               select: {
                 id: true,
@@ -402,7 +410,8 @@ export async function PUT(request: NextRequest) {
             id: true,
             code: true,
             name: true,
-            symbol: true
+            symbol: true,
+            is_default: true
           }
         }
       }
@@ -476,12 +485,12 @@ export async function DELETE(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Check if there are active user packages
+    // Check if there are active user packages using this price
     if (existingPrice.userPackages.length > 0) {
       return NextResponse.json({
         success: false,
         error: 'Cannot delete package price',
-        message: 'Package price has active user packages and cannot be deleted'
+        message: 'Package price is being used by active user packages and cannot be deleted'
       }, { status: 400 });
     }
 

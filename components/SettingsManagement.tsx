@@ -57,7 +57,7 @@ export function SettingsManagement() {
         setSeedStatus('error');
         setSeedMessage(error.message || 'Failed to seed content');
       }
-    } catch (error) {
+    } catch {
       setSeedStatus('error');
       setSeedMessage('Network error occurred while seeding content');
     } finally {
@@ -109,7 +109,7 @@ export function SettingsManagement() {
         setSeedCustomersStatus('error');
         setSeedCustomersMessage(error.message || 'Failed to seed customers');
       }
-    } catch (error) {
+    } catch {
       setSeedCustomersStatus('error');
       setSeedCustomersMessage('Network error occurred while seeding customers');
     } finally {
@@ -150,7 +150,7 @@ export function SettingsManagement() {
         setSeedSchedulesStatus('error');
         setSeedSchedulesMessage(error.message || 'Failed to seed schedules');
       }
-    } catch (error) {
+    } catch {
       setSeedSchedulesStatus('error');
       setSeedSchedulesMessage('Network error occurred while seeding schedules');
     } finally {

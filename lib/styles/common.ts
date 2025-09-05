@@ -210,7 +210,7 @@ export const responsiveStyles = (base: string, _variants: Record<string, string>
 };
 
 // Export all styles
-export default {
+const commonStyles = {
   cardStyles,
   buttonStyles,
   inputStyles,
@@ -222,3 +222,5 @@ export default {
   conditionalStyles,
   responsiveStyles,
 };
+
+export default commonStyles;

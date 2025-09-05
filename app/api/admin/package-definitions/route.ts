@@ -3,6 +3,48 @@ import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 
+interface PackageDefinitionWhereClause {
+  packageType?: string;
+  isActive?: boolean;
+  sessionDurationId?: number;
+}
+
+interface PackageDefinitionSelectClause {
+  id: boolean;
+  name: boolean;
+  description: boolean;
+  sessionsCount: boolean;
+  sessionDurationId: boolean;
+  packageType: boolean;
+  maxGroupSize: boolean;
+  isActive: boolean;
+  isPopular: boolean;
+  displayOrder: boolean;
+  featured: boolean;
+  createdAt: boolean;
+  updatedAt: boolean;
+  sessionDuration?: {
+    select: {
+      id: boolean;
+      name: boolean;
+      duration_minutes: boolean;
+    };
+  };
+  packagePrices?: {
+    select: {
+      id: boolean;
+      price: boolean;
+      currency: {
+        select: {
+          id: boolean;
+          code: boolean;
+          symbol: boolean;
+        };
+      };
+    };
+  };
+}
+
 
 // Zod schemas for package definition validation
 const createPackageDefinitionSchema = z.object({
@@ -62,14 +104,14 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Query parameters:', { packageType, isActive, sessionDurationId, page, limit, enhanced });
 
     // Build the query with proper relationships
-    const where: any = {};
-    
+    const where: PackageDefinitionWhereClause = {};
+
     if (packageType) where.packageType = packageType;
     if (isActive !== undefined) where.isActive = isActive === 'true';
     if (sessionDurationId) where.sessionDurationId = sessionDurationId;
 
     // Base select fields
-    const select: any = {
+    const select: PackageDefinitionSelectClause = {
       id: true,
       name: true,
       description: true,
@@ -78,38 +120,37 @@ export async function GET(request: NextRequest) {
       packageType: true,
       maxGroupSize: true,
       isActive: true,
+      isPopular: true,
+      displayOrder: true,
+      featured: true,
       createdAt: true,
       updatedAt: true,
       sessionDuration: {
         select: {
           id: true,
           name: true,
-          duration_minutes: true,
-          description: true
+          duration_minutes: true
         }
       }
     };
 
     // Enhanced mode includes pricing information
     if (enhanced === 'true') {
-      select.packagePrices = {
+      (select as any).packagePrices = {
         where: { isActive: true },
         select: {
           id: true,
           price: true,
-          pricingMode: true,
-          isActive: true,
           currency: {
             select: {
               id: true,
               code: true,
-              name: true,
               symbol: true
             }
           }
         }
       };
-      select._count = {
+      (select as unknown as Record<string, unknown>)._count = {
         packagePrices: true
       };
     }

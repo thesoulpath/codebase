@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Build-time check - prevent Stripe imports during build
-let StripePaymentService: any;
-
-if (process.env.NODE_ENV !== 'production' || process.env.STRIPE_SECRET_KEY) {
-  const paymentModule = require('@/lib/stripe/payment-service');
-  StripePaymentService = paymentModule.StripePaymentService;
-}
+import { StripePaymentService } from '@/lib/stripe/payment-service';
 
 export async function POST(request: NextRequest) {
   // Check if Stripe is configured

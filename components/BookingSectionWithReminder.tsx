@@ -6,7 +6,7 @@ import { CheckCircle, Bell } from 'lucide-react';
 
 
 interface BookingSectionProps {
-  t: any;
+  t: Record<string, string | Record<string, string>>;
   language: string;
 }
 
@@ -153,7 +153,7 @@ export function BookingSection({ t, language }: BookingSectionProps) {
             </div>
             
             <h2 className="text-2xl sm:text-3xl font-heading text-[#EAEAEA]">
-              {t.apply.form.thankYou}
+              {(t.apply as Record<string, any>).form?.thankYou || 'Thank You!'}
             </h2>
             
             <div className="bg-gradient-to-br from-[#191970]/30 to-[#0A0A23]/30 p-6 rounded-2xl border border-[#FFD700]/20">
@@ -248,7 +248,7 @@ export function BookingSection({ t, language }: BookingSectionProps) {
           className="text-center mb-8"
         >
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-heading text-[#EAEAEA] mb-4">
-            {t.apply.title}
+            {(t.apply as Record<string, string>).title || 'Book Your Session'}
           </h2>
           
           {/* Step Indicator */}

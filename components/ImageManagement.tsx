@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { 
   Upload, Image, HardDrive, Globe, Clock, Edit, Trash2, 
-  Filter
+  Filter, RefreshCw
 } from 'lucide-react';
 import { BaseButton } from './ui/BaseButton';
 import { BaseInput } from './ui/BaseInput';
@@ -24,13 +24,14 @@ export function ImageManagement() {
   const { user } = useAuth();
   const [images, setImages] = useState<ImageData>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [lastLoaded, setLastLoaded] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [editingImage, setEditingImage] = useState<any>(null);
-  const [deletingImage, setDeletingImage] = useState<any>(null);
+  const [editingImage, setEditingImage] = useState<{ id: string; name: string; url: string; alt?: string; category?: string } | null>(null);
+  const [deletingImage, setDeletingImage] = useState<{ id: string; name: string; url: string; alt?: string; category?: string } | null>(null);
   const [editFormData, setEditFormData] = useState({
     name: '',
     alt: '',
@@ -57,19 +58,17 @@ export function ImageManagement() {
     return new Date(date).toLocaleDateString();
   };
 
-  useEffect(() => {
-    if (user?.access_token) {
-      loadImages();
-    }
-  }, [user?.access_token]);
 
-  const loadImages = async () => {
+
+  const loadImages = useCallback(async () => {
     try {
+      console.log('🔍 loadImages called');
+      
       setIsLoading(true);
       setError(null);
 
       if (!user?.access_token) {
-        console.error('No access token available for loading images');
+        console.log('❌ No access token for image loading');
         setError('Authentication required');
         return;
       }
@@ -82,22 +81,117 @@ export function ImageManagement() {
         }
       });
 
+      console.log('🔍 Images response status:', response.status);
+
       if (!response.ok) {
-        console.error('Failed to load images:', response.status, response.statusText);
         const errorText = await response.text();
-        console.error('Response text:', errorText);
+        console.error('❌ Failed to load images:', response.status, response.statusText);
+        console.error('❌ Error response body:', errorText);
         throw new Error(`Failed to load images: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('✅ Images loaded successfully:', Object.keys(data.images || {}).length, 'items');
       setImages(data.images || {});
     } catch (err: any) {
-      console.error('Error loading images:', err);
+      console.error('❌ Error loading images:', err);
       setError(`Failed to load images: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.access_token]);
+
+  const fetchAllData = useCallback(async () => {
+    try {
+      console.log('🔍 fetchAllData called, user:', user);
+      console.log('🔍 access_token exists:', !!user?.access_token);
+      console.log('🔍 access_token length:', user?.access_token?.length);
+
+      if (!user?.access_token) {
+        console.log('❌ No access token, cannot load image data');
+        return;
+      }
+
+      setIsLoading(true);
+      console.log('Loading image data...');
+
+      await loadImages();
+
+      setLastLoaded(new Date());
+      console.log('✅ Image data loaded successfully');
+    } catch (error) {
+      console.error('❌ Error fetching image data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, loadImages]);
+
+  // Add a manual refresh function that can be called from parent components
+  const refreshImageData = useCallback(() => {
+    if (user?.access_token) {
+      console.log('Manual refresh requested...');
+      fetchAllData();
+    }
+  }, [user?.access_token, fetchAllData]);
+
+  useEffect(() => {
+    if (user?.access_token) {
+      console.log('User authenticated, loading image data...');
+      fetchAllData();
+    } else {
+      console.log('User not authenticated, clearing image data...');
+      setImages({});
+      setIsLoading(false);
+    }
+  }, [user?.access_token, fetchAllData]);
+
+  // Refresh data when component becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user?.access_token && Object.keys(images).length === 0) {
+        console.log('Component became visible, refreshing image data...');
+        fetchAllData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user?.access_token, images, fetchAllData]);
+
+  // Additional effect to handle component mounting/navigation
+  useEffect(() => {
+    if (user?.access_token && Object.keys(images).length === 0) {
+      console.log('Component mounted or navigated to, loading image data...');
+      fetchAllData();
+    }
+  }, [user?.access_token, images, fetchAllData]);
+
+  // Expose refresh function to parent components if needed
+  useEffect(() => {
+    // @ts-expect-error - Exposing refresh function globally for debugging
+    window.refreshImageData = refreshImageData;
+
+    return () => {
+      // @ts-expect-error - Clean up global function
+      delete window.refreshImageData;
+    };
+  }, [refreshImageData]);
+
+  // Listen for navigation events and refresh data when needed
+  useEffect(() => {
+    const handleNavigation = () => {
+      // Small delay to ensure the component is fully mounted
+      setTimeout(() => {
+        if (user?.access_token && Object.keys(images).length === 0) {
+          console.log('Navigation detected, refreshing image data...');
+          fetchAllData();
+        }
+      }, 100);
+    };
+
+    window.addEventListener('popstate', handleNavigation);
+    return () => window.removeEventListener('popstate', handleNavigation);
+  }, [user?.access_token, images, fetchAllData]);
 
   const handleEdit = (image: any) => {
     setEditingImage(image);
@@ -185,7 +279,7 @@ export function ImageManagement() {
       <div className={`flex items-center justify-center min-h-[400px]`}>
         <div className="text-center">
           <div className={`w-16 h-16 border-4 border-[${colors.accent[500]}] border-t-transparent rounded-full animate-spin mx-auto mb-[${spacing[4]}]`}></div>
-          <p className={`text-[${colors.text.secondary}]`}>Loading images...</p>
+          <p className={`text-[${colors.accent[500]}] text-lg font-semibold`}>Loading images...</p>
         </div>
       </div>
     );
@@ -226,15 +320,31 @@ export function ImageManagement() {
           <p className={`text-[${colors.text.secondary}]`}>
             Manage website images, logos, and visual assets
           </p>
+          {lastLoaded && (
+            <p className="text-sm text-gray-400 mt-1">
+              Last updated: {lastLoaded.toLocaleTimeString()}
+            </p>
+          )}
         </div>
-        <BaseButton 
-          onClick={() => setShowUploadModal(true)} 
-          variant="primary"
-          size="lg"
-          leftIcon={<Upload className="w-4 h-4" />}
-        >
-          Upload Image
-        </BaseButton>
+        <div className="flex gap-2">
+          <BaseButton 
+            onClick={refreshImageData}
+            disabled={isLoading}
+            variant="outline"
+            size="lg"
+            leftIcon={<RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />}
+          >
+            Refresh
+          </BaseButton>
+          <BaseButton 
+            onClick={() => setShowUploadModal(true)} 
+            variant="primary"
+            size="lg"
+            leftIcon={<Upload className="w-4 h-4" />}
+          >
+            Upload Image
+          </BaseButton>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -614,7 +724,7 @@ export function ImageManagement() {
                 Delete Image
               </h3>
               <p className={`text-[${colors.text.secondary}] mb-[${spacing[6]}]`}>
-                Are you sure you want to delete "{deletingImage?.name}"? This action cannot be undone.
+                Are you sure you want to delete &ldquo;{deletingImage?.name}&rdquo;? This action cannot be undone.
               </p>
               
               <div className={`flex space-x-[${spacing[2]}]`}>

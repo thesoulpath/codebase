@@ -375,7 +375,7 @@ export const AstrologyChart: React.FC<AstrologyChartProps> = ({ dateTime, latitu
               </div>
               <div className="text-right">
                 <div className="font-medium text-white">
-                  {planet.degree}° {planet.minute}' {ZODIAC_DATA[planet.sign as keyof typeof ZODIAC_DATA].symbol}
+                  {planet.degree}° {planet.minute}&apos; {ZODIAC_DATA[planet.sign as keyof typeof ZODIAC_DATA].symbol}
                 </div>
                 <div className="text-sm text-white/70">
                   {planet.sign} {planet.retrograde && '(R)'} • House {planet.house}
@@ -394,7 +394,7 @@ export const AstrologyChart: React.FC<AstrologyChartProps> = ({ dateTime, latitu
             <div key={house.number} className="p-3 bg-white/10 rounded-lg border border-white/20 text-center">
               <div className="font-medium text-white">House {house.number}</div>
               <div className="text-sm text-white">
-                {house.degree}° {house.minute}' {ZODIAC_DATA[house.sign as keyof typeof ZODIAC_DATA].symbol}
+                {house.degree}° {house.minute}&apos; {ZODIAC_DATA[house.sign as keyof typeof ZODIAC_DATA].symbol}
               </div>
               <div className="text-xs text-white/70">{house.sign}</div>
             </div>
@@ -407,7 +407,7 @@ export const AstrologyChart: React.FC<AstrologyChartProps> = ({ dateTime, latitu
         <div className="p-4 bg-white/10 rounded-lg border border-white/20">
           <h5 className="font-semibold mb-2 text-white">Ascendant</h5>
           <p className="text-sm text-white">
-            {Math.floor(getDegreeInSign(chartData.ascendant))}° {getMinute(chartData.ascendant)}' {ZODIAC_DATA[getZodiacSign(chartData.ascendant) as keyof typeof ZODIAC_DATA].symbol}
+            {Math.floor(getDegreeInSign(chartData.ascendant))}° {getMinute(chartData.ascendant)}&apos; {ZODIAC_DATA[getZodiacSign(chartData.ascendant) as keyof typeof ZODIAC_DATA].symbol}
           </p>
           <p className="text-xs text-white/70">{getZodiacSign(chartData.ascendant)}</p>
         </div>
@@ -415,7 +415,7 @@ export const AstrologyChart: React.FC<AstrologyChartProps> = ({ dateTime, latitu
         <div className="p-4 bg-white/10 rounded-lg border border-white/20">
           <h5 className="font-semibold mb-2 text-white">Midheaven</h5>
           <p className="text-sm text-white">
-            {Math.floor(getDegreeInSign(chartData.midheaven))}° {getMinute(chartData.midheaven)}' {ZODIAC_DATA[getZodiacSign(chartData.midheaven) as keyof typeof ZODIAC_DATA].symbol}
+            {Math.floor(getDegreeInSign(chartData.midheaven))}° {getMinute(chartData.midheaven)}&apos; {ZODIAC_DATA[getZodiacSign(chartData.midheaven) as keyof typeof ZODIAC_DATA].symbol}
           </p>
           <p className="text-xs text-white/70">{getZodiacSign(chartData.midheaven)}</p>
         </div>

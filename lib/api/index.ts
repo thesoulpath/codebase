@@ -17,18 +17,18 @@ import { createClient } from '@/lib/supabase/client';
 // TYPES
 // ============================================================================
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
   message?: string;
-  details?: any;
+  details?: unknown;
 }
 
 export interface ApiError {
   message: string;
   status: number;
-  details?: any;
+  details?: unknown;
 }
 
 export interface PaginationParams {
@@ -46,13 +46,49 @@ export interface FilterParams {
   [key: string]: string | number | boolean | undefined;
 }
 
+// Data interfaces
+export interface ClientData {
+  id?: string;
+  name: string;
+  email: string;
+  phone?: string;
+  language?: string;
+  status?: string;
+  [key: string]: unknown;
+}
+
+export interface BookingData {
+  id?: string;
+  clientId: string;
+  packageId: string;
+  scheduleSlotId: string;
+  birthData?: {
+    date: string;
+    city: string;
+    time?: string;
+  };
+  message?: string;
+  [key: string]: unknown;
+}
+
+export interface PackageData {
+  id?: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  duration: number;
+  sessionsCount: number;
+  [key: string]: unknown;
+}
+
 // ============================================================================
 // BASE API CLIENT
 // ============================================================================
 
 class ApiClient {
   private supabase = createClient();
-  private cache = new Map<string, { data: any; timestamp: number }>();
+  private cache = new Map<string, { data: ApiResponse<unknown>; timestamp: number }>();
   private cacheTimeout = 5 * 60 * 1000; // 5 minutes
 
   /**
@@ -85,14 +121,15 @@ class ApiClient {
       }
 
       const data = await response.json();
-      return data;
+      return data as ApiResponse<T>;
     } catch (error) {
       console.error('API request failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
         message: 'API request failed',
-      };
+        data: undefined,
+      } as ApiResponse<T>;
     }
   }
 
@@ -107,7 +144,7 @@ class ApiClient {
     const now = Date.now();
 
     if (cached && (now - cached.timestamp) < this.cacheTimeout) {
-      return cached.data;
+      return cached.data as ApiResponse<T>;
     }
 
     const result = await fetcher();
@@ -147,7 +184,7 @@ class ClientsApi extends ApiClient {
     status?: string;
     language?: string;
     hasActivePackages?: boolean;
-  }): Promise<ApiResponse<any[]>> {
+  }): Promise<ApiResponse<ClientData[]>> {
     const searchParams = new URLSearchParams();
     
     if (params?.enhanced) searchParams.append('enhanced', 'true');
@@ -167,7 +204,7 @@ class ClientsApi extends ApiClient {
   /**
    * Get a single client by ID
    */
-  async getById(id: string): Promise<ApiResponse<any>> {
+  async getById(id: string): Promise<ApiResponse<ClientData>> {
     return this.getCachedOrFetch(`clients:${id}`, () => 
       this.request(`${this.baseUrl}/${id}`)
     );
@@ -176,7 +213,7 @@ class ClientsApi extends ApiClient {
   /**
    * Create a new client
    */
-  async create(clientData: any): Promise<ApiResponse<any>> {
+  async create(clientData: Omit<ClientData, 'id'>): Promise<ApiResponse<ClientData>> {
     const result = await this.request(this.baseUrl, {
       method: 'POST',
       body: JSON.stringify(clientData),
@@ -186,13 +223,13 @@ class ClientsApi extends ApiClient {
       this.clearCache('clients:all');
     }
 
-    return result;
+    return result as ApiResponse<ClientData>;
   }
 
   /**
    * Update an existing client
    */
-  async update(id: string, clientData: any): Promise<ApiResponse<any>> {
+  async update(id: string, clientData: Partial<ClientData>): Promise<ApiResponse<ClientData>> {
     const result = await this.request(`${this.baseUrl}/${id}`, {
       method: 'PUT',
       body: JSON.stringify(clientData),
@@ -203,7 +240,7 @@ class ClientsApi extends ApiClient {
       this.clearCache('clients:all');
     }
 
-    return result;
+    return result as ApiResponse<ClientData>;
   }
 
   /**
@@ -238,7 +275,7 @@ class BookingsApi extends ApiClient {
     status?: string;
     dateFrom?: string;
     dateTo?: string;
-  }): Promise<ApiResponse<any[]>> {
+  }): Promise<ApiResponse<BookingData[]>> {
     const searchParams = new URLSearchParams();
     
     if (params?.clientId) searchParams.append('clientId', params.clientId);
@@ -255,7 +292,7 @@ class BookingsApi extends ApiClient {
   /**
    * Create a new booking
    */
-  async create(bookingData: any): Promise<ApiResponse<any>> {
+  async create(bookingData: Omit<BookingData, 'id'>): Promise<ApiResponse<BookingData>> {
     const result = await this.request(this.baseUrl, {
       method: 'POST',
       body: JSON.stringify(bookingData),
@@ -265,13 +302,13 @@ class BookingsApi extends ApiClient {
       this.clearCache('bookings:all');
     }
 
-    return result;
+    return result as ApiResponse<BookingData>;
   }
 
   /**
    * Update an existing booking
    */
-  async update(id: string, bookingData: any): Promise<ApiResponse<any>> {
+  async update(id: string, bookingData: Partial<BookingData>): Promise<ApiResponse<BookingData>> {
     const result = await this.request(`${this.baseUrl}/${id}`, {
       method: 'PUT',
       body: JSON.stringify(bookingData),
@@ -282,7 +319,7 @@ class BookingsApi extends ApiClient {
       this.clearCache('bookings:all');
     }
 
-    return result;
+    return result as ApiResponse<BookingData>;
   }
 
   /**
@@ -312,7 +349,7 @@ class PackagesApi extends ApiClient {
   /**
    * Get all packages
    */
-  async getAll(): Promise<ApiResponse<any[]>> {
+  async getAll(): Promise<ApiResponse<PackageData[]>> {
     return this.getCachedOrFetch('packages:all', () => 
       this.request(this.baseUrl)
     );
@@ -321,7 +358,7 @@ class PackagesApi extends ApiClient {
   /**
    * Create a new package
    */
-  async create(packageData: any): Promise<ApiResponse<any>> {
+  async create(packageData: Omit<PackageData, 'id'>): Promise<ApiResponse<PackageData>> {
     const result = await this.request(this.baseUrl, {
       method: 'POST',
       body: JSON.stringify(packageData),
@@ -331,13 +368,13 @@ class PackagesApi extends ApiClient {
       this.clearCache('packages:all');
     }
 
-    return result;
+    return result as ApiResponse<PackageData>;
   }
 
   /**
    * Update an existing package
    */
-  async update(id: string, packageData: any): Promise<ApiResponse<any>> {
+  async update(id: string, packageData: Partial<PackageData>): Promise<ApiResponse<PackageData>> {
     const result = await this.request(`${this.baseUrl}/${id}`, {
       method: 'PUT',
       body: JSON.stringify(packageData),
@@ -348,7 +385,7 @@ class PackagesApi extends ApiClient {
       this.clearCache('packages:all');
     }
 
-    return result;
+    return result as ApiResponse<PackageData>;
   }
 
   /**
@@ -378,7 +415,7 @@ class DashboardApi extends ApiClient {
   /**
    * Get dashboard statistics
    */
-  async getStats(): Promise<ApiResponse<any>> {
+  async getStats(): Promise<ApiResponse<Record<string, unknown>>> {
     return this.getCachedOrFetch('dashboard:stats', () => 
       this.request(this.baseUrl)
     );
@@ -405,8 +442,15 @@ export const api = {
  */
 export function createApiEndpoint<T>(baseUrl: string) {
   return {
-    getAll: (params?: any) => 
-      fetch(`${baseUrl}?${new URLSearchParams(params)}`).then(res => res.json()),
+    getAll: (params?: Record<string, string | number | boolean>) => {
+      const searchParams = params ? new URLSearchParams(
+        Object.entries(params).reduce((acc, [key, value]) => {
+          acc[key] = String(value);
+          return acc;
+        }, {} as Record<string, string>)
+      ) : new URLSearchParams();
+      return fetch(`${baseUrl}?${searchParams}`).then(res => res.json());
+    },
     
     getById: (id: string) => 
       fetch(`${baseUrl}/${id}`).then(res => res.json()),
@@ -433,7 +477,7 @@ export function createApiEndpoint<T>(baseUrl: string) {
 /**
  * Handle API errors consistently
  */
-export function handleApiError(error: any): ApiError {
+export function handleApiError(error: unknown): ApiError {
   if (error instanceof Error) {
     return {
       message: error.message,

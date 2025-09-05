@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { loadStripe } from '@stripe/stripe-js';
 
 // Stripe configuration
 export const stripeConfig = {
@@ -32,7 +33,7 @@ export const stripe = getStripe();
 // Stripe client-side instance
 export const getStripeClient = () => {
   if (typeof window !== 'undefined') {
-    return require('@stripe/stripe-js').loadStripe(stripeConfig.publishableKey);
+    return loadStripe(stripeConfig.publishableKey);
   }
   return null;
 };

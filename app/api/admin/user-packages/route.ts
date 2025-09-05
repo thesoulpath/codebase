@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Query parameters:', { userId, purchaseId, isActive, hasRemainingSessions, packageType, page, limit, enhanced });
 
     // Build the query with proper relationships
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     
     if (userId) where.userId = userId;
     if (purchaseId) where.purchaseId = purchaseId;
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Base select fields
-    const select: any = {
+    const select: Record<string, unknown> = {
       id: true,
       userId: true,
       purchaseId: true,

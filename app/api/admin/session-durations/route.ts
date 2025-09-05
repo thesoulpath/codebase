@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Query parameters:', { is_active, page, limit });
 
     // Build the query
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (is_active !== undefined) where.is_active = is_active === 'true';
 
     console.log('🔍 Executing database query...');

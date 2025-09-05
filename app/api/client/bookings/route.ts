@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { replacePlaceholders } from '@/lib/communication/placeholders';
 
 
 // Zod schema for booking creation
@@ -9,7 +10,9 @@ const createBookingSchema = z.object({
   scheduleSlotId: z.number().int().positive('Schedule slot ID must be positive'),
   userPackageId: z.number().int().positive('User package ID must be positive'),
   sessionType: z.string().min(1, 'Session type is required').default('Session'),
-  notes: z.string().optional()
+  notes: z.string().optional(),
+  otpCode: z.string().optional(), // OTP code for verification
+  phoneNumber: z.string().optional() // Phone number for OTP verification
 });
 
 const querySchema = z.object({
@@ -52,7 +55,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Query parameters:', { status, page, limit });
 
     // Build the query with proper relationships
-    const where: any = {
+    const where: Record<string, unknown> = {
       userId: user.id
     };
 
@@ -141,7 +144,7 @@ export async function GET(request: NextRequest) {
       prisma.booking.count({ where })
     ]);
 
-    console.log('✅ Database query successful, found', bookings.length, 'bookings');
+    console.log('✅ Database query successful, found', bookings?.length || 0, 'bookings');
 
     const totalPages = Math.ceil(totalCount / limit);
 
@@ -198,7 +201,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const { scheduleSlotId, userPackageId, sessionType, notes } = validation.data;
+    const { scheduleSlotId, userPackageId, sessionType, notes, otpCode, phoneNumber } = validation.data;
 
     // Verify the user owns the package and it's active
     const userPackage = await prisma.userPackage.findFirst({
@@ -238,6 +241,31 @@ export async function POST(request: NextRequest) {
         error: 'No sessions remaining',
         message: 'You have no sessions remaining in this package'
       }, { status: 400 });
+    }
+
+    // Verify OTP if provided
+    if (otpCode && phoneNumber) {
+      const otpVerification = await prisma.otpVerification.findFirst({
+        where: {
+          phoneNumber,
+          otpCode,
+          isVerified: true,
+          expiresAt: {
+            gt: new Date()
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      if (!otpVerification) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid OTP',
+          message: 'OTP code is invalid or has expired'
+        }, { status: 400 });
+      }
     }
 
     // Verify the schedule slot is available
@@ -331,6 +359,78 @@ export async function POST(request: NextRequest) {
     });
 
     console.log('✅ Booking created successfully');
+
+    // Send booking confirmation using communication templates
+    try {
+      // Get booking confirmation template
+      const bookingTemplate = await prisma.communicationTemplate.findFirst({
+        where: {
+          templateKey: 'booking_confirmation',
+          type: 'email',
+          isActive: true
+        },
+        include: {
+          translations: true
+        }
+      });
+
+      if (bookingTemplate && user.email) {
+        // Get user details for template replacement
+        const userDetails = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: {
+            fullName: true,
+            email: true,
+            phone: true,
+            birthDate: true,
+            birthTime: true,
+            birthPlace: true,
+            language: true
+          }
+        });
+
+        if (userDetails) {
+          // Prepare template data
+          const templateData = {
+            userName: userDetails.fullName || 'User',
+            userEmail: userDetails.email || '',
+            bookingId: result.id.toString(),
+            language: userDetails.language || 'English',
+            adminEmail: 'admin@soulpath.lat',
+            submissionDate: new Date().toLocaleDateString(),
+            birthDate: userDetails.birthDate?.toISOString().split('T')[0] || '',
+            birthTime: userDetails.birthTime?.toString().substring(0, 5) || '',
+            birthPlace: userDetails.birthPlace || '',
+            clientQuestion: notes || 'No specific question provided',
+            bookingDate: result.scheduleSlot.startTime.toISOString().split('T')[0],
+            bookingTime: result.scheduleSlot.startTime.toTimeString().substring(0, 5),
+            sessionType: sessionType
+          };
+
+          // Get the appropriate translation
+          const userLanguage = userDetails.language?.toLowerCase() || 'en';
+          const translation = bookingTemplate.translations.find(t => 
+            t.language === userLanguage
+          ) || bookingTemplate.translations[0];
+
+          if (translation) {
+            // Replace placeholders in subject and content
+            const subject = replacePlaceholders(translation.subject || '', templateData);
+            const content = replacePlaceholders(translation.content || '', templateData);
+
+            // TODO: Send email using your email service
+            console.log('📧 Booking confirmation email prepared:', {
+              to: userDetails.email,
+              subject,
+              content: content.substring(0, 100) + '...'
+            });
+          }
+        }
+      }
+    } catch (templateError) {
+      console.error('Error sending booking confirmation:', templateError);
+      // Don't fail the booking creation if template sending fails
+    }
 
     return NextResponse.json({
       success: true,

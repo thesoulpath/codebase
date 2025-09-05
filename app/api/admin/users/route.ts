@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Query parameters:', { email, status, language, role, hasActivePackages, page, limit, enhanced });
 
     // Build the query with proper relationships
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     
     if (email) where.email = email;
     if (status) where.status = status;
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     if (role) where.role = role;
 
     // Base select fields
-    const select: any = {
+    const select: Record<string, unknown> = {
       id: true,
       email: true,
       fullName: true,
