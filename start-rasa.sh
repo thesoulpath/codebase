@@ -29,9 +29,14 @@ fi
 # Check if models exist
 if [ ! -d "models" ] || [ -z "$(ls -A models/*.tar.gz 2>/dev/null)" ]; then
     echo "No trained models found, training Rasa model..."
-    $RASA_CMD train
+    echo "Warning: Training may take several minutes..."
+    # Add timeout to prevent hanging
+    timeout 1800 $RASA_CMD train || {
+        echo "Training timed out or failed. Starting server without training..."
+        echo "Note: You may need to train the model locally and include it in the deployment."
+    }
 else
-    echo "Cleaning up old models to save memory..."
+    echo "Found existing models, cleaning up old ones to save memory..."
     # Keep only the latest 2 models
     ls -t models/*.tar.gz 2>/dev/null | tail -n +3 | xargs rm -f 2>/dev/null || true
 fi
