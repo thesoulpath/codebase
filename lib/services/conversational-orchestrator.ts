@@ -1,12 +1,11 @@
-import { RasaService } from './rasa-service';
+// Dynamic import to avoid Vercel build issues
+const RasaService = require('./rasa-service').RasaService;
 import { OpenRouterService } from './openrouter-service';
 import { TwilioService } from './twilio-service';
 import { APIService } from './api-service';
 import { LoggingService } from './logging-service';
 import {
-  WhatsAppMessage,
   RasaResponse,
-  ConversationLog,
   ConversationContext,
   OrchestratorConfig,
   IntentActionMapping,
@@ -169,7 +168,7 @@ export class ConversationalOrchestrator {
   private async handleAmbiguousIntent(
     userMessage: string,
     rasaResponse: RasaResponse,
-    context: ConversationContext
+    _context: ConversationContext
   ): Promise<string> {
     const alternativeIntents = this.rasaService.getAlternativeIntents(rasaResponse);
     

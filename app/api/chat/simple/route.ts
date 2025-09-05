@@ -146,9 +146,9 @@ export async function POST(request: NextRequest) {
     // Check if this is a button payload first
     let intent = '';
     let confidence = 1.0;
-    let rasaData = { entities: [] };
+    let rasaData: any = { entities: [] };
     let bookingData = requestBookingData || null;
-    let buttons = [];
+    let buttons: any[] = [];
 
     // Handle button payloads directly
     if (message.startsWith('confirm_booking_') || 

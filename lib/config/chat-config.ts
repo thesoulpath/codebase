@@ -215,7 +215,7 @@ export const isBusinessHours = (config: ChatConfig): boolean => {
   if (!config.businessHours.enabled) return true;
 
   const now = new Date();
-  const day = now.toLocaleLowerCase('en-US', { weekday: 'long' }) as keyof typeof config.businessHours.schedule;
+  const day = now.toLocaleDateString('en-US', { weekday: 'long' }) as keyof typeof config.businessHours.schedule;
   const schedule = config.businessHours.schedule[day];
 
   if (!schedule.enabled) return false;

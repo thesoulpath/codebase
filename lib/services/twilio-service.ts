@@ -57,7 +57,7 @@ export class TwilioService {
     to: string, 
     message: string, 
     mediaUrl: string, 
-    mediaType: 'image' | 'document' | 'audio' | 'video' = 'image'
+    _mediaType: 'image' | 'document' | 'audio' | 'video' = 'image'
   ): Promise<{success: boolean, messageId?: string, error?: string}> {
     try {
       const response = await this.client.messages.create({
@@ -127,7 +127,7 @@ export class TwilioService {
   /**
    * Envía un mensaje de confirmación de recepción
    */
-  async sendDeliveryConfirmation(to: string, originalMessageId: string): Promise<void> {
+  async sendDeliveryConfirmation(to: string, _originalMessageId: string): Promise<void> {
     try {
       await this.sendMessage(to, '✅ Mensaje recibido. Te ayudo en un momento...');
     } catch (error) {

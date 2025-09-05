@@ -18,6 +18,13 @@ export interface ExternalAPIConfig {
   version?: string;
   rateLimit?: number;
   timeout?: number;
+  lastTestedAt?: Date;
+  lastTestResult?: any;
+  healthStatus?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export interface APIConfigAudit {
@@ -52,7 +59,15 @@ export class ExternalAPIService {
 
       const config = await this.prisma.externalAPIConfig.create({
         data: {
-          ...processedData,
+          name: processedData.name || '',
+          provider: processedData.provider || '',
+          category: processedData.category || '',
+          apiKey: processedData.apiKey || '',
+          apiSecret: processedData.apiSecret || '',
+          apiUrl: processedData.apiUrl || '',
+          description: processedData.description || '',
+          isActive: processedData.isActive ?? true,
+          timeout: processedData.timeout || 30000,
           createdBy: userId,
           updatedBy: userId,
         },
@@ -277,7 +292,12 @@ export class ExternalAPIService {
         skip: offset,
       });
 
-      return logs;
+      return logs.map(log => ({
+        ...log,
+        action: log.action as 'create' | 'update' | 'delete' | 'test',
+        ipAddress: log.ipAddress || undefined,
+        userAgent: log.userAgent || undefined
+      }));
     } catch (error) {
       console.error('Error fetching audit logs:', error);
       throw new Error('Failed to fetch audit logs');
@@ -291,7 +311,7 @@ export class ExternalAPIService {
     data: Partial<ExternalAPIConfig>,
     action: 'encrypt' | 'decrypt'
   ): Promise<Partial<ExternalAPIConfig>> {
-    const processed = { ...data };
+    const processed: any = { ...data };
 
     // Campos sensibles que requieren encriptación
     const sensitiveFields = ['apiKey', 'apiSecret', 'webhookSecret'];
@@ -374,13 +394,18 @@ export class ExternalAPIService {
    */
   private async testOpenRouter(config: any): Promise<{ success: boolean; message: string; details?: any }> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), config.timeout || 30000);
+      
       const response = await fetch(`${config.apiUrl || 'https://openrouter.ai/api/v1'}/models`, {
         headers: {
           'Authorization': `Bearer ${config.apiKey}`,
           'Content-Type': 'application/json',
         },
-        timeout: config.timeout || 30000,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -411,13 +436,18 @@ export class ExternalAPIService {
       // Usar la API de Twilio para verificar credenciales
       const auth = Buffer.from(`${config.apiKey}:${config.apiSecret}`).toString('base64');
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), config.timeout || 30000);
+      
       const response = await fetch('https://api.twilio.com/2010-04-01/Accounts.json', {
         headers: {
           'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json',
         },
-        timeout: config.timeout || 30000,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -445,9 +475,14 @@ export class ExternalAPIService {
    */
   private async testTelegram(config: any): Promise<{ success: boolean; message: string; details?: any }> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), config.timeout || 30000);
+      
       const response = await fetch(`https://api.telegram.org/bot${config.apiKey}/getMe`, {
-        timeout: config.timeout || 30000,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();

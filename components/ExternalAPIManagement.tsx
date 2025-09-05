@@ -13,7 +13,6 @@ import {
   AlertTriangle,
   Eye,
   EyeOff,
-  Copy,
   RefreshCw,
   Database,
   Zap,
@@ -21,9 +20,7 @@ import {
   CreditCard,
   Globe,
   Shield,
-  Activity,
-  Clock,
-  User
+  Clock
 } from 'lucide-react';
 import { BaseCard } from '@/components/ui/BaseCard';
 import { BaseButton } from '@/components/ui/BaseButton';
@@ -247,13 +244,13 @@ export function ExternalAPIManagement() {
       const result = await response.json();
       setTestResults(prev => ({
         ...prev,
-        [config.id]: result.data,
+        [config.id as string]: result.data,
       }));
     } catch (error) {
       console.error('Error testing config:', error);
       setTestResults(prev => ({
         ...prev,
-        [config.id]: { success: false, message: 'Test failed' },
+        [config.id as string]: { success: false, message: 'Test failed' },
       }));
     } finally {
       setTestingConfig(null);
@@ -267,9 +264,9 @@ export function ExternalAPIManagement() {
     }));
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
+  // const copyToClipboard = (text: string) => {
+  //   navigator.clipboard.writeText(text);
+  // };
 
   const getHealthStatusIcon = (status?: string) => {
     switch (status) {

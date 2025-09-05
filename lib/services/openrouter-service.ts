@@ -1,5 +1,5 @@
 import axios, { AxiosResponse } from 'axios';
-import { LLMRequest, LLMResponse, OrchestratorConfig, PromptMessage } from '@/lib/types/conversational-orchestrator';
+import { LLMRequest, LLMResponse, OrchestratorConfig, PromptMessage, SystemPrompt, UserPrompt } from '@/lib/types/conversational-orchestrator';
 
 export class OpenRouterService {
   private config: OrchestratorConfig['openrouter'];
@@ -15,7 +15,7 @@ export class OpenRouterService {
    */
   async generateResponse(
     messages: PromptMessage[],
-    context?: {
+    _context?: {
       intent?: string;
       entities?: Record<string, any>;
       apiData?: any;
@@ -149,9 +149,9 @@ export class OpenRouterService {
    */
   private buildUserPrompt(
     userMessage: string,
-    intent: string,
-    entities: Record<string, any>,
-    apiData: any
+    _intent: string,
+    _entities: Record<string, any>,
+    _apiData: any
   ): UserPrompt {
     return {
       role: 'user',

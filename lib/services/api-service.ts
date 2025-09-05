@@ -96,12 +96,12 @@ export class APIService {
   /**
    * Consulta el estado de una solicitud o cita
    */
-  private async consultarEstado(entities: Record<string, any>, userId: string): Promise<APICallResult> {
+  private async consultarEstado(entities: Record<string, any>, _userId: string): Promise<APICallResult> {
     try {
       const { solicitud_id, cita_id, email } = entities;
       
       let endpoint = '';
-      let params: any = {};
+      const params: any = {};
 
       if (solicitud_id) {
         endpoint = '/admin/bookings';
@@ -134,7 +134,7 @@ export class APIService {
   /**
    * Agenda una nueva cita
    */
-  private async agendarCita(entities: Record<string, any>, userId: string): Promise<APICallResult> {
+  private async agendarCita(entities: Record<string, any>, _userId: string): Promise<APICallResult> {
     try {
       const { fecha, hora, tipo_sesion, paquete_id, email } = entities;
 
@@ -170,7 +170,7 @@ export class APIService {
   /**
    * Consulta paquetes disponibles
    */
-  private async consultarPaquetes(entities: Record<string, any>, userId: string): Promise<APICallResult> {
+  private async consultarPaquetes(entities: Record<string, any>, _userId: string): Promise<APICallResult> {
     try {
       const { tipo_paquete, moneda, duración } = entities;
       
@@ -193,7 +193,7 @@ export class APIService {
   /**
    * Procesa un pago
    */
-  private async pagarServicio(entities: Record<string, any>, userId: string): Promise<APICallResult> {
+  private async pagarServicio(entities: Record<string, any>, _userId: string): Promise<APICallResult> {
     try {
       const { monto, método_pago, cita_id, paquete_id, email } = entities;
 
@@ -229,7 +229,7 @@ export class APIService {
   /**
    * Cancela una cita
    */
-  private async cancelarCita(entities: Record<string, any>, userId: string): Promise<APICallResult> {
+  private async cancelarCita(entities: Record<string, any>, _userId: string): Promise<APICallResult> {
     try {
       const { cita_id, email } = entities;
 
@@ -260,7 +260,7 @@ export class APIService {
   /**
    * Consulta el historial del usuario
    */
-  private async consultarHistorial(entities: Record<string, any>, userId: string): Promise<APICallResult> {
+  private async consultarHistorial(entities: Record<string, any>, _userId: string): Promise<APICallResult> {
     try {
       const { email, tipo_historial, fecha_desde, fecha_hasta } = entities;
 
@@ -291,7 +291,7 @@ export class APIService {
   /**
    * Consulta horarios disponibles
    */
-  private async consultarHorarios(entities: Record<string, any>, userId: string): Promise<APICallResult> {
+  private async consultarHorarios(entities: Record<string, any>, _userId: string): Promise<APICallResult> {
     try {
       const { fecha, duración, tipo_sesion } = entities;
 
@@ -314,7 +314,7 @@ export class APIService {
   /**
    * Actualiza el perfil del usuario
    */
-  private async actualizarPerfil(entities: Record<string, any>, userId: string): Promise<APICallResult> {
+  private async actualizarPerfil(entities: Record<string, any>, _userId: string): Promise<APICallResult> {
     try {
       const { email, nombre, teléfono, fecha_nacimiento, lugar_nacimiento } = entities;
 
@@ -354,7 +354,7 @@ export class APIService {
   ): Promise<APICallResult> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
-      const config = {
+      const config: any = {
         method,
         url,
         timeout: this.config.timeout,
@@ -387,7 +387,7 @@ export class APIService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown API error',
-        statusCode: error.response?.status || 500
+        statusCode: (error as any).response?.status || 500
       };
     }
   }

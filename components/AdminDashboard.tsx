@@ -21,8 +21,7 @@ import {
   User,
   Star,
   Video,
-  Zap,
-  Globe
+  Zap
 } from 'lucide-react';
 
 import { useAuth } from '../hooks/useAuth';

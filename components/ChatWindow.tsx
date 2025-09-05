@@ -2,9 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, Bot, User, Minimize2, Maximize2, Clock, Zap } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Minimize2, Maximize2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/useTranslations';
-import { defaultChatConfig, ChatConfig, isBusinessHours, getPositionClasses, getTogglePositionClasses } from '@/lib/config/chat-config';
+import { ChatConfig } from '@/lib/config/chat-config';
 
 interface Message {
   id: string;
@@ -19,11 +19,11 @@ interface Message {
   }>;
 }
 
-interface QuickReply {
-  id: string;
-  text: string;
-  action?: () => void;
-}
+// interface QuickReply {
+//   id: string;
+//   text: string;
+//   action?: () => void;
+// }
 
 interface ChatWindowProps {
   isOpen?: boolean;

@@ -13,7 +13,7 @@ export class RasaService {
   /**
    * Envía un mensaje a Rasa para obtener intención y entidades
    */
-  async parseMessage(message: string, senderId: string): Promise<RasaResponse> {
+  async parseMessage(message: string, _senderId: string): Promise<RasaResponse> {
     try {
       const response: AxiosResponse<RasaResponse> = await axios.post(
         `${this.baseUrl}/model/parse`,

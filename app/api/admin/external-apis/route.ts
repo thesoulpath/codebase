@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ExternalAPIService } from '@/lib/services/external-api-service';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
 
 // Inicializar servicio
 const apiService = new ExternalAPIService();
@@ -9,8 +8,8 @@ const apiService = new ExternalAPIService();
 export async function GET(request: NextRequest) {
   try {
     // Verificar autenticación
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const user = await requireAuth(request);
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -18,7 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verificar permisos de admin
-    if (session.user.role !== 'admin') {
+    if (user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
         { status: 403 }
@@ -72,8 +71,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Verificar autenticación
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const user = await requireAuth(request);
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -81,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar permisos de admin
-    if (session.user.role !== 'admin') {
+    if (user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
         { status: 403 }
@@ -109,7 +108,7 @@ export async function POST(request: NextRequest) {
 
         const newConfig = await apiService.createConfig(
           data,
-          session.user.id,
+          user.id,
           ipAddress,
           userAgent
         );
@@ -130,7 +129,7 @@ export async function POST(request: NextRequest) {
 
         const testResult = await apiService.testConfig(
           data.id,
-          session.user.id,
+          user.id,
           ipAddress,
           userAgent
         );
@@ -164,8 +163,8 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     // Verificar autenticación
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const user = await requireAuth(request);
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -173,7 +172,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verificar permisos de admin
-    if (session.user.role !== 'admin') {
+    if (user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
         { status: 403 }
@@ -203,7 +202,7 @@ export async function PUT(request: NextRequest) {
     const updatedConfig = await apiService.updateConfig(
       id,
       updateData,
-      session.user.id,
+      user.id,
       ipAddress,
       userAgent
     );
@@ -230,8 +229,8 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // Verificar autenticación
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const user = await requireAuth(request);
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -239,7 +238,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verificar permisos de admin
-    if (session.user.role !== 'admin') {
+    if (user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
         { status: 403 }
@@ -265,7 +264,7 @@ export async function DELETE(request: NextRequest) {
 
     await apiService.deleteConfig(
       id,
-      session.user.id,
+      user.id,
       ipAddress,
       userAgent
     );

@@ -171,10 +171,10 @@ export class LoggingService {
       `;
 
       return {
-        totalConversations: Number(stats[0]?.total_conversations || 0),
-        successfulConversations: Number(stats[0]?.successful_conversations || 0),
-        failedConversations: Number(stats[0]?.failed_conversations || 0),
-        averageProcessingTime: Number(stats[0]?.average_processing_time || 0),
+        totalConversations: Number((stats as any)[0]?.total_conversations || 0),
+        successfulConversations: Number((stats as any)[0]?.successful_conversations || 0),
+        failedConversations: Number((stats as any)[0]?.failed_conversations || 0),
+        averageProcessingTime: Number((stats as any)[0]?.average_processing_time || 0),
         topIntents: topIntents as Array<{intent: string, count: number}>,
         topErrors: topErrors as Array<{error: string, count: number}>
       };

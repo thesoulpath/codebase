@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Verificación de salud del webhook
     const orchestrator = getOrchestrator();
