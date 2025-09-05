@@ -15,6 +15,7 @@ RUN echo "Build timestamp: $(date)" > /tmp/build_info.txt
 RUN echo "Python version: $(python --version)" > /tmp/python_info.txt
 RUN apt-get update && apt-get install -y build-essential && \
     pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir spacy==3.6.1 && \
     pip install --no-cache-dir rasa==3.6.21 && \
     python -m spacy download en_core_web_sm && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
