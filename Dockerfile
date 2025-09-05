@@ -28,12 +28,12 @@ RUN chmod +x /app/start-rasa.sh
 # Train Rasa model
 RUN rasa train
 
-# Expose Rasa port
+# Expose port (will be overridden by Render's PORT env var)
 EXPOSE 5005
 
-# Health check for Rasa
+# Health check for Rasa (uses PORT env var)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5005/health || exit 1
+    CMD curl -f http://localhost:${PORT:-5005}/health || exit 1
 
 # Start Rasa server using startup script
 CMD ["/app/start-rasa.sh"]

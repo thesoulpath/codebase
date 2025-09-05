@@ -6,6 +6,8 @@ services:
     plan: starter
     healthCheckPath: /health
     envVars:
+      - key: PORT
+        value: 5005
       - key: RASA_PORT
         value: 5005
       - key: OPENROUTER_API_KEY

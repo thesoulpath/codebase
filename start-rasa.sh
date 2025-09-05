@@ -2,6 +2,10 @@
 
 echo "Starting Rasa server..."
 
+# Get port from environment variable (Render requirement)
+PORT=${PORT:-5005}
+echo "Using port: $PORT"
+
 # Find Rasa executable
 RASA_CMD=$(which rasa)
 if [ -z "$RASA_CMD" ]; then
@@ -28,5 +32,5 @@ if [ ! -d "models" ] || [ -z "$(ls -A models/*.tar.gz 2>/dev/null)" ]; then
     $RASA_CMD train
 fi
 
-echo "Starting Rasa server on port 5005..."
-$RASA_CMD run --enable-api --cors "*" --debug --port 5005
+echo "Starting Rasa server on port $PORT..."
+$RASA_CMD run --enable-api --cors "*" --debug --port $PORT
