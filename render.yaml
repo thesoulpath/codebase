@@ -2,7 +2,7 @@ services:
   - type: web
     name: soulpath-chatbot
     env: docker
-    dockerfilePath: ./Dockerfile.optimized
+    dockerfilePath: ./Dockerfile
     plan: starter
     healthCheckPath: /api/health
     envVars:
