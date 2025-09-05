@@ -10,8 +10,10 @@ RUN npm ci --only=production && npm cache clean --force
 FROM python:3.8-slim AS python-deps
 
 WORKDIR /app
-COPY rasa/requirements.txt ./
+# Force clean copy of requirements file
+COPY --chown=1000:1000 rasa/requirements.txt ./
 RUN apt-get update && apt-get install -y build-essential && \
+    pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir rasa==3.6.21 spacy==3.6.1 && \
     pip install --no-cache-dir tensorflow-cpu==2.11.0 && \
