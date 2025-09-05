@@ -33,4 +33,4 @@ if [ ! -d "models" ] || [ -z "$(ls -A models/*.tar.gz 2>/dev/null)" ]; then
 fi
 
 echo "Starting Rasa server on port $PORT..."
-$RASA_CMD run --enable-api --cors "*" --debug --port $PORT --interface 0.0.0.0
+$RASA_CMD run --enable-api --cors "*" --debug --port $PORT -i 0.0.0.0

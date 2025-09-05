@@ -23,7 +23,7 @@ COPY rasa/ ./
 # Train Rasa model
 RUN rasa train
 
-# Expose port (Railway will override with PORT env var)
+# Expose port (Render will override with PORT env var)
 EXPOSE 5005
 
 # Copy startup script
