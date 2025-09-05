@@ -4,6 +4,7 @@ FROM node:18-alpine AS node-deps
 
 WORKDIR /app
 COPY package*.json ./
+COPY prisma/ ./prisma/
 RUN npm ci --only=production && npm cache clean --force
 
 FROM python:3.8-alpine AS python-deps
@@ -12,7 +13,7 @@ WORKDIR /app
 COPY rasa/requirements.txt ./
 RUN apk add --no-cache build-base linux-headers && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir rasa==3.6.21 tensorflow spacy && \
+    pip install --no-cache-dir rasa==3.6.21 tensorflow==2.12.0 spacy==3.6.1 && \
     python -m spacy download en_core_web_sm && \
     apk del build-base linux-headers
 
