@@ -2,8 +2,9 @@ services:
   - type: web
     name: soulpath-chatbot
     env: docker
-    dockerfilePath: ./Dockerfile.simple
+    dockerfilePath: ./Dockerfile.optimized
     plan: starter
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
